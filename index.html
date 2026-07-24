@@ -2274,7 +2274,7 @@ function computeQuoteRows(cart){
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
   opts=opts||{};
   var INK='#1a1a1a',SUB='#666',MUTE='#888',LINE='#ddd',LINED='#1a1a1a',HEADBG='#f4f4f2';
-  var FONT='"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  var FONT="'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
 
   function wM(n){return (n||0).toLocaleString('ko-KR')+'원/월';}
   function wW(n){return (n||0).toLocaleString('ko-KR')+'원';}
@@ -2417,7 +2417,7 @@ function buildStoryHTML(cart,customer,salesperson,today,opts){
   var isOrderCust=opts.custType==='order';
   var INK='#1c2a3a',INKS='#4a5568',PAPER='#f7f3ea',PAPER3='#e7ded0',
       BRASS='#a3813a',BRASSD='#7d611f',LINE='#d9cfba',WHITE='#fffdf9';
-  var SERIF='"Song Myung",serif', SANS='"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  var SERIF="'Song Myung',serif", SANS="'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
 
   // ── 타이포 스케일 (이 몇 가지만 사용) ──
   var FS_TAG=10, FS_META=11, FS_BODY=12.5, FS_EMPH=13.5, FS_LEAD=14.5;   // 산세리프

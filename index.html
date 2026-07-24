@@ -1001,7 +1001,8 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       h += '<input type="checkbox" style="width:17px;height:17px;flex-shrink:0;accent-color:#2563eb;cursor:pointer"' + (d.반값 ? ' checked' : '') + ' onchange="setHanval(' + idx + ',this.checked)"> <span style="font-size:12px;font-weight:600">반값 (-50%)</span>';
       if (d.반값) {
         h += '<div style="display:flex;align-items:center;gap:4px;margin-left:auto">';
-        h += '<input type="number" value="' + (item.반값개월 || 0) + '" min="0" max="' + (item.약정년 * 12) + '" onchange="setHanvalPeriod(' + idx + ',Math.max(0,Math.min(+this.value,item.약정년*12)))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
+        var hvMax = item.약정년 * 12;
+        h += '<input type="number" value="' + (item.반값개월 || 0) + '" min="0" max="' + hvMax + '" onchange="setHanvalPeriod(' + idx + ',Math.max(0,Math.min(+this.value,' + hvMax + ')))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
         h += '<span style="font-size:11px;color:#94a3b8">' + (item.반값개월 === 0 ? '개월 (전기간)' : '개월') + '</span>';
         h += '</div>';
       }
@@ -1176,7 +1177,8 @@ function renderS2UI(item,idx){
   var bm=s2.반값월||0;
   html+='<p class="pl" style="margin-top:8px;margin-bottom:4px">반값 적용 기간</p>';
   html+='<div style="display:flex;align-items:center;gap:4px">';
-  html+='<input type="number" value="'+bm+'" min="0" max="'+(item.약정년*12)+'" onchange="setS2Val('+idx+',\'반값월\',Math.max(0,Math.min(+this.value,item.약정년*12)))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
+  var s2Max=item.약정년*12;
+  html+='<input type="number" value="'+bm+'" min="0" max="'+s2Max+'" onchange="setS2Val('+idx+',\'반값월\',Math.max(0,Math.min(+this.value,'+s2Max+')))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
   html+='<span style="font-size:11px;color:#94a3b8">'+(bm===0?'개월 (없음)':'개월')+'</span>';
   html+='</div>';
   html+='<p style="font-size:11px;color:#94a3b8;margin-top:6px">* 1개월차 선납분 포함하여 계산</p>';

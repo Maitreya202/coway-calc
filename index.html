@@ -2304,7 +2304,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   }
 
   var h='';
-  h+='<div style="font-family:'+FONT+';width:794px;background:#fff;color:'+INK+'">';
+  h+='<div style="font-family:'+FONT+';width:794px;box-sizing:border-box;padding:36px;background:#fff;color:'+INK+'">';
   h+='<div style="border:1px solid '+LINED+';">';
 
   // [1] 헤더
@@ -2329,23 +2329,23 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   // [3] 제품 테이블 (모델명 아래에 계약상세 바로 표기)
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
   h+='<tr style="background:'+HEADBG+'">';
-  h+='<th style="padding:9px 6px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';width:30px">No</th>';
-  h+='<th style="padding:9px 6px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:left">품목</th>';
-  h+='<th style="padding:9px 6px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">정상가</th>';
-  h+='<th style="padding:9px 6px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
+  h+='<th style="padding:9px 8px 9px 16px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';width:30px">No</th>';
+  h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:left">품목</th>';
+  h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">정상가</th>';
+  h+='<th style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
   h+='</tr>';
   rows.forEach(function(r,idx){
     h+='<tr>';
-    h+='<td style="padding:9px 6px;border-bottom:1px solid '+LINE+';text-align:center;color:'+SUB+'">'+(idx+1)+'</td>';
-    h+='<td style="padding:9px 6px;border-bottom:1px solid '+LINE+'"><div style="font-weight:500">'+esc(r.name)+'</div>';
+    h+='<td style="padding:9px 8px 9px 16px;border-bottom:1px solid '+LINE+';text-align:center;color:'+SUB+'">'+(idx+1)+'</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+'"><div style="font-weight:500">'+esc(r.name)+'</div>';
     if(opts.showContract){
       h+='<div style="font-size:11px;color:'+MUTE+';margin-top:2px">'+esc(r.model)+(r.bg.length?' &middot; '+r.bg.map(esc).join(' &middot; '):'')+'</div>';
     } else {
       h+='<div style="font-size:11px;color:'+MUTE+'">'+esc(r.model)+'</div>';
     }
     h+='</td>';
-    h+='<td style="padding:9px 6px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through">'+wM(r.lp)+'</td>';
-    h+='<td style="padding:9px 6px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+wM(r.dp)+'</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through">'+wM(r.lp)+'</td>';
+    h+='<td style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+wM(r.dp)+'</td>';
     h+='</tr>';
   });
   h+='</table>';
@@ -2363,8 +2363,8 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   if(opts.showIlsibl && ilT.cnt>0){
     var ilDiff=ilT.rental-ilT.disc;
     var ilRes=ilDiff>0?'일시불 유리 · '+wW(ilDiff)+' 절감':ilDiff<0?'렌탈/선납 유리 · '+wW(-ilDiff)+' 절감':'동일';
-    h+='<div style="border-top:1px solid '+LINED+';padding:10px 16px;font-weight:700;font-size:12px;background:'+HEADBG+'">일시불 비교</div>';
-    h+='<div style="border-top:1px solid '+LINE+';padding:12px 16px;font-size:12px">';
+    h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">일시불 비교</div>';
+    h+='<div style="border-top:1px solid '+LINE+';padding:12px 20px;font-size:12px">';
     h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">일시불 정가 합계</span><span>'+wW(ilT.base)+'</span></div>';
     if(ilT.hasDisc){ h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>동시구매 -10% 적용</span><span>'+wW(ilT.disc)+'</span></div>'; }
     h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">비교 기준 (렌탈/선납 총납입)</span><span>'+wW(ilT.rental)+'</span></div>';
@@ -2375,29 +2375,29 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // [6] 추가정보 (옵션)
   if(opts.showNotes){
-    h+='<div style="border-top:1px solid '+LINED+';padding:10px 16px;font-weight:700;font-size:12px;background:'+HEADBG+'">추가 정보</div>';
+    h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">추가 정보</div>';
     var notes=['※ 위 금액은 자동이체 기준 견적입니다 (법인사업자 지로 요청시 제품 1대당 1,000원 추가)',
       '※ 등록비 및 설치비 전액 면제 / 렌탈 기간 내 반환시 제품 회수비가 청구됩니다.',
       '※ 3년 약정시 의무사용기간 36개월 / 총렌탈기간 60개월 ㅣ 5/6/7/9년 약정시 의무사용과 총렌탈기간 동일',
       '※ 사업자 명의시 전자세금계산서 매월 자동발행',
       '※ 이용하시는 동안 무상 A/S 적용 (단, 해체 및 이전설치비 제외)',
       '※ 위 금액은 대 기준으로 산정되었으며, 대수 변동에 따라 금액 차이가 발생할 수 있습니다.'];
-    h+='<div style="border-top:1px solid '+LINE+';padding:10px 16px">';
+    h+='<div style="border-top:1px solid '+LINE+';padding:10px 20px">';
     notes.forEach(function(n){ h+='<div style="font-size:10.5px;color:'+SUB+';padding:3px 0">'+esc(n)+'</div>'; });
     h+='</div>';
   }
 
   // [7] 판매인 정보 (옵션)
   if(opts.showSalesperson){
-    h+='<div style="border-top:1px solid '+LINED+';padding:10px 16px;font-weight:700;font-size:12px;background:'+HEADBG+'">판매인 정보</div>';
-    h+='<div style="border-top:1px solid '+LINE+';padding:12px 16px">';
+    h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">판매인 정보</div>';
+    h+='<div style="border-top:1px solid '+LINE+';padding:12px 20px">';
     h+='<div style="font-size:12px;color:'+SUB+'">판매처  코웨이갤러리 원주점</div>';
     h+='<div style="font-size:13px;font-weight:700;margin-top:4px">담당자  '+(salesperson?esc(salesperson):'—')+(opts.salespersonPhone?'  <span style="font-weight:400;color:'+SUB+'">'+esc(opts.salespersonPhone)+'</span>':'')+'</div>';
     h+='</div>';
   }
 
   // 푸터
-  h+='<div style="padding:10px 16px;border-top:1px solid '+LINED+';text-align:center">';
+  h+='<div style="padding:10px 20px;border-top:1px solid '+LINED+';text-align:center">';
   h+='<div style="font-size:10px;color:'+MUTE+'">코웨이갤러리</div>';
   h+='</div>';
 

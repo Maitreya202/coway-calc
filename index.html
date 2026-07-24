@@ -421,21 +421,12 @@ fetch(GAS_URL + '?action=getData', {
     document.getElementById('quoteBasketBar').style.display = 'none';
     document.getElementById('noDataMsg').style.display = (PRODUCTS.length===0) ? 'block' : 'none';
   })
-  .withFailureHandler(function(e) {
+  .catch(function(e) {
     var msg = e && e.message ? e.message : String(e);
-    var isAuth = /permission|access|author|login|sign|scope/i.test(msg);
-    var isId   = /not found|invalid.*id|no.*sheet/i.test(msg);
-    var title  = isAuth ? '로그인 또는 권한 오류' : isId ? '스프레드시트를 찾을 수 없음' : '데이터 로드 실패';
-    var hint   = isAuth
-      ? 'Google 계정으로 로그인되어 있는지 확인하거나<br>관리자에게 접근 권한을 요청하세요.'
-      : isId
-      ? 'Code.gs의 SPREADSHEET_ID를 확인하세요.'
-      : '오류: ' + msg;
-    document.querySelector('#loadingScreen p').textContent = title;
+    document.querySelector('#loadingScreen p').textContent = '데이터 로드 실패';
     document.querySelector('#loadingScreen small').innerHTML =
-      hint + '<br><br><button onclick="location.reload()" style="margin-top:8px;background:#2563eb;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer">다시 시도</button>';
-  })
-  .getData();
+      '오류: ' + msg + '<br><br><button onclick="location.reload()" style="margin-top:8px;background:#2563eb;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer">다시 시도</button>';
+  });
 
 var KIT_SHEETS = ['정수기','공기청정기','비데'];
 function getMgmtLabel(item) {
@@ -679,10 +670,10 @@ searchInput.addEventListener('input',function(){
 });
 
 function clearSearch(){
-  searchInput.value='';
-  document.getElementById('clearBtn').style.display='none';
-  dropdown.classList.remove('show');
-  searchBox.classList.remove('active');
+  if(searchInput) searchInput.value='';
+  var cb=document.getElementById('clearBtn'); if(cb) cb.style.display='none';
+  if(dropdown) dropdown.classList.remove('show');
+  if(searchBox) searchBox.classList.remove('active');
 }
 function openSearchModal(idx){
   searchTargetIdx = (typeof idx === 'number') ? idx : null;

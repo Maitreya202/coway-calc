@@ -326,20 +326,28 @@ input:focus,select:focus { border-color:#2563eb; }
       <button type="button" id="fmtBtnStory" onclick="setQuoteFormat('story')" style="flex:1;border:none;padding:9px 4px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:#64748b">&#9998;&#65039; 스토리텔링형 견적</button>
     </div>
     <div id="normalFormatOpts">
-      <label class="check-row" style="margin-bottom:14px">
+      <p style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px">금액 표기</p>
+      <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteIlsiblToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128179; 견적서에 일시불 비교 포함</span>
       </label>
+      <label class="check-row" style="margin-bottom:6px">
+        <input type="checkbox" id="quoteMemberToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#127974; 일시불 비교에 멤버십 비용 포함</span>
+      </label>
+      <label class="check-row" style="margin-bottom:6px">
+        <input type="checkbox" id="quoteTotalToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128176; 렌탈 기간 중 총 납입금액 표시</span>
+      </label>
+      <label class="check-row" style="margin-bottom:14px">
+        <input type="checkbox" id="quoteSavingToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128184; 정상가 대비 절감 금액 표시</span>
+      </label>
+      <p style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px">표기 옵션</p>
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteContractToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128203; 품목별 계약상세 표시 (모델명 아래)</span>
       </label>
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteNotesToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128221; 추가정보 섹션 포함</span>
       </label>
-      <label class="check-row" style="margin-bottom:6px">
-        <input type="checkbox" id="quoteSalespersonToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128100; 담당자정보 섹션 포함</span>
-      </label>
       <label class="check-row" style="margin-bottom:14px">
-        <input type="checkbox" id="quoteTotalToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128176; 렌탈 기간 중 총 납입금액 표시</span>
+        <input type="checkbox" id="quoteSalespersonToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128100; 담당자정보 섹션 포함</span>
       </label>
     </div>
     <div id="storyFormatOpts" style="display:none;margin-bottom:14px">
@@ -423,6 +431,7 @@ var searchTargetIdx = null; // null=신규 추가, 숫자=해당 카트 인덱�
 
 var SUNAP2 = {};   // 서버에서 로드
 var TASAB_COND = {}; // 타사보상 약정별 조건
+var MEMBERSHIP_CASH = {}; // 일시불 멤버십 요금 (제품군/기능구조/관리주기별)
 var HANVAL_PERIODS = [0, 2, 4, 6, 12, 18, 24];
 
 function fixModalHeight() {
@@ -433,7 +442,7 @@ window.addEventListener('orientationchange', function(){ setTimeout(fixModalHeig
 setTimeout(fixModalHeight, 100);
 
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
-fetch(GAS_URL + '?action=getData', {method:'GET', mode:'cors', redirect:'follow'})
+fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', redirect:'follow', cache:'no-store'})
   .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(function(resp) {
     var rows = resp.products || resp; // 하위 호환: 구 버전은 배열 직접
@@ -448,6 +457,7 @@ fetch(GAS_URL + '?action=getData', {method:'GET', mode:'cors', redirect:'follow'
     if (cond.sunap2) SUNAP2 = cond.sunap2;
     if (cond.tasab)  TASAB_COND = cond.tasab;
     if (cond.korasol) KORASOL = cond.korasol;
+    if (cond.membershipCash) MEMBERSHIP_CASH = cond.membershipCash;
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('quoteBasketBar').style.display = 'none';
@@ -502,6 +512,64 @@ function getTrueTotal(item,c) {
     return c.sunap.amt+hm*Math.min(bm,c.months)+am*Math.max(0,c.months-bm);
   }
   return c.total;
+}
+
+// ── 일시불 멤버십 비용 (일시불 구매 1년 이후부터 멤버십 가입 필요) ──
+function _apArea(model) {
+  var m = /^[A-Z]+-?(\d{2})/.exec(String(model||'').toUpperCase());
+  return m ? parseInt(m[1], 10) : null;
+}
+function _apTierGeneral(area) {
+  if (area == null) return null;
+  if (area <= 10) return '일반 5~10평';
+  if (area <= 29) return '일반 11~29평';
+  return '일반 30평 이상';
+}
+function _apTierComplex(area) {
+  if (area == null) return null;
+  return area <= 10 ? '복합(가습/제습) 10평이하' : '복합(가습/제습) 10평초과';
+}
+function _memCycleKey(item) {
+  if (isSelfMgmt(item.관리방법)) return '자가관리';
+  var j = item.관리주기;
+  if (j === '2개월' || j === '4개월' || j === '6개월') return j;
+  return null;
+}
+// 카트 품목 1개의 월 멤버십 요금 (해당 없는 제품군/주기는 0)
+function getMembershipFee(item) {
+  if (!MEMBERSHIP_CASH) return 0;
+  var cat, feat;
+  if (item.s === '정수기') {
+    cat = '정수기';
+    if (item.분류 === '얼음') feat = '얼음/탄산/이온/커피';
+    else if (item.분류 === '냉온정') feat = '냉정/온정/냉온정';
+    else if (item.분류 === '스탠드') feat = '냉온정/얼음 대용량';
+    else feat = '일반'; // 일반, 직수
+  } else if (item.s === '공기청정기') {
+    if (item.분류 === '제습') return 0; // 순수 제습기는 멤버십 비교 대상 아님
+    var area = _apArea(item.모델명);
+    if (area == null) return 0;
+    cat = '공기청정기';
+    feat = (item.분류 === '제습청정' || item.분류 === '가습청정') ? _apTierComplex(area) : _apTierGeneral(area);
+  } else if (item.s === '비데' || item.s === '연수기') {
+    cat = '비데/연수기'; feat = '-';
+  } else if (item.s === '의류청정기') {
+    cat = '의류청정기'; feat = '-';
+  } else {
+    return 0; // 그 외 제품군은 멤버십 비교 대상 아님
+  }
+  var bucket = MEMBERSHIP_CASH[cat] && MEMBERSHIP_CASH[cat][feat];
+  if (!bucket) return 0;
+  var ck = _memCycleKey(item);
+  if (!ck) return 0;
+  return bucket[ck] || 0;
+}
+// 약정기간 전체 동안의 멤버십 총비용 (1년차는 무상 포함, 2년차부터 약정 만료까지)
+function getMembershipTotal(item) {
+  var monthly = getMembershipFee(item);
+  if (!monthly) return 0;
+  var months = Math.max(0, (item.약정년 || 0) - 1) * 12;
+  return monthly * months;
 }
 
 function calcItem(item) {
@@ -1060,19 +1128,24 @@ function renderResultBox(item, idx, c, d, isSunap2) {
 
   if (item.일시불 > 0 && item.구매방법 !== 'cash') {
     var ilBase = item.일시불, ilDisc = Math.round(ilBase * 0.9), ilOn = item.ilsiblOn || false;
-    var ilComp = ilOn ? ilDisc : ilBase;
+    var memOn = item.memberCmpOn !== false;
+    var ilMembership = memOn ? getMembershipTotal(item) : 0;
+    var ilComp = (ilOn ? ilDisc : ilBase) + ilMembership;
     var rc, rl;
     if (c.sunap) { rc = getTrueTotal(item, c); rl = c.sunap.label + ' 총납입'; }
     else          { rc = c.total; rl = '렌탈 총납입'; }
     var diff = rc - ilComp;
     var cr2 = diff > 0 ? '일시불 유리 ' + won(diff) + ' 절감' : diff < 0 ? '렌탈/선납 유리 ' + won(-diff) + ' 절감' : '동일';
+    var hasMemData = getMembershipFee(item) > 0;
     h += '<div style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
       + '<span style="font-size:11px;font-weight:700;color:#64748b">일시불 비교</span>'
       + '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#2563eb;font-weight:700">'
       + '<input type="checkbox"' + (ilOn ? ' checked' : '') + ' onchange="setIlsibl(' + idx + ',this.checked)" style="accent-color:#2563eb">동시구매 10% 적용</label></div>'
+      + (hasMemData ? '<div style="display:flex;justify-content:flex-end;margin-bottom:4px"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#64748b;font-weight:700"><input type="checkbox"' + (memOn ? ' checked' : '') + ' onchange="setMemberCmp(' + idx + ',this.checked)" style="accent-color:#2563eb">멤버십 비용 포함</label></div>' : '')
       + '<div class="res-sub" style="color:#334155"><span>일시불 정가</span><span>' + won(ilBase) + '</span></div>'
       + (ilOn ? '<div class="res-sub" style="color:#2563eb;font-weight:700"><span>&#8627; 동시구매 (-10%)</span><span>' + won(ilDisc) + '</span></div>' : '')
+      + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + item.약정년 + '년차)</span><span>' + won(ilMembership) + '</span></div>' : '')
       + '<div class="res-sub" style="color:#64748b;font-size:11px"><span>비교 기준 (' + rl + ')</span><span>' + won(rc) + '</span></div>'
       + '<div class="res-sub" style="font-weight:700;font-size:11px"><span>&#8627; 비교 결과</span><span>' + cr2 + '</span></div></div>';
   }
@@ -1264,7 +1337,7 @@ function doUpdate(){
   document.getElementById('loadingScreen').style.display='flex';
   document.getElementById('app').style.display='none';
   fetch(GAS_URL+'?action=clearCache')
-    .then(function(){ return fetch(GAS_URL+'?action=getData',{method:'GET',mode:'cors',redirect:'follow'}); })
+    .then(function(){ return fetch(GAS_URL+'?action=getData&_ts='+Date.now(),{method:'GET',mode:'cors',redirect:'follow',cache:'no-store'}); })
     .then(function(r){ return r.json(); })
     .then(function(resp){
       var rows=resp.products||resp;
@@ -1278,6 +1351,7 @@ function doUpdate(){
       if(cond.sunap2) SUNAP2=cond.sunap2;
       if(cond.tasab) TASAB_COND=cond.tasab;
       if(cond.korasol) KORASOL=cond.korasol;
+      if(cond.membershipCash) MEMBERSHIP_CASH=cond.membershipCash;
       document.getElementById('loadingScreen').style.display='none';
       document.getElementById('app').style.display='block';
       renderCart();
@@ -1389,9 +1463,9 @@ function updateBasketTotalBar(){
   parts.push('합산 총액 <strong>'+won(t.totT)+'</strong>');
   var notes='';
   if(t.hasIlsiblCmp){
-    var cdiff=t.ilsiblCmpRental-t.ilsiblCmpBase;
+    var cdiff=t.ilsiblCmpRental-(t.ilsiblCmpBase+t.ilsiblCmpMembership);
     var cLabel=cdiff>0?'일시불이 '+won(cdiff)+' 더 저렴':cdiff<0?'렌탈이 '+won(-cdiff)+' 더 저렴':'동일';
-    notes+='<p style="font-size:10px;color:#4b5563;margin-top:4px">일시불가 합계 '+won(t.ilsiblCmpBase)+' (렌탈 총납입 대비 '+cLabel+')</p>';
+    notes+='<p style="font-size:10px;color:#4b5563;margin-top:4px">일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
   }
   var line='<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline">'+
     parts.map(function(p){return '<span style="font-size:11px;color:#166534">'+p+'</span>';}).join('<span style="color:#86EFAC">/</span>')
@@ -1556,6 +1630,7 @@ function setBmp(idx,v){cart[idx].별매품on=v;if(v&&!cart[idx].별매품cnt)car
 function setBmpCnt(idx,v){cart[idx].별매품cnt=Math.max(1,parseInt(v)||1);renderCart();}
 function setHeadType(idx,v){cart[idx].headType=v;renderCart();}
 function setIlsibl(idx,v){cart[idx].ilsiblOn=v;renderCart();}
+function setMemberCmp(idx,v){cart[idx].memberCmpOn=v;renderCart();}
 function setS2Grade(idx,g){cart[idx].s2=Object.assign({},cart[idx].s2,{grade:g,oi:0});renderCart();}
 function setS2Oi(idx,i){cart[idx].s2=Object.assign({},cart[idx].s2,{oi:parseInt(i)});renderCart();}
 function setS2Val(idx,k,v){var s2=Object.assign({},cart[idx].s2);s2[k]=v;cart[idx].s2=s2;renderCart();}
@@ -1621,7 +1696,7 @@ function calcTotals(items){
   items=items||cart;
   var totM=0,totT=0,sn36=0,sn24=0,sn60=0,sn2=0;
   var korNabTotal=0,korPbkTotal=0,korRefundTotal=0;
-  var ilsiblCmpBase=0,ilsiblCmpRental=0,hasIlsiblCmp=false;
+  var ilsiblCmpBase=0,ilsiblCmpRental=0,ilsiblCmpMembership=0,hasIlsiblCmp=false;
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),st=it.선납||'none';
     var ki=itemKorCalc(it,c);
@@ -1644,6 +1719,7 @@ function calcTotals(items){
     if (it.구매방법!=='cash' && it.일시불>0){
       hasIlsiblCmp=true;
       ilsiblCmpBase+=it.일시불;
+      if (it.memberCmpOn!==false) ilsiblCmpMembership+=getMembershipTotal(it);
       ilsiblCmpRental+=itemTrueTotal;
     }
   });
@@ -1682,7 +1758,7 @@ function calcTotals(items){
   return {totM:totM,totT:totT,sn36:sn36,sn24:sn24,sn60:sn60,sn2:sn2,
           korNabTotal:korNabTotal,korPbkTotal:korPbkTotal,korRefundTotal:korRefundTotal,
           totIlsibl:totIlsibl,totIlsiblDisc:totIlsiblDisc,agg:agg,
-          hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpRental:ilsiblCmpRental};
+          hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpMembership:ilsiblCmpMembership,ilsiblCmpRental:ilsiblCmpRental};
 }
 
 function updateTotalBar(){
@@ -1701,9 +1777,9 @@ function updateTotalBar(){
 
   var notes='';
   if (t.hasIlsiblCmp){
-    var cdiff=t.ilsiblCmpRental-t.ilsiblCmpBase;
+    var cdiff=t.ilsiblCmpRental-(t.ilsiblCmpBase+t.ilsiblCmpMembership);
     var cLabel=cdiff>0?'일시불이 '+won(cdiff)+' 더 저렴':cdiff<0?'렌탈이 '+won(-cdiff)+' 더 저렴':'동일';
-    notes+='<p class="snote">일시불가 합계 '+won(t.ilsiblCmpBase)+' (렌탈 총납입 대비 '+cLabel+')</p>';
+    notes+='<p class="snote">일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
   }
   if (t.sn36>0) notes+='<p class="snote">36선납 '+t.sn36+'개 — 36개월간 청구 없음</p>';
   if (t.sn24>0) notes+='<p class="snote">24선납 '+t.sn24+'개 — 24개월간 청구 없음</p>';
@@ -2124,10 +2200,12 @@ function generateQuoteAssets(items,customer,salesperson,today,cb){
     } else {
       var opts={
         showIlsibl: !!(document.getElementById('quoteIlsiblToggle')&&document.getElementById('quoteIlsiblToggle').checked),
+        showMembership: !!(document.getElementById('quoteMemberToggle')&&document.getElementById('quoteMemberToggle').checked),
         showContract: !!(document.getElementById('quoteContractToggle')&&document.getElementById('quoteContractToggle').checked),
         showNotes: !!(document.getElementById('quoteNotesToggle')&&document.getElementById('quoteNotesToggle').checked),
         showSalesperson: !!(document.getElementById('quoteSalespersonToggle')&&document.getElementById('quoteSalespersonToggle').checked),
         showTotalPayment: !!(document.getElementById('quoteTotalToggle')&&document.getElementById('quoteTotalToggle').checked),
+        showSaving: !!(document.getElementById('quoteSavingToggle')&&document.getElementById('quoteSavingToggle').checked),
         salespersonPhone: phone
       };
       innerHtml=buildQuoteHTML(items,customer,salesperson,today,opts);
@@ -2294,14 +2372,14 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totTrue=_rd.totTrue;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
   var quoteNo='Q-'+now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate())+'-'+p2(now.getHours())+p2(now.getMinutes());
 
   // ── 일시불 비교 ──
-  var ilT={base:0,disc:0,rental:0,cnt:0,hasDisc:false};
+  var ilT={base:0,disc:0,rental:0,cnt:0,hasDisc:false,membership:0};
   if(opts.showIlsibl){
     cart.forEach(function(item){
       if(item.일시불>0){
@@ -2309,6 +2387,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
         ilT.base+=item.일시불;
         if(item.ilsiblOn){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
         else{ilT.disc+=item.일시불;}
+        if (opts.showMembership && item.memberCmpOn!==false) ilT.membership+=getMembershipTotal(item);
         ilT.rental+=getTrueTotal(item,ic);
         ilT.cnt++;
       }
@@ -2338,24 +2417,34 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='<div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">307-81-06054 &middot; 코웨이 주식회사 &middot; 대표자 서장원</div>';
   h+='</div></div>';
 
+  // 완전 동일 품목(옵션까지 동일)은 표시상 하나로 묶고 수량 컬럼으로 표기 (합계 계산에는 영향 없음)
+  var dispRows=[]; var _sigIdx={};
+  rows.forEach(function(r){
+    var sig=JSON.stringify(r.item,function(k,v){return(k==='id'||k==='_open')?undefined:v;});
+    if(_sigIdx.hasOwnProperty(sig)){ dispRows[_sigIdx[sig]].qty++; }
+    else{ _sigIdx[sig]=dispRows.length; dispRows.push(Object.assign({},r,{qty:1})); }
+  });
+
   // [3] 제품 테이블 (모델명 아래에 계약상세 바로 표기)
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
   h+='<tr style="background:'+HEADBG+'">';
   h+='<th style="padding:9px 8px 9px 16px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';width:30px">No</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:left">품목</th>';
+  h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:center;width:40px">수량</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">정상가</th>';
   h+='<th style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
   h+='</tr>';
-  rows.forEach(function(r,idx){
+  dispRows.forEach(function(r,idx){
     h+='<tr>';
     h+='<td style="padding:9px 8px 9px 16px;border-bottom:1px solid '+LINE+';text-align:center;color:'+SUB+'">'+(idx+1)+'</td>';
-    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+'"><div style="font-weight:500">'+esc(r.name)+'</div>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+'"><div style="font-weight:500">'+esc(r.name)+(r.discBadge?' <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+HEADBG+';color:'+INK+';border:1px solid '+LINE+';margin-left:4px;display:inline-block;vertical-align:middle">'+esc(r.discBadge)+'</span>':'')+'</div>';
     if(opts.showContract){
       h+='<div style="font-size:11px;color:'+MUTE+';margin-top:2px">'+esc(r.model)+(r.bg.length?' &middot; '+r.bg.map(esc).join(' &middot; '):'')+'</div>';
     } else {
       h+='<div style="font-size:11px;color:'+MUTE+'">'+esc(r.model)+'</div>';
     }
     h+='</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:center;font-weight:600">'+r.qty+'</td>';
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through">'+wM(r.lp)+'</td>';
     h+='<td style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+wM(r.dp)+'</td>';
     h+='</tr>';
@@ -2366,13 +2455,14 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   var sumItems=[{label:'월 합계',val:wW(totM)}];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
-  if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue)});
+  if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
   h+='<div style="flex:1;display:flex">';
   sumItems.forEach(function(si,i){
     h+='<div style="flex:1;padding:10px 14px;'+(i>0?'border-left:1px solid '+LINE+';':'')+'">';
     h+='<div style="font-size:10.5px;color:'+MUTE+';margin-bottom:3px">'+si.label+'</div>';
     h+='<div style="font-size:13px;font-weight:600">'+si.val+'</div>';
+    if(si.sub) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:2px">'+si.sub+'</div>';
     h+='</div>';
   });
   h+='</div>';
@@ -2383,12 +2473,14 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // [4-b] 일시불 비교
   if(opts.showIlsibl && ilT.cnt>0){
-    var ilDiff=ilT.rental-ilT.disc;
+    var ilTotal=ilT.disc+ilT.membership;
+    var ilDiff=ilT.rental-ilTotal;
     var ilRes=ilDiff>0?'일시불 유리 · '+wW(ilDiff)+' 절감':ilDiff<0?'렌탈/선납 유리 · '+wW(-ilDiff)+' 절감':'동일';
     h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">일시불 비교</div>';
     h+='<div style="border-top:1px solid '+LINE+';padding:12px 20px;font-size:12px">';
     h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">일시불 정가 합계</span><span>'+wW(ilT.base)+'</span></div>';
     if(ilT.hasDisc){ h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>동시구매 -10% 적용</span><span>'+wW(ilT.disc)+'</span></div>'; }
+    if(ilT.membership>0){ h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">&#8627; 2년차부터 멤버십 비용 (약정기간 동안)</span><span>'+wW(ilT.membership)+'</span></div>'; }
     h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">비교 기준 (렌탈/선납 총납입)</span><span>'+wW(ilT.rental)+'</span></div>';
     h+='<div style="border-top:1px solid '+LINE+';margin:5px 0"></div>';
     h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>비교 결과</span><span>'+ilRes+'</span></div>';

@@ -335,8 +335,11 @@ input:focus,select:focus { border-color:#2563eb; }
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteNotesToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128221; 추가정보 섹션 포함</span>
       </label>
-      <label class="check-row" style="margin-bottom:14px">
+      <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteSalespersonToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128100; 담당자정보 섹션 포함</span>
+      </label>
+      <label class="check-row" style="margin-bottom:14px">
+        <input type="checkbox" id="quoteTotalToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128176; 렌탈 기간 중 총 납입금액 표시</span>
       </label>
     </div>
     <div id="storyFormatOpts" style="display:none;margin-bottom:14px">
@@ -2124,6 +2127,7 @@ function generateQuoteAssets(items,customer,salesperson,today,cb){
         showContract: !!(document.getElementById('quoteContractToggle')&&document.getElementById('quoteContractToggle').checked),
         showNotes: !!(document.getElementById('quoteNotesToggle')&&document.getElementById('quoteNotesToggle').checked),
         showSalesperson: !!(document.getElementById('quoteSalespersonToggle')&&document.getElementById('quoteSalespersonToggle').checked),
+        showTotalPayment: !!(document.getElementById('quoteTotalToggle')&&document.getElementById('quoteTotalToggle').checked),
         salespersonPhone: phone
       };
       innerHtml=buildQuoteHTML(items,customer,salesperson,today,opts);
@@ -2268,13 +2272,15 @@ function computeQuoteRows(cart){
     var totalSaving=isCash?perSaving:perSaving*c.months;
     var hasDiscount=perSaving>0; // 정상가보다 실제 납입액이 낮으면(프로모션가만 적용된 경우 포함) 절감 표시
     discLabel=discBadge; // 뱃지에 표시할 텍스트 (결합/동시구매/타사보상/코라솔 등 명명된 할인이 있을 때만 채워짐)
-    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
+    var trueTotal=isCash?dp:getTrueTotal(item,c);
+    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
   });
   var totM=rows.reduce(function(s,r){return s+r.dp;},0);
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
+  var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totPay:totPay,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2288,7 +2294,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totTrue=_rd.totTrue;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2356,14 +2362,24 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   });
   h+='</table>';
 
-  // [4] 합계
-  h+='<div style="display:flex;justify-content:flex-end;border-top:2px solid '+LINED+'">';
-  h+='<table style="font-size:13px;width:280px;border-collapse:collapse">';
-  h+='<tr><td style="padding:7px 6px;color:'+SUB+'">월 합계</td><td style="padding:7px 6px;text-align:right">'+wW(totM)+'</td></tr>';
-  if(totSn>0){ h+='<tr><td style="padding:7px 6px;color:'+SUB+'">선납금</td><td style="padding:7px 6px;text-align:right">'+wW(totSn)+'</td></tr>'; }
-  h+='<tr><td style="padding:7px 6px;color:'+SUB+'">등록비 &middot; 설치비</td><td style="padding:7px 6px;text-align:right">면제</td></tr>';
-  h+='<tr style="background:'+HEADBG+'"><td style="padding:9px 6px;font-weight:700;border-top:1px solid '+LINED+'">합계금액</td><td style="padding:9px 6px;text-align:right;font-weight:700;font-size:15px;border-top:1px solid '+LINED+'">'+wM(totM)+'</td></tr>';
-  h+='</table></div>';
+  // [4] 합계 (가로 배치)
+  var sumItems=[{label:'월 합계',val:wW(totM)}];
+  if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
+  sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
+  if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue)});
+  h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
+  h+='<div style="flex:1;display:flex">';
+  sumItems.forEach(function(si,i){
+    h+='<div style="flex:1;padding:10px 14px;'+(i>0?'border-left:1px solid '+LINE+';':'')+'">';
+    h+='<div style="font-size:10.5px;color:'+MUTE+';margin-bottom:3px">'+si.label+'</div>';
+    h+='<div style="font-size:13px;font-weight:600">'+si.val+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
+  h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">합계금액</div>';
+  h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
+  h+='</div></div>';
 
   // [4-b] 일시불 비교
   if(opts.showIlsibl && ilT.cnt>0){

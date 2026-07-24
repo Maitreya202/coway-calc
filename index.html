@@ -1794,10 +1794,14 @@ document.addEventListener('change',function(e){
 });
 
 
+function _fnameDate(){
+  var d=new Date();
+  return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+}
 function doSave(el,btnId,filename){
   var btn=document.getElementById(btnId);
   var customer=document.getElementById('customer').value;
-  var fname=filename+(customer?'_'+customer:'')+'.png';
+  var fname=filename+(customer?'_'+customer:'')+'_'+_fnameDate()+'.png';
   var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
   btn.disabled=true;btn.textContent='저장 중...';
@@ -1978,7 +1982,7 @@ function _sendEmailAction(){
   sendBtn.textContent='전송 중...';
   document.getElementById('emailStatus').textContent='';
 
-  var fname='코웨이견적서'+(_qCust?'_'+_qCust:'')+'.pdf';
+  var fname='코웨이견적서'+(_qCust?'_'+_qCust:'')+'_'+_fnameDate()+'.pdf';
 
   function doSend(base64Pdf){
     fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'sendEmail', data:dataUrl.split(',')[1], fname:fname, to:toEmail, cust:_qCust, sales:_qSalesperson, salesEmail:_qSalespersonEmail})})
@@ -2036,7 +2040,7 @@ function downloadQuotePDF(){
     ensureAssetsLoaded(function(){
       setTimeout(function(){
         var doc=canvasToPdf(_qCanvas,_qBreaks);
-        var fname='코웨이견적서'+(_qCust?'_'+_qCust:'')+'.pdf';
+        var fname='코웨이견적서'+(_qCust?'_'+_qCust:'')+'_'+_fnameDate()+'.pdf';
         doc.save(fname);
         btn.disabled=false; btn.textContent='\uD83D\uDCBE PDF 저장';
       },30);

@@ -394,8 +394,15 @@ setTimeout(fixModalHeight, 100);
 
 // GAS_URL은 배포 후 실제 URL로 교체
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
-fetch(GAS_URL + '?action=getData')
-  .then(function(r){ return r.json(); })
+fetch(GAS_URL + '?action=getData', {
+    method: 'GET',
+    mode: 'cors',
+    redirect: 'follow'
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
   .then(function(resp) {
     var rows = resp.products || resp; // 하위 호환: 구 버전은 배열 직접
     PRODUCTS = rows.map(function(r) {

@@ -336,7 +336,7 @@ input:focus,select:focus { border-color:#2563eb; }
         <input type="checkbox" id="quoteNotesToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128221; 추가정보 섹션 포함</span>
       </label>
       <label class="check-row" style="margin-bottom:14px">
-        <input type="checkbox" id="quoteSalespersonToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128100; 판매인정보 섹션 포함</span>
+        <input type="checkbox" id="quoteSalespersonToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128100; 담당자정보 섹션 포함</span>
       </label>
     </div>
     <div id="storyFormatOpts" style="display:none;margin-bottom:14px">
@@ -2391,9 +2391,9 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     h+='</div>';
   }
 
-  // [7] 판매인 정보 (옵션)
+  // [7] 담당자 정보 (옵션)
   if(opts.showSalesperson){
-    h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">판매인 정보</div>';
+    h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">담당자 정보</div>';
     h+='<div style="border-top:1px solid '+LINE+';padding:12px 20px">';
     h+='<div style="font-size:12px;color:'+SUB+'">판매처  코웨이갤러리 원주점</div>';
     h+='<div style="font-size:13px;font-weight:700;margin-top:4px">담당자  '+(salesperson?esc(salesperson):'—')+(opts.salespersonPhone?'  <span style="font-weight:400;color:'+SUB+'">'+esc(opts.salespersonPhone)+'</span>':'')+'</div>';

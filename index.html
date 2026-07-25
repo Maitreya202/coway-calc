@@ -876,7 +876,6 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
     if (item.isRerental && item.재렌탈1년on) tags.push('1년 -20%');
     else if (!item.isRerental && d.반값) tags.push('반값' + (item.반값개월 ? ' ' + item.반값개월 + '개월' : ''));
   }
-  if (isSunap2 && c.sunap) tags.push('선납2');
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
   if (korCnt > 0) tags.push('코라솔 ' + korCnt + '건');
   if (isCashMode && item.일시불할인 !== 'none') tags.push({none:'',10:'-10%',15:'-15%','1010':'-19%'}[item.일시불할인]||'');

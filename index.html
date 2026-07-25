@@ -1059,10 +1059,12 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       h += renderS2UI(item, idx);
     }
   }
-  h += '<span class="sec-label" style="margin-top:12px">선납 설정</span>';
+  var hasActiveKor = item.kors && item.kors.some(function(k){return k.on;});
+  h += '<span class="sec-label" style="margin-top:12px">선납 설정' + (hasActiveKor ? ' <span style="font-weight:400;color:#94a3b8;font-size:11px">(코라솔 결합 중엔 일반 선납 선택 불가)</span>' : '') + '</span>';
   h += '<select onchange="setSunap(' + idx + ',this.value)" style="margin-bottom:8px">';
   [['none', '없음'], ['36', '36선납 (36개월치 일시납, 10% 할인)'], ['24', '24선납 (24개월치 일시납, 8% 할인)'], ['60', '60선납 (36개월 10%↓ + 24개월 8%↓)']].forEach(function(s) {
-    h += '<option value="' + s[0] + '"' + (item.선납 === s[0] ? ' selected' : '') + '>' + s[1] + '</option>';
+    var blocked = hasActiveKor && s[0] !== 'none';
+    h += '<option value="' + s[0] + '"' + (item.선납 === s[0] ? ' selected' : '') + (blocked ? ' disabled' : '') + '>' + s[1] + (blocked ? ' (코라솔 결합 중 불가)' : '') + '</option>';
   });
   // 반값 (할인 패널 내 통합)
   if (!isSunap2) {
@@ -1803,12 +1805,17 @@ function updateTotalBar(){
 function renderKorItem(item,idx){
   var kors=item.kors||[];
   var c=calcItem(item),ki=itemKorCalc(item,c);
-  var html='<div class="kor-item"><div class="kor-item-hdr"><span class="kor-label">&#128309; 코웨이라이프솔루션 연동</span><button onclick="korAddRow('+idx+')" style="background:#0ea5e9;color:white;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button></div>';
+  var isPlainSunap = item.선납==='36'||item.선납==='24'||item.선납==='60';
+  var addBtn = isPlainSunap
+    ? '<button disabled title="일반 선납(36/24/60) 적용 중에는 코라솔을 추가할 수 없습니다" style="background:#cbd5e1;color:#64748b;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:not-allowed;font-family:inherit">+ 추가</button>'
+    : '<button onclick="korAddRow('+idx+')" style="background:#0ea5e9;color:white;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button>';
+  var html='<div class="kor-item"><div class="kor-item-hdr"><span class="kor-label">&#128309; 코웨이라이프솔루션 연동</span>'+addBtn+'</div>';
+  if (isPlainSunap) html+='<p style="font-size:11px;color:#94a3b8;margin-top:4px">일반 선납(36/24/60) 적용 중에는 코라솔과 결합할 수 없습니다</p>';
   if (kors.length>0){
     kors.forEach(function(kor,ki2){
       var k=KORASOL[kor.prod]||KORASOL['499'];
       html+='<div style="background:white;border-radius:8px;padding:8px 10px;margin-top:8px;border:1.5px solid '+(kor.on?'#0ea5e9':'#e2e8f0')+'">';
-      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><label class="kor-tgl"><input type="checkbox" data-ki="'+idx+'" data-ki2="'+ki2+'" data-kf="on"'+(kor.on?' checked':'')+' ><span class="kor-sl"></span></label><span style="font-size:11px;font-weight:700;color:#0369a1;flex:1;margin-left:8px">'+k.name+(kor.on?'':' (비활성)')+'</span><button onclick="korRemoveRow('+idx+','+ki2+')" style="background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:2px 4px">&#10005;</button></div>';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><label class="kor-tgl"><input type="checkbox" data-ki="'+idx+'" data-ki2="'+ki2+'" data-kf="on"'+(kor.on?' checked':'')+(isPlainSunap?' disabled title="일반 선납(36/24/60) 적용 중에는 켤 수 없습니다"':'')+' ><span class="kor-sl"></span></label><span style="font-size:11px;font-weight:700;color:#0369a1;flex:1;margin-left:8px">'+k.name+(kor.on?'':' (비활성)')+'</span><button onclick="korRemoveRow('+idx+','+ki2+')" style="background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:2px 4px">&#10005;</button></div>';
       if (kor.on){
         html+='<div class="kor-fields"><div class="kor-fw"><p>코라솔 상품</p><select data-ki="'+idx+'" data-ki2="'+ki2+'" data-kf="prod">'+Object.keys(KORASOL).map(function(key){return '<option value="'+key+'"'+(kor.prod===key?' selected':'')+'>'+KORASOL[key].name+'</option>';}).join('')+'</select></div><div class="kor-fw"><p>지원 기간</p><select data-ki="'+idx+'" data-ki2="'+ki2+'" data-kf="si">'+k.지원.map(function(s,i){return '<option value="'+i+'"'+(kor.si===i?' selected':'')+'>'+s.months+'개월</option>';}).join('')+'</select></div><div class="kor-fw"><p>구좌 수</p><input type="number" min="1" value="'+(kor.cnt||1)+'" data-ki="'+idx+'" data-ki2="'+ki2+'" data-kf="cnt"></div></div>';
       }
@@ -2294,6 +2301,7 @@ function computeQuoteRows(cart){
     var c=calcItem(item),ki=itemKorCalc(item,c),ml=getMgmtLabel(item);
     var isCash=item.구매방법==='cash';
     var lp=item.정상가,dp=isCash?(c.cashFinal||0):c.monthly,sn=(c.sunap&&c.sunap.amt)?c.sunap.amt:0;
+    var snPreM=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.인하후)?((c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly):0;
     if(!isCash){
       if(ki){dp=ki.isHanval?ki.halfRenM:ki.renM;}
       else if(c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){dp=c.normalMonthly;}
@@ -2309,8 +2317,7 @@ function computeQuoteRows(cart){
       if(item.tasabosangOn)bg[0]+=' / 타사보상';
       if(c.isHanval&&c.hvMonths>0){bg[0]+= c.hvMonths<c.months ? (' / 반값 '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / 반값 '+c.hvMonths+'개월');}
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
-      if(item.선납&&item.선납!=='none'){bg[0]+= item.선납==='선납2' ? ' / 선납2 적용' : ' / '+item.선납+'개월 선납';}
-      if(sn>0)bg.push('선납금: '+sn.toLocaleString('ko-KR')+'원');
+      if(item.선납&&item.선납!=='none'&&item.선납!=='선납2'){bg[0]+=' / '+item.선납+'개월 선납';}
       if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
     }
     var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupCap,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0),pbkTotal:ki.pbkTotal}:null;
@@ -2331,10 +2338,11 @@ function computeQuoteRows(cart){
     discLabel=discBadge; // 뱃지에 표시할 텍스트 (결합/동시구매/타사보상/코라솔 등 명명된 할인이 있을 때만 채워짐)
     var trueTotal=isCash?dp:(ki?ki.renTotal:getTrueTotal(item,c));
     var korM=ki?ki.totalNabM:0;
-    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
+    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
   });
   var totM=rows.reduce(function(s,r){return s+r.dp;},0);
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
+  var totSnPreM=rows.reduce(function(s,r){return s+r.snPreM;},0);
   var totKor=rows.reduce(function(s,r){return s+r.korM;},0);
   var totKorSup=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supM:0);},0);
   var totKorSupTotal=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supTotal:0);},0);
@@ -2345,7 +2353,7 @@ function computeQuoteRows(cart){
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totSnPreM:totSnPreM,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2359,7 +2367,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totSnPreM=_rd.totSnPreM, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2442,7 +2450,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   // [4] 합계 (가로 배치)
   var totMKor=totM+totKor;
   var sumItems=[];
-  if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
+  if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn),sub:totSnPreM>0?('선납 적용전 '+wW(totSnPreM)+'/월'):''});
   if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
   if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:'<span style="white-space:nowrap">'+wW(totKorSup)+'/월</span><br><span style="white-space:nowrap;font-size:10.5px;font-weight:600">'+wW(totKorSupTotal)+'/총합</span>',sub:'결합전 렌탈료 '+wW(totKorEffM)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});

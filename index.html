@@ -1689,7 +1689,8 @@ function itemKorCalc(item,c){
     hvInSup:c.isHanval?Math.min(c.hvMonths,supMo):0,
     normalInSup:c.isHanval?supMo-Math.min(c.hvMonths,supMo):supMo,
     halfRenM:halfRenM,normalRenM:normalRenM,
-    halfMonthly:c.halfMonthly||0,normalMonthly:c.normalMonthly||0,pbkLines:pbkLines
+    halfMonthly:c.halfMonthly||0,normalMonthly:c.normalMonthly||0,pbkLines:pbkLines,
+    totalSupCap:totalSupCap
   };
 }
 
@@ -2302,7 +2303,7 @@ function computeQuoteRows(cart){
       if(sn>0)bg.push('선납금: '+sn.toLocaleString('ko-KR')+'원');
       if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
     }
-    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupM*Math.min(ki.maxSupMonths,c.months),renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
+    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupCap,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
     var discLabel, discBadge;
     if(isCash){
       discBadge=c.discLabel||'';
@@ -2473,6 +2474,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
       '※ 위 금액은 VAT 포함 금액입니다.',
       '※ 고객님 보유 제품에 따라 결합·재렌탈 프로모션 이용이 가능하며, 해당 사항은 실제 주문 시 최종 확인 가능합니다.',
       '※ 설치일은 주문 진행 시 배정 진행하여 드립니다.'];
+    if(totKor>0) notes.push('※ 코라솔 결합 할인은 매월 균등하게 적용되며, 마지막 달에 총 지원금에 맞춰 할인액이 조정됩니다.');
     h+='<div style="border-top:1px solid '+LINE+';padding:10px 20px">';
     notes.forEach(function(n){ h+='<div style="font-size:10.5px;color:'+SUB+';padding:3px 0">'+esc(n)+'</div>'; });
     h+='</div>';

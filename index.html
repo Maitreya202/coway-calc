@@ -1651,13 +1651,13 @@ function itemKorCalc(item,c){
   var activeKors=kors.filter(function(k){return k.on;});
   if (activeKors.length===0) return null;
   var effM=getEffM(item,c);
-  var totalSupM=0,totalNabM=0,totalNabTotal=0,totalRefund=0,maxSupMonths=0;
+  var totalSupM=0,totalSupCap=0,totalNabM=0,totalNabTotal=0,totalRefund=0,maxSupMonths=0;
   var lines=[],pbkLines=[];
   activeKors.forEach(function(kor){
     var k=KORASOL[kor.prod];if(!k)return;
     var sup=k.지원[kor.si]||k.지원[0];
     var cnt=kor.cnt||1;
-    totalSupM+=sup.monthly*cnt;totalNabM+=k.납부금*cnt;
+    totalSupM+=sup.monthly*cnt;totalSupCap+=(sup.total||sup.monthly*sup.months)*cnt;totalNabM+=k.납부금*cnt;
     totalNabTotal+=(k.납부금*cnt)*k.납부회차;totalRefund+=k.만기환급금*cnt;
     if (sup.months>maxSupMonths) maxSupMonths=sup.months;
     lines.push({k:k,sup:sup,cnt:cnt,supM:sup.monthly*cnt,nabM:k.납부금*cnt,nabTotal:(k.납부금*cnt)*k.납부회차,refund:k.만기환급금*cnt,prod:kor.prod});
@@ -2300,8 +2300,9 @@ function computeQuoteRows(cart){
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
       if(item.선납&&item.선납!=='none'){bg[0]+= item.선납==='선납2' ? ' / 선납2 적용' : ' / '+item.선납+'개월 선납';}
       if(sn>0)bg.push('선납금: '+sn.toLocaleString('ko-KR')+'원');
+      if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
     }
-    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
+    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupM*Math.min(ki.maxSupMonths,c.months),renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
     var discLabel, discBadge;
     if(isCash){
       discBadge=c.discLabel||'';
@@ -2325,13 +2326,14 @@ function computeQuoteRows(cart){
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
   var totKor=rows.reduce(function(s,r){return s+r.korM;},0);
   var totKorSup=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supM:0);},0);
+  var totKorSupTotal=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supTotal:0);},0);
   var totKorEffM=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.effM:0);},0);
   var totKorRefund=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.refund:0);},0);
   var totKorCnt=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.cnt:0);},0);
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2345,7 +2347,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2429,17 +2431,17 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   var totMKor=totM+totKor;
   var sumItems=[];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
-  if(totKor>0) sumItems.push({label:'코라솔 납부금'+(totKorCnt>1?' &times;'+totKorCnt:''),val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
-  if(totKorSup>0) sumItems.push({label:'렌탈료 코라솔 지원 할인',val:wW(totKorSup),sub:'정상 렌탈료 '+wW(totKorEffM)});
+  if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
+  if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:wW(totKorSup)+'/월 &middot; '+wW(totKorSupTotal)+'/총합',sub:'결합전 렌탈료 '+wW(totKorEffM)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
   h+='<div style="flex:1;display:flex">';
   sumItems.forEach(function(si,i){
-    h+='<div style="flex:1;padding:10px 14px;'+(i>0?'border-left:1px solid '+LINE+';':'')+'">';
-    h+='<div style="font-size:10.5px;color:'+MUTE+';margin-bottom:3px">'+si.label+'</div>';
-    h+='<div style="font-size:13px;font-weight:600">'+si.val+'</div>';
-    if(si.sub) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:2px">'+si.sub+'</div>';
+    h+='<div style="flex:1;min-width:0;padding:9px 10px;'+(i>0?'border-left:1px solid '+LINE+';':'')+'">';
+    h+='<div style="font-size:10px;color:'+MUTE+';margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+si.label+'</div>';
+    h+='<div style="font-size:12.5px;font-weight:600;line-height:1.35">'+si.val+'</div>';
+    if(si.sub) h+='<div style="font-size:9px;color:#15803D;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+si.sub+'</div>';
     h+='</div>';
   });
   h+='</div>';

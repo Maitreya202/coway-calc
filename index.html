@@ -1131,7 +1131,9 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     var ilMembership = memOn ? getMembershipTotal(item) : 0;
     var ilComp = (ilOn ? ilDisc : ilBase) + ilMembership;
     var rc, rl;
-    if (c.sunap) { rc = getTrueTotal(item, c); rl = c.sunap.label + ' 총납입'; }
+    var rki = itemKorCalc(item, c);
+    if (rki) { rc = rki.renTotal; rl = '코라솔 반영 렌탈 총납입'; }
+    else if (c.sunap) { rc = getTrueTotal(item, c); rl = c.sunap.label + ' 총납입'; }
     else          { rc = c.total; rl = '렌탈 총납입'; }
     var diff = rc - ilComp;
     var cr2 = diff > 0 ? '일시불 유리 ' + won(diff) + ' 절감' : diff < 0 ? '렌탈/선납 유리 ' + won(-diff) + ' 절감' : '동일';
@@ -2298,8 +2300,8 @@ function computeQuoteRows(cart){
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
       if(item.선납&&item.선납!=='none'){bg[0]+= item.선납==='선납2' ? ' / 선납2 적용' : ' / '+item.선납+'개월 선납';}
       if(sn>0)bg.push('선납금: '+sn.toLocaleString('ko-KR')+'원');
-      if(ki){var k2='코라솔 '+ki.totalNabM.toLocaleString('ko-KR')+'원/월'; if(ki.refund>0)k2+=' / 만기환급: '+ki.refund.toLocaleString('ko-KR')+'원'; bg.push(k2);}
     }
+    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
     var discLabel, discBadge;
     if(isCash){
       discBadge=c.discLabel||'';
@@ -2315,15 +2317,21 @@ function computeQuoteRows(cart){
     var totalSaving=isCash?perSaving:perSaving*c.months;
     var hasDiscount=perSaving>0; // 정상가보다 실제 납입액이 낮으면(프로모션가만 적용된 경우 포함) 절감 표시
     discLabel=discBadge; // 뱃지에 표시할 텍스트 (결합/동시구매/타사보상/코라솔 등 명명된 할인이 있을 때만 채워짐)
-    var trueTotal=isCash?dp:getTrueTotal(item,c);
-    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
+    var trueTotal=isCash?dp:(ki?ki.renTotal:getTrueTotal(item,c));
+    var korM=ki?ki.totalNabM:0;
+    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
   });
   var totM=rows.reduce(function(s,r){return s+r.dp;},0);
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
+  var totKor=rows.reduce(function(s,r){return s+r.korM;},0);
+  var totKorSup=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supM:0);},0);
+  var totKorEffM=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.effM:0);},0);
+  var totKorRefund=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.refund:0);},0);
+  var totKorCnt=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.cnt:0);},0);
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2337,7 +2345,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2349,11 +2357,12 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     cart.forEach(function(item){
       if(item.일시불>0){
         var ic=calcItem(item);
+        var iki=itemKorCalc(item,ic);
         ilT.base+=item.일시불;
         if(item.ilsiblOn){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
         else{ilT.disc+=item.일시불;}
         if (opts.showMembership && item.memberCmpOn!==false) ilT.membership+=getMembershipTotal(item);
-        ilT.rental+=getTrueTotal(item,ic);
+        ilT.rental+=iki?iki.renTotal:getTrueTotal(item,ic);
         ilT.cnt++;
       }
     });
@@ -2417,8 +2426,11 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='</table>';
 
   // [4] 합계 (가로 배치)
+  var totMKor=totM+totKor;
   var sumItems=[];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
+  if(totKor>0) sumItems.push({label:'코라솔 납부금'+(totKorCnt>1?' &times;'+totKorCnt:''),val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
+  if(totKorSup>0) sumItems.push({label:'렌탈료 코라솔 지원 할인',val:wW(totKorSup),sub:'정상 렌탈료 '+wW(totKorEffM)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
@@ -2433,7 +2445,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='</div>';
   h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
   h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">합계금액</div>';
-  h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
+  h+='<div style="font-size:16px;font-weight:700">'+wM(totMKor)+'</div>';
   h+='</div></div>';
 
   // [4-b] 일시불 비교
@@ -2503,7 +2515,7 @@ function buildStoryHTML(cart,customer,salesperson,today,opts){
   var SEC_PAD='14px 40px';
 
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totPay=_rd.totPay, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM+_rd.totKor, totPay=_rd.totPay, totSaving=_rd.totSaving;
   var custNameRaw=customer?esc(customer):'';
   var now=new Date();
   var installDate;

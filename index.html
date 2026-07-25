@@ -2417,7 +2417,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='</table>';
 
   // [4] 합계 (가로 배치)
-  var sumItems=[{label:'월 합계',val:wW(totM)}];
+  var sumItems=[];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});

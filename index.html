@@ -1831,8 +1831,9 @@ function renderKorItem(item,idx){
         html+='<div class="kor-cr main"><span>렌탈 실납입 (지원기간)</span><span>'+won(ki.renM)+'/월</span></div>';
       }
       if (ki.pbkTotal>0){
-        if (ki.pbkLines&&ki.pbkLines.length>0) ki.pbkLines.forEach(function(pl){html+='<div class="kor-cr" style="color:#16a34a;font-weight:700"><span>&#8627; 페이백 ('+pl.label+') 61개월차</span><span style="color:#16a34a">-'+won(pl.amt*pl.months)+'</span></div>';});
-        else html+='<div class="kor-cr" style="color:#16a34a;font-weight:700"><span>&#8627; 페이백 (61개월차)</span><span style="color:#16a34a">-'+won(ki.pbkTotal)+'</span></div>';
+        var pbkAfterMo=ki.maxSupMonths+1;
+        if (ki.pbkLines&&ki.pbkLines.length>0) ki.pbkLines.forEach(function(pl){html+='<div class="kor-cr" style="color:#16a34a;font-weight:700"><span>&#8627; 페이백 ('+pl.label+') '+pbkAfterMo+'개월차</span><span style="color:#16a34a">-'+won(pl.amt*pl.months)+'</span></div>';});
+        else html+='<div class="kor-cr" style="color:#16a34a;font-weight:700"><span>&#8627; 페이백 ('+pbkAfterMo+'개월차)</span><span style="color:#16a34a">-'+won(ki.pbkTotal)+'</span></div>';
       }
       html+='<div class="kor-cr" style="color:#64748b"><span>렌탈 총 납입금 (코라솔 공제 후)</span><span style="font-weight:700;color:#334155">'+won(ki.renTotal)+'</span></div><div style="border-top:1px dashed #bae6fd;margin:6px 0"></div>';
       if (ki.isHanval&&ki.hvInSup>0){
@@ -1967,12 +1968,7 @@ function openQuoteInfoModal(scope){
   var hasIlsiblDiscItem=_itemsForScope(_quoteInfoScope).some(function(it){
     return it.일시불>0 && it.구매방법!=='cash' && it.ilsiblOn;
   });
-  var ilDiscToggle=document.getElementById('quoteIlsiblDiscToggle'), ilDiscRow=document.getElementById('quoteIlsiblDiscRow');
-  ilDiscToggle.disabled=!hasIlsiblDiscItem;
-  ilDiscToggle.checked=hasIlsiblDiscItem;
-  ilDiscRow.style.opacity=hasIlsiblDiscItem?'1':'.45';
-  ilDiscRow.style.cursor=hasIlsiblDiscItem?'pointer':'not-allowed';
-  ilDiscRow.title=hasIlsiblDiscItem?'':'현재 대상 품목 중 동시구매 할인이 적용된 제품이 없습니다';
+  document.getElementById('quoteIlsiblDiscToggle').checked=hasIlsiblDiscItem;
 
   document.getElementById('quoteInfoModal').classList.add('show');
 }
@@ -2317,7 +2313,7 @@ function computeQuoteRows(cart){
       if(sn>0)bg.push('선납금: '+sn.toLocaleString('ko-KR')+'원');
       if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
     }
-    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupCap,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0)}:null;
+    var korInfo=ki?{nabM:ki.totalNabM,refund:ki.refund,supM:ki.totalSupM,supTotal:ki.totalSupCap,renM:ki.isHanval?ki.halfRenM:ki.renM,effM:ki.isHanval?ki.halfMonthly:ki.effM,cnt:ki.lines.reduce(function(s,l){return s+l.cnt;},0),pbkTotal:ki.pbkTotal}:null;
     var discLabel, discBadge;
     if(isCash){
       discBadge=c.discLabel||'';
@@ -2345,10 +2341,11 @@ function computeQuoteRows(cart){
   var totKorEffM=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.effM:0);},0);
   var totKorRefund=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.refund:0);},0);
   var totKorCnt=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.cnt:0);},0);
+  var totKorPbk=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.pbkTotal:0);},0);
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2362,7 +2359,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorEffM=_rd.totKorEffM, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2376,7 +2373,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
         var ic=calcItem(item);
         var iki=itemKorCalc(item,ic);
         ilT.base+=item.일시불;
-        if(opts.showIlsiblDisc&&item.ilsiblOn){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
+        if(opts.showIlsiblDisc){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
         else{ilT.disc+=item.일시불;}
         if (opts.showMembership && item.memberCmpOn!==false) ilT.membership+=getMembershipTotal(item);
         ilT.rental+=iki?iki.renTotal:getTrueTotal(item,ic);
@@ -2447,7 +2444,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   var sumItems=[];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
   if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
-  if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:wW(totKorSup)+'/월 &middot; '+wW(totKorSupTotal)+'/총합',sub:'결합전 렌탈료 '+wW(totKorEffM)});
+  if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:'<span style="white-space:nowrap">'+wW(totKorSup)+'/월</span><br><span style="white-space:nowrap;font-size:10.5px;font-weight:600">'+wW(totKorSupTotal)+'/총합</span>',sub:'결합전 렌탈료 '+wW(totKorEffM)});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
@@ -2463,6 +2460,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
   h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">합계금액</div>';
   h+='<div style="font-size:16px;font-weight:700">'+wM(totMKor)+'</div>';
+  if(totKorPbk>0) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">렌탈 종료 후 페이백: '+wW(totKorPbk)+'</div>';
   h+='</div></div>';
 
   // [4-b] 일시불 비교

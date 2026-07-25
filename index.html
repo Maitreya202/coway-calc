@@ -281,10 +281,15 @@ input:focus,select:focus { border-color:#2563eb; }
           <option value="term">약정기간</option>
           <option value="mgmt">관리방법</option>
           <option value="disc">할인</option>
-          <option value="half">반값/추가할인</option>
+          <option value="half">반값 (-50%)</option>
         </select>
         <p class="sec-label">변경 값</p>
-        <select id="bulkVal" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#f8fafc;margin-bottom:20px"></select>
+        <select id="bulkVal" onchange="toggleBulkHalfMonthsWrap()" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#f8fafc;margin-bottom:12px"></select>
+        <div id="bulkHalfMonthsWrap" style="display:none;margin-bottom:20px">
+          <p class="sec-label">반값 적용 기간 (개월, 0=전기간)</p>
+          <input type="number" id="bulkHalfMonths" min="0" value="0" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#f8fafc">
+          <p style="font-size:11px;color:#94a3b8;margin-top:4px">* 약정기간을 초과하는 값은 각 항목의 약정년 한도로 자동 조정됩니다</p>
+        </div>
         <div style="display:flex;gap:8px">
           <button onclick="closeBulkChangeModal()" style="flex:1;background:#f1f5f9;color:#64748b;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">취소</button>
           <button onclick="applyBulk();closeBulkChangeModal()" style="flex:2;background:#1D4ED8;color:white;border:none;padding:12px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">적용 &#8594;</button>
@@ -696,12 +701,13 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
   }
 
   // 타사보상 1년간 만원 추가 할인
-  var tasab1년On=!!(item.tasabosangOn&&item.tasab1년on&&hasTasab);
+  var _tc1y=TASAB_COND[item.약정년]||{};
+  var _disc1y=d.동시구매?(_tc1y.동시구매||0):(d.결합?(_tc1y.결합||0):(_tc1y.base||0));
+  var tasab1년On=!!(item.tasabosangOn&&item.tasab1년on&&hasTasab&&_disc1y>0);
   var tasab1년Disc=0;
   var tasab1년Rate=normalMonthly;
   if (tasab1년On) {
-    var _tc=TASAB_COND[item.약정년]||{};
-    tasab1년Disc=d.동시구매?(_tc.동시구매||0):(d.결합?(_tc.결합||0):(_tc.base||0));
+    tasab1년Disc=_disc1y;
     tasab1년Rate=Math.max(0,normalMonthly-tasab1년Disc);
     total=tasab1년Rate*Math.min(12,months)+normalMonthly*Math.max(0,months-12);
     monthly=tasab1년Rate;
@@ -876,30 +882,43 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   if (isCashMode && item.일시불할인 !== 'none') tags.push({none:'',10:'-10%',15:'-15%','1010':'-19%'}[item.일시불할인]||'');
 
   var h = '';
-  h += '<div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleDetail('+idx+')">';
-  h += '<input type="checkbox" ' + (cartSel[idx] ? 'checked' : '') + ' onchange="event.stopPropagation();toggleCartSel(' + idx + ',this.checked)" style="accent-color:#2563eb;width:15px;height:15px;flex-shrink:0" onclick="event.stopPropagation()">';
+  h += '<div style="display:flex;align-items:flex-start;gap:6px;cursor:pointer" onclick="toggleDetail('+idx+')">';
+  h += '<input type="checkbox" ' + (cartSel[idx] ? 'checked' : '') + ' onchange="event.stopPropagation();toggleCartSel(' + idx + ',this.checked)" style="accent-color:#2563eb;width:15px;height:15px;flex-shrink:0;margin-top:3px" onclick="event.stopPropagation()">';
 
-  // 제품 정보 블록
-  h += '<div class="box-item filled" style="flex:0 0 auto;min-width:90px;max-width:130px">'
-    + '<div class="box-label">' + item.모델명 + ' <span style="color:#2563eb">(' + _pmTxt + ')</span>' + (_inQ ? ' <span style="color:#15803D;font-size:9px">📌</span>' : '') + '</div>'
-    + '<div class="box-value">' + _shortName + '</div>'
-    + '<div style="font-size:10px;font-weight:800;color:#2563eb;margin-top:2px">' + compactPrice + '</div>'
+  h += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">';
+
+  // 1줄: 제품명(타이틀) + 가격, 모델명은 그 아래 보조 텍스트
+  h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
+    + '<div style="min-width:0">'
+    + '<div style="font-size:13px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
+    + '<div style="font-size:10px;color:#94a3b8;margin-top:1px">' + item.모델명 + ' (' + _pmTxt + ')' + '</div>'
+    + '</div>'
+    + '<div style="font-size:13px;font-weight:800;color:#2563eb;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
     + '</div>';
 
-  // 능동형 태그들
-  h += '<div style="display:flex;flex-wrap:wrap;gap:3px;flex:1;min-width:0">';
+  // 2줄: 능동형 태그들 — 파란색
+  h += '<div style="display:flex;flex-wrap:wrap;gap:3px">';
   tags.filter(Boolean).forEach(function(tag) {
-    h += '<span style="display:inline-block;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;color:#1E40AF;white-space:nowrap">' + tag + '</span>';
+    h += badgeHtml(tag, 'blue');
   });
   if (tags.filter(Boolean).length === 0) {
     h += '<span style="font-size:11px;color:#94a3b8">탭하여 설정</span>';
   }
   h += '</div>';
 
+  h += '</div>'; // 뱃지 컬럼
+
   h += '<button onclick="event.stopPropagation();toggleDetail(' + idx + ')" style="flex-shrink:0;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;color:' + (_isOpen ? '#2563eb' : '#94a3b8') + '">' + (_isOpen ? '&#9650;' : '&#9660;') + '</button>';
   h += '<button class="icon-btn" title="삭제" onclick="event.stopPropagation();removeCart(' + idx + ')" style="flex-shrink:0;font-size:15px;color:#cbd5e1">&#10005;</button>';
   h += '</div>'; // 한 줄
   return h;
+}
+
+function badgeHtml(text, color) {
+  var bg = color === 'green' ? '#ECFDF5' : '#EFF6FF';
+  var border = color === 'green' ? '#86EFAC' : '#BFDBFE';
+  var fg = color === 'green' ? '#15803D' : '#1E40AF';
+  return '<span style="display:inline-block;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:' + fg + ';white-space:nowrap">' + text + '</span>';
 }
 
 // ── 구매방법/약정/관리방법 패널 ────────────────────────────────
@@ -1043,8 +1062,9 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
         h += (function(){
       var _tc=TASAB_COND[item.약정년]||{};
       var _disc=d.동시구매?(_tc.동시구매||0):(d.결합?(_tc.결합||0):(_tc.base||0));
-      var _lbl=_disc>0?'1년간 '+won(_disc)+' 추가 할인':'1년 추가 할인 (조건 없음)';
-      return '</div><div class="check-row" style="margin-top:6px"><input type="checkbox"'+( item.tasab1년on?' checked':'')+' onchange="setTasab1년('+idx+',this.checked)" style="accent-color:#7c3aed"><span style="color:#7c3aed;font-weight:700">&#128161; '+_lbl+'</span></div>';
+      var _canApply=_disc>0;
+      var _lbl=_canApply?'1년간 '+won(_disc)+' 추가 할인':'1년 추가 할인 (해당 약정년 조건 없음)';
+      return '</div><div class="check-row" style="margin-top:6px'+(_canApply?'':';opacity:.45;pointer-events:none')+'"><input type="checkbox"'+(item.tasab1년on&&_canApply?' checked':'')+(_canApply?'':' disabled')+' onchange="setTasab1년('+idx+',this.checked)" style="accent-color:#7c3aed"><span style="color:#7c3aed;font-weight:700">&#128161; '+_lbl+'</span></div>';
     })();
       }
       h += '</div>';
@@ -1132,7 +1152,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
 
   if (item.일시불 > 0 && item.구매방법 !== 'cash') {
     var ilBase = item.일시불, ilDisc = Math.round(ilBase * 0.9), ilOn = item.ilsiblOn || false;
-    var memOn = item.memberCmpOn !== false;
+    var memOn = item.memberCmpOn === true;
     var ilMembership = memOn ? getMembershipTotal(item) : 0;
     var ilComp = (ilOn ? ilDisc : ilBase) + ilMembership;
     var rc, rl;
@@ -1141,19 +1161,27 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     else if (c.sunap) { rc = getTrueTotal(item, c); rl = c.sunap.label + ' 총납입'; }
     else          { rc = c.total; rl = '렌탈 총납입'; }
     var diff = rc - ilComp;
-    var cr2 = diff > 0 ? '일시불 유리 ' + won(diff) + ' 절감' : diff < 0 ? '렌탈/선납 유리 ' + won(-diff) + ' 절감' : '동일';
+    var cashWins = diff > 0, rentalWins = diff < 0;
+    var cr2 = cashWins ? '일시불 유리 · ' + won(diff) + ' 절감' : rentalWins ? '렌탈/선납 유리 · ' + won(-diff) + ' 절감' : '차액 없음';
+    var resColor = cashWins ? '#15803D' : rentalWins ? '#2563eb' : '#64748b';
+    var resBg    = cashWins ? '#ECFDF5' : rentalWins ? '#EFF6FF' : '#f1f5f9';
     var hasMemData = getMembershipFee(item) > 0;
-    h += '<div style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      + '<span style="font-size:11px;font-weight:700;color:#64748b">일시불 비교</span>'
-      + '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#2563eb;font-weight:700">'
-      + '<input type="checkbox"' + (ilOn ? ' checked' : '') + ' onchange="setIlsibl(' + idx + ',this.checked)" style="accent-color:#2563eb">동시구매 10% 적용</label></div>'
-      + (hasMemData ? '<div style="display:flex;justify-content:flex-end;margin-bottom:4px"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#64748b;font-weight:700"><input type="checkbox"' + (memOn ? ' checked' : '') + ' onchange="setMemberCmp(' + idx + ',this.checked)" style="accent-color:#2563eb">멤버십 비용 포함</label></div>' : '')
-      + '<div class="res-sub" style="color:#334155"><span>일시불 정가</span><span>' + won(ilBase) + '</span></div>'
+    h += '<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-bottom:8px">'
+      + '<span style="font-size:12px;font-weight:800;color:#334155">일시불 비교</span>'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#2563eb;font-weight:700;white-space:nowrap">'
+      + '<input type="checkbox"' + (ilOn ? ' checked' : '') + ' onchange="setIlsibl(' + idx + ',this.checked)" style="accent-color:#2563eb">동시구매 -10%</label>'
+      + (hasMemData ? '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#64748b;font-weight:700;white-space:nowrap"><input type="checkbox"' + (memOn ? ' checked' : '') + ' onchange="setMemberCmp(' + idx + ',this.checked)" style="accent-color:#2563eb">멤버십 포함</label>' : '')
+      + '</div></div>'
+      + '<div class="res-sub" style="color:#334155;font-weight:600"><span>일시불 정가</span><span>' + won(ilBase) + '</span></div>'
       + (ilOn ? '<div class="res-sub" style="color:#2563eb;font-weight:700"><span>&#8627; 동시구매 (-10%)</span><span>' + won(ilDisc) + '</span></div>' : '')
       + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + item.약정년 + '년차)</span><span>' + won(ilMembership) + '</span></div>' : '')
-      + '<div class="res-sub" style="color:#64748b;font-size:11px"><span>비교 기준 (' + rl + ')</span><span>' + won(rc) + '</span></div>'
-      + '<div class="res-sub" style="font-weight:700;font-size:11px"><span>&#8627; 비교 결과</span><span>' + cr2 + '</span></div></div>';
+      + '<div class="res-sub" style="color:#64748b"><span>비교 기준 (' + rl + ')</span><span>' + won(rc) + '</span></div>'
+      + '<div style="margin-top:6px;background:' + resBg + ';border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center">'
+      + '<span style="font-size:11px;font-weight:700;color:' + resColor + '">비교 결과</span>'
+      + '<span style="font-size:13px;font-weight:800;color:' + resColor + '">' + cr2 + '</span></div>'
+      + '</div>';
   }
 
   if (c.sunap) {
@@ -1504,8 +1532,8 @@ var BULK_FIELD_DEFS = {
   method: { label:'구매방법', opts:[['rental','신규'],['rerental','재렌탈'],['cash','일시불']] },
   term:   { label:'약정기간', opts:[[3,'3년'],[5,'5년'],[6,'6년'],[7,'7년']] },
   mgmt:   { label:'관리방법', opts:[['방문관리','방문관리'],['자가관리','자가관리'],['서비스프리','서비스프리']] },
-  disc:   { label:'할인', opts:[['없음','없음'],['동시구매','동시구매'],['결합','결합'],['페스타','페스타']] },
-  half:   { label:'반값/추가할인', opts:[['off','미적용'],['on','반값/추가할인 적용']] }
+  disc:   { label:'할인', opts:[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['페스타','-15%']] },
+  half:   { label:'반값 (-50%)', opts:[['off','미적용'],['on','반값 (-50%) 적용']] }
 };
 function renderBulkOptsHtml(){
   var field=document.getElementById('bulkField').value;
@@ -1522,6 +1550,12 @@ function onBulkFieldChange(){
   valEl.innerHTML=renderBulkOptsHtml();
   var opt=valEl.querySelector('option[value="'+prev+'"]');
   if (opt && !opt.disabled) valEl.value=prev;
+  toggleBulkHalfMonthsWrap();
+}
+function toggleBulkHalfMonthsWrap(){
+  var field=document.getElementById('bulkField').value;
+  var val=document.getElementById('bulkVal').value;
+  document.getElementById('bulkHalfMonthsWrap').style.display=(field==='half'&&val==='on')?'block':'none';
 }
 function bulkCanApply(item,field,val){
   if (field==='method'){
@@ -1573,7 +1607,16 @@ function applyBulk(){
     else if (field==='disc') setDisc(idx,val);
     else if (field==='half') {
       if (cart[idx].isRerental) cart[idx].재렌탈1년on=(val==='on');
-      else cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:(val==='on')});
+      else {
+        cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:(val==='on')});
+        if (val==='on') {
+          var hvMax=cart[idx].약정년*12;
+          var hvRaw=Math.max(0,parseInt(document.getElementById('bulkHalfMonths').value,10)||0);
+          cart[idx].반값개월=Math.min(hvRaw,hvMax);
+        } else {
+          cart[idx].반값개월=0;
+        }
+      }
     }
   });
   renderCart();
@@ -1726,7 +1769,7 @@ function calcTotals(items){
     if (it.구매방법!=='cash' && it.일시불>0){
       hasIlsiblCmp=true;
       ilsiblCmpBase+=it.일시불;
-      if (it.memberCmpOn!==false) ilsiblCmpMembership+=getMembershipTotal(it);
+      if (it.memberCmpOn===true) ilsiblCmpMembership+=getMembershipTotal(it);
       ilsiblCmpRental+=itemTrueTotal;
     }
   });
@@ -2383,7 +2426,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
         ilT.base+=item.일시불;
         if(opts.showIlsiblDisc){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
         else{ilT.disc+=item.일시불;}
-        if (opts.showMembership && item.memberCmpOn!==false) ilT.membership+=getMembershipTotal(item);
+        if (opts.showMembership && item.memberCmpOn===true) ilT.membership+=getMembershipTotal(item);
         ilT.rental+=iki?iki.renTotal:getTrueTotal(item,ic);
         ilT.cnt++;
       }

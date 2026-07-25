@@ -330,6 +330,9 @@ input:focus,select:focus { border-color:#2563eb; }
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteIlsiblToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128179; 견적서에 일시불 비교 포함</span>
       </label>
+      <label class="check-row" id="quoteIlsiblDiscRow" style="margin-bottom:6px">
+        <input type="checkbox" id="quoteIlsiblDiscToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#127991;&#65039; 일시불 비교에 -10% 할인 반영</span>
+      </label>
       <label class="check-row" id="quoteMemberRow" style="margin-bottom:6px">
         <input type="checkbox" id="quoteMemberToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#127974; 일시불 비교에 멤버십 비용 포함</span>
       </label>
@@ -541,9 +544,9 @@ function getMembershipFee(item) {
   if (item.s === '정수기') {
     cat = '정수기';
     if (item.분류 === '얼음') feat = '얼음/탄산/이온/커피';
-    else if (item.분류 === '냉온정') feat = '냉정/온정/냉온정';
+    else if (item.분류 === '냉온정' || item.분류 === '직수') feat = '냉정/온정/냉온정'; // 직수형은 분류상 급수방식 표기일 뿐 냉온정 기능 제품
     else if (item.분류 === '스탠드') feat = '냉온정/얼음 대용량';
-    else feat = '일반'; // 일반, 직수
+    else feat = '일반';
   } else if (item.s === '공기청정기') {
     if (item.분류 === '제습') return 0; // 순수 제습기는 멤버십 비교 대상 아님
     var area = _apArea(item.모델명);
@@ -1961,6 +1964,16 @@ function openQuoteInfoModal(scope){
   memRow.style.cursor=hasMemberItem?'pointer':'not-allowed';
   memRow.title=hasMemberItem?'':'현재 대상 품목 중 멤버십 비교가 적용되는 제품이 없습니다';
 
+  var hasIlsiblDiscItem=_itemsForScope(_quoteInfoScope).some(function(it){
+    return it.일시불>0 && it.구매방법!=='cash' && it.ilsiblOn;
+  });
+  var ilDiscToggle=document.getElementById('quoteIlsiblDiscToggle'), ilDiscRow=document.getElementById('quoteIlsiblDiscRow');
+  ilDiscToggle.disabled=!hasIlsiblDiscItem;
+  ilDiscToggle.checked=hasIlsiblDiscItem;
+  ilDiscRow.style.opacity=hasIlsiblDiscItem?'1':'.45';
+  ilDiscRow.style.cursor=hasIlsiblDiscItem?'pointer':'not-allowed';
+  ilDiscRow.title=hasIlsiblDiscItem?'':'현재 대상 품목 중 동시구매 할인이 적용된 제품이 없습니다';
+
   document.getElementById('quoteInfoModal').classList.add('show');
 }
 function closeQuoteInfoModal(){
@@ -2168,6 +2181,7 @@ function generateQuoteAssets(items,customer,salesperson,today,cb){
     } else {
       var opts={
         showIlsibl: !!(document.getElementById('quoteIlsiblToggle')&&document.getElementById('quoteIlsiblToggle').checked),
+        showIlsiblDisc: !!(document.getElementById('quoteIlsiblDiscToggle')&&document.getElementById('quoteIlsiblDiscToggle').checked),
         showMembership: !!(document.getElementById('quoteMemberToggle')&&document.getElementById('quoteMemberToggle').checked),
         showContract: !!(document.getElementById('quoteContractToggle')&&document.getElementById('quoteContractToggle').checked),
         showNotes: !!(document.getElementById('quoteNotesToggle')&&document.getElementById('quoteNotesToggle').checked),
@@ -2362,7 +2376,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
         var ic=calcItem(item);
         var iki=itemKorCalc(item,ic);
         ilT.base+=item.일시불;
-        if(item.ilsiblOn){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
+        if(opts.showIlsiblDisc&&item.ilsiblOn){ilT.disc+=Math.round(item.일시불*0.9);ilT.hasDisc=true;}
         else{ilT.disc+=item.일시불;}
         if (opts.showMembership && item.memberCmpOn!==false) ilT.membership+=getMembershipTotal(item);
         ilT.rental+=iki?iki.renTotal:getTrueTotal(item,ic);
@@ -2455,16 +2469,30 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   if(opts.showIlsibl && ilT.cnt>0){
     var ilTotal=ilT.disc+ilT.membership;
     var ilDiff=ilT.rental-ilTotal;
-    var ilRes=ilDiff>0?'일시불 유리 · '+wW(ilDiff)+' 절감':ilDiff<0?'렌탈/선납 유리 · '+wW(-ilDiff)+' 절감':'동일';
+    var ilResVal=ilDiff>0?'일시불 유리':ilDiff<0?'렌탈 유리':'동일';
+    var ilResSub=ilDiff!==0?(wW(Math.abs(ilDiff))+' 절감'):'';
+    function ilCell(si,bordered){
+      var s='<div style="flex:1;min-width:0;padding:9px 10px;'+(bordered?'border-left:1px solid '+LINE+';':'')+'">';
+      s+='<div style="font-size:10px;color:'+MUTE+';margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+si.label+'</div>';
+      s+='<div style="font-size:12.5px;font-weight:600;line-height:1.35;white-space:nowrap">'+si.val+(si.badge?' <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:7px;background:'+HEADBG+';color:'+INK+';border:1px solid '+LINE+';display:inline-block;vertical-align:middle">'+si.badge+'</span>':'')+'</div>';
+      if(si.sub) s+='<div style="font-size:9px;color:'+MUTE+';margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+si.sub+'</div>';
+      s+='</div>';
+      return s;
+    }
+    var ilPriceLabel=ilT.hasDisc?'할인적용가':'정가';
+    var ilPriceVal=ilT.hasDisc?ilT.disc:ilT.base;
+    var ilTotalSub=ilT.membership>0?(ilPriceLabel+' '+wW(ilPriceVal)+' + 멤버십 '+wW(ilT.membership)):(ilPriceLabel+' '+wW(ilPriceVal));
     h+='<div style="border-top:1px solid '+LINED+';padding:10px 20px;font-weight:700;font-size:12px;background:'+HEADBG+'">일시불 비교</div>';
-    h+='<div style="border-top:1px solid '+LINE+';padding:12px 20px;font-size:12px">';
-    h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">일시불 정가 합계</span><span>'+wW(ilT.base)+'</span></div>';
-    if(ilT.hasDisc){ h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>동시구매 -10% 적용</span><span>'+wW(ilT.disc)+'</span></div>'; }
-    if(ilT.membership>0){ h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">&#8627; 2년차부터 멤버십 비용 (약정기간 동안)</span><span>'+wW(ilT.membership)+'</span></div>'; }
-    h+='<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:'+SUB+'">비교 기준 (렌탈/선납 총납입)</span><span>'+wW(ilT.rental)+'</span></div>';
-    h+='<div style="border-top:1px solid '+LINE+';margin:5px 0"></div>';
-    h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>비교 결과</span><span>'+ilRes+'</span></div>';
+    h+='<div style="display:flex;align-items:stretch;border-top:1px solid '+LINE+'">';
+    h+='<div style="flex:1;display:flex">';
+    h+=ilCell({label:'일시불 총액'+(ilT.membership>0?' (정가+멤버십)':''),val:wW(ilTotal),sub:ilTotalSub,badge:ilT.hasDisc?'-10%':''},false);
+    h+=ilCell({label:'렌탈 총 납입액',val:wW(ilT.rental),sub:''},true);
     h+='</div>';
+    h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
+    h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">비교 결과</div>';
+    h+='<div style="font-size:14px;font-weight:700">'+ilResVal+'</div>';
+    if(ilResSub) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:2px">'+ilResSub+'</div>';
+    h+='</div></div>';
   }
 
   // [6] 추가정보 (옵션)

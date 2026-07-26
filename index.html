@@ -732,8 +732,6 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
     else if (d.결합) discLabel='결합 -5%';
     else if (d.페스타) discLabel='페스타 -15%';
   }
-  if (d.반값&&st!=='선납2'&&!isRe) discLabel+=(discLabel?' + ':'')+'반값 -50%';
-
   return {
     base:base,displayBase:displayBase,
     monthly:monthly,halfMonthly:halfMonthly,normalMonthly:normalMonthly,
@@ -877,7 +875,8 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   else if (c.discLabel) tags.push(c.discLabel);
   if (!isCashMode) {
     if (item.isRerental && item.재렌탈1년on) tags.push('1년 -20%');
-    else if (!item.isRerental && d.반값) tags.push('반값' + (item.반값개월 ? ' ' + item.반값개월 + '개월' : ''));
+    else if (!item.isRerental && d.반값 && item.선납 !== '선납2') tags.push('반값' + (item.반값개월 ? ' ' + item.반값개월 + '개월' : ''));
+    else if (!item.isRerental && item.선납 === '선납2' && c.sunap && c.sunap.s2HalfMo > 0) tags.push('반값 ' + c.sunap.s2HalfMo + '개월');
   }
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
   if (korCnt > 0) tags.push('코라솔 ' + korCnt + '건');
@@ -1720,17 +1719,22 @@ function itemKorCalc(item,c){
   });
   var supMo=Math.min(maxSupMonths,c.months);
   var renM,pbkM,pbkTotal,renTotal,halfRenM=null,normalRenM=null;
-  if (c.isHanval&&c.hvMonths>0){
-    var hvInSup=Math.min(c.hvMonths,supMo);
+  var st=item.선납||'none';
+  var hasS2Half=st==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0;
+  var hvMo=(c.isHanval&&c.hvMonths>0)?c.hvMonths:(hasS2Half?c.sunap.s2HalfMo:0);
+  var hvRate=(c.isHanval&&c.hvMonths>0)?c.halfMonthly:(hasS2Half?c.sunap.s2HalfM:0);
+  var afterRate=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:(hasS2Half?c.sunap.s2AfterM:effM);
+  if (hvMo>0){
+    var hvInSup=Math.min(hvMo,supMo);
     var normalInSup=supMo-hvInSup;
-    halfRenM=Math.max(0,c.halfMonthly-totalSupM);
-    normalRenM=Math.max(0,c.normalMonthly-totalSupM);
-    var pbkInHv=Math.max(0,totalSupM-c.halfMonthly);
-    var pbkInNormal=Math.max(0,totalSupM-c.normalMonthly);
+    halfRenM=Math.max(0,hvRate-totalSupM);
+    normalRenM=Math.max(0,afterRate-totalSupM);
+    var pbkInHv=Math.max(0,totalSupM-hvRate);
+    var pbkInNormal=Math.max(0,totalSupM-afterRate);
     renM=hvInSup>0?halfRenM:normalRenM;
     pbkM=hvInSup>0?pbkInHv:pbkInNormal;
     pbkTotal=pbkInHv*hvInSup+pbkInNormal*normalInSup;
-    renTotal=halfRenM*hvInSup+normalRenM*normalInSup+c.normalMonthly*(c.months-supMo);
+    renTotal=halfRenM*hvInSup+normalRenM*normalInSup+afterRate*(c.months-supMo);
     if (pbkInHv>0&&hvInSup>0) pbkLines.push({amt:pbkInHv,months:hvInSup,label:'반값 '+hvInSup+'개월'});
     if (pbkInNormal>0&&normalInSup>0) pbkLines.push({amt:pbkInNormal,months:normalInSup,label:'정상 '+normalInSup+'개월'});
   } else {
@@ -1741,11 +1745,11 @@ function itemKorCalc(item,c){
     lines:lines,effM:effM,totalSupM:totalSupM,totalNabM:totalNabM,
     renM:renM,pbkM:pbkM,pbkTotal:pbkTotal,nabTotal:totalNabTotal,refund:totalRefund,
     maxSupMonths:maxSupMonths,renTotal:renTotal,netM:renM+totalNabM,
-    isHanval:!!(c.isHanval&&c.hvMonths>0),
-    hvInSup:c.isHanval?Math.min(c.hvMonths,supMo):0,
-    normalInSup:c.isHanval?supMo-Math.min(c.hvMonths,supMo):supMo,
+    isHanval:hvMo>0,
+    hvInSup:hvMo>0?Math.min(hvMo,supMo):0,
+    normalInSup:hvMo>0?supMo-Math.min(hvMo,supMo):supMo,
     halfRenM:halfRenM,normalRenM:normalRenM,
-    halfMonthly:c.halfMonthly||0,normalMonthly:c.normalMonthly||0,pbkLines:pbkLines,
+    halfMonthly:hvRate||0,normalMonthly:afterRate||0,pbkLines:pbkLines,
     totalSupCap:totalSupCap
   };
 }
@@ -1765,7 +1769,7 @@ function itemPhases(it){
     if (ki.isHanval){
       if (ki.hvInSup>0) push(ki.hvInSup, ki.halfRenM||0);
       if (ki.normalInSup>0) push(ki.hvInSup+ki.normalInSup, ki.normalRenM||0);
-      if (c.months>supMo) push(c.months, c.normalMonthly);
+      if (c.months>supMo) push(c.months, ki.normalMonthly);
     } else {
       if (supMo>0) push(supMo, ki.renM);
       if (c.months>supMo) push(c.months, ki.effM);
@@ -2424,6 +2428,7 @@ function canvasToPdf(canvas,breakpoints){
 function computeQuoteRows(cart){
   var rows=cart.map(function(item){
     var c=calcItem(item),ki=itemKorCalc(item,c),ml=getMgmtLabel(item);
+    var d=item.discounts||{};
     var isCash=item.구매방법==='cash';
     var lp=item.정상가,dp=isCash?(c.cashFinal||0):c.monthly,sn=(c.sunap&&c.sunap.amt)?c.sunap.amt:0;
     var snPreM=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.인하후)?((c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly):0;
@@ -2441,6 +2446,7 @@ function computeQuoteRows(cart){
       if(item.isRerental)bg[0]+=' / 재렌탈';
       if(item.tasabosangOn)bg[0]+=' / 타사보상';
       if(c.isHanval&&c.hvMonths>0){bg[0]+= c.hvMonths<c.months ? (' / 반값 '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / 반값 '+c.hvMonths+'개월');}
+      else if(item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){bg[0]+=' / 반값 '+c.sunap.s2HalfMo+'개월 ('+c.sunap.s2HalfM.toLocaleString('ko-KR')+'원/월)';}
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
       if(item.선납&&item.선납!=='none'&&item.선납!=='선납2'){bg[0]+=' / '+item.선납+'개월 선납';}
       if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
@@ -2453,6 +2459,8 @@ function computeQuoteRows(cart){
       var discParts=[];
       if(item.tasabosangOn) discParts.push('타사보상');
       if(c.discLabel) discParts.push(c.discLabel);
+      if(!item.isRerental&&d.반값&&item.선납!=='선납2') discParts.push('반값'+(item.반값개월?' '+item.반값개월+'개월':''));
+      else if(!item.isRerental&&item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0) discParts.push('반값 '+c.sunap.s2HalfMo+'개월');
       if(ki) discParts.push('코라솔');
       discBadge=discParts.join(' · ');
     }

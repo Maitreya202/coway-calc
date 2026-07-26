@@ -344,8 +344,11 @@ input:focus,select:focus { border-color:#2563eb; }
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteTotalToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128176; 렌탈 기간 중 총 납입금액 표시</span>
       </label>
-      <label class="check-row" style="margin-bottom:14px">
+      <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteSavingToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128184; 정상가 대비 절감 금액 표시</span>
+      </label>
+      <label class="check-row" style="margin-bottom:14px">
+        <input type="checkbox" id="quoteTimelineToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128197; 납부 타임라인 표시 (할인구간 여러 개일 때)</span>
       </label>
       <p style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px">표기 옵션</p>
       <label class="check-row" style="margin-bottom:6px">
@@ -2312,6 +2315,7 @@ function generateQuoteAssets(items,customer,salesperson,today,cb){
         showSalesperson: !!(document.getElementById('quoteSalespersonToggle')&&document.getElementById('quoteSalespersonToggle').checked),
         showTotalPayment: !!(document.getElementById('quoteTotalToggle')&&document.getElementById('quoteTotalToggle').checked),
         showSaving: !!(document.getElementById('quoteSavingToggle')&&document.getElementById('quoteSavingToggle').checked),
+        showTimeline: !!(document.getElementById('quoteTimelineToggle')&&document.getElementById('quoteTimelineToggle').checked),
         salespersonPhone: phone
       };
       innerHtml=buildQuoteHTML(items,customer,salesperson,today,opts);
@@ -2593,7 +2597,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='</div></div>';
 
   // [4-a] 납부 타임라인 (할인구간이 2개 이상 겹칠 때만, 스키니 한 줄)
-  var qTimeline=buildTimeline(cart);
+  var qTimeline=opts.showTimeline?buildTimeline(cart):[];
   if(qTimeline.length>1){
     h+='<div style="border-top:1px solid '+LINED+';padding:8px 20px;background:'+HEADBG+';display:flex;align-items:center;gap:16px;flex-wrap:wrap">';
     h+='<span style="font-size:10px;font-weight:700;color:'+SUB+';letter-spacing:.05em;flex-shrink:0">납부 타임라인</span>';

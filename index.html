@@ -1487,8 +1487,14 @@ function updateBasketTotalBar(){
   if(quoteBasket.length===0){btb.innerHTML='';btb.style.display='none';return;}
   var t=calcTotals(quoteBasket),a=t.agg;
   var parts=[];
-  parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
-  if(a.hasHalf) parts.push('할인기간 <strong>'+won(a.halfM)+'</strong>/월');
+  if (t.timeline.length>1){
+    t.timeline.forEach(function(seg){
+      var label=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
+      parts.push(label+' <strong>'+won(seg.total)+'</strong>/월');
+    });
+  } else {
+    parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
+  }
   if(a.hasKor) parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
   if(a.ilsibl>0) parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
   if(a.korPbk>0) parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
@@ -1741,6 +1747,71 @@ function itemKorCalc(item,c){
   };
 }
 
+// 개별 제품의 계약기간 동안 월 납입액이 바뀌는 구간을 순서대로 반환 (예: 1~12개월 30,410원, 13~60개월 40,410원)
+function itemPhases(it){
+  var c=it._calcSnap||calcItem(it);
+  var ki=itemKorCalc(it,c);
+  var st=it.선납||'none';
+  var segs=[];
+  function push(to,rate){
+    var from=segs.length?segs[segs.length-1].to+1:1;
+    if (to>=from) segs.push({from:from,to:to,rate:rate});
+  }
+  if (ki){
+    var supMo=Math.min(ki.maxSupMonths,c.months);
+    if (ki.isHanval){
+      if (ki.hvInSup>0) push(ki.hvInSup, ki.halfRenM||0);
+      if (ki.normalInSup>0) push(ki.hvInSup+ki.normalInSup, ki.normalRenM||0);
+      if (c.months>supMo) push(c.months, c.normalMonthly);
+    } else {
+      if (supMo>0) push(supMo, ki.renM);
+      if (c.months>supMo) push(c.months, ki.effM);
+    }
+  } else if (c.tasab1년On){
+    push(Math.min(12,c.months), c.tasab1년Rate);
+    if (c.months>12) push(c.months, c.normalMonthly);
+  } else if (st==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){
+    push(Math.min(c.sunap.s2HalfMo,c.months), c.sunap.s2HalfM||0);
+    if (c.months>c.sunap.s2HalfMo) push(c.months, c.sunap.s2AfterM||0);
+  } else if (c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){
+    push(c.hvMonths, c.halfMonthly);
+    push(c.months, c.normalMonthly);
+  } else {
+    var eM=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly;
+    if (st==='선납2'&&c.sunap&&c.sunap.인하후) push(c.months, c.sunap.인하후);
+    else if (st==='60'){ if (c.months>60){ push(60,0); push(c.months,eM); } else push(c.months,0); }
+    else push(c.months, eM);
+  }
+  return segs;
+}
+
+// 카트 전체를 합쳐서, 월 합산 청구액이 바뀌는 시점마다 구간을 나눈 타임라인 생성
+function buildTimeline(items){
+  var perItem=items.map(itemPhases).filter(function(s){return s.length>0;});
+  if (perItem.length===0) return [];
+  var boundarySet={};
+  perItem.forEach(function(segs){segs.forEach(function(s){boundarySet[s.to]=true;});});
+  var boundaries=Object.keys(boundarySet).map(Number).sort(function(a,b){return a-b;});
+  var timeline=[],prevEnd=0;
+  boundaries.forEach(function(b){
+    var start=prevEnd+1;
+    var total=0;
+    perItem.forEach(function(segs){
+      var seg=segs.filter(function(s){return start>=s.from&&start<=s.to;})[0];
+      if (seg) total+=seg.rate;
+    });
+    timeline.push({from:start,to:b,total:total});
+    prevEnd=b;
+  });
+  var merged=[];
+  timeline.forEach(function(seg){
+    var last=merged[merged.length-1];
+    if (last&&last.total===seg.total) last.to=seg.to;
+    else merged.push({from:seg.from,to:seg.to,total:seg.total});
+  });
+  return merged;
+}
+
 function calcTotals(items){
   items=items||cart;
   var totM=0,totT=0,sn36=0,sn24=0,sn60=0,sn2=0;
@@ -1773,10 +1844,11 @@ function calcTotals(items){
     }
   });
   var totIlsibl=0,totIlsiblDisc=0;
-  var agg={ilsibl:0,halfM:0,halfMo:0,normalM:0,korNabM:0,hasHalf:false,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
+  var agg={ilsibl:0,halfM:0,halfMo:0,flatM:0,totalMo:0,normalM:0,korNabM:0,hasHalf:false,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),ki=itemKorCalc(it,c);
     var st=it.선납||'none';
+    if (c.months>agg.totalMo) agg.totalMo=c.months;
     if (c.sunap) agg.ilsibl+=c.sunap.amt;
     if (it.일시불>0){agg.hasIlsibl=true;totIlsibl+=it.일시불;totIlsiblDisc+=Math.round(it.일시불*0.9);}
     if (ki){
@@ -1784,7 +1856,7 @@ function calcTotals(items){
       agg.korPbk+=ki.pbkTotal;agg.korRefund+=ki.refund;
       agg.korNabTotal+=ki.nabTotal;agg.korRenTotal+=ki.renTotal;
       if (ki.isHanval){agg.hasHalf=true;agg.halfM+=ki.halfRenM||0;agg.normalM+=ki.normalRenM||0;if(c.hvMonths>agg.halfMo)agg.halfMo=c.hvMonths;}
-      else agg.normalM+=ki.renM;
+      else {agg.normalM+=ki.renM;agg.flatM+=ki.renM;}
     } else {
       if (c.tasab1년On){
         agg.hasHalf=true;agg.halfM+=c.tasab1년Rate;agg.normalM+=c.normalMonthly;
@@ -1797,9 +1869,9 @@ function calcTotals(items){
         if (c.hvMonths>agg.halfMo) agg.halfMo=c.hvMonths;
       } else {
         var eM=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly;
-        if (st==='선납2'&&c.sunap&&c.sunap.인하후) agg.normalM+=c.sunap.인하후;
-        else if (st==='60'){if(c.months>60)agg.normalM+=eM;}
-        else agg.normalM+=eM;
+        if (st==='선납2'&&c.sunap&&c.sunap.인하후){agg.normalM+=c.sunap.인하후;agg.flatM+=c.sunap.인하후;}
+        else if (st==='60'){if(c.months>60){agg.normalM+=eM;agg.flatM+=eM;}}
+        else {agg.normalM+=eM;agg.flatM+=eM;}
       }
     }
   });
@@ -1807,6 +1879,7 @@ function calcTotals(items){
   return {totM:totM,totT:totT,sn36:sn36,sn24:sn24,sn60:sn60,sn2:sn2,
           korNabTotal:korNabTotal,korPbkTotal:korPbkTotal,korRefundTotal:korRefundTotal,
           totIlsibl:totIlsibl,totIlsiblDisc:totIlsiblDisc,agg:agg,
+          timeline:buildTimeline(items),
           hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpMembership:ilsiblCmpMembership,ilsiblCmpRental:ilsiblCmpRental};
 }
 
@@ -1816,8 +1889,14 @@ function updateTotalBar(){
   if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';return;}
   var t=calcTotals(),a=t.agg;
   var parts=[];
-  parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
-  if (a.hasHalf)   parts.push('할인기간 <strong>'+won(a.halfM)+'</strong>/월');
+  if (t.timeline.length>1){
+    t.timeline.forEach(function(seg){
+      var label=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
+      parts.push(label+' <strong>'+won(seg.total)+'</strong>/월');
+    });
+  } else {
+    parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
+  }
   if (a.hasKor)    parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
   if (a.ilsibl>0)  parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
   if (a.korPbk>0)  parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');

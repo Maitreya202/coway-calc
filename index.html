@@ -1142,6 +1142,21 @@ function _chainHtml(steps) {
   }).join('');
 }
 
+// 정상가 → (타사보상 렌탈가 전환 시) → 콤보할인(동시구매/결합/페스타) 까지의 공통 단계
+function _baseChainSteps(item, c, d) {
+  var steps = [{label:'정상가', val:c.displayBase}];
+  if (item.tasabosangOn) {
+    var tasabBase = item.타사보상렌탈 > 0 ? item.타사보상렌탈 : item.타사보상지로;
+    steps.push({label:'타사보상 렌탈가', val:tasabBase});
+    if (d.동시구매) steps.push({label:'동시구매 -10%', val:c.normalMonthly});
+    else if (d.결합) steps.push({label:'결합 -5%', val:c.normalMonthly});
+  } else {
+    var combo = d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
+    if (combo) steps.push({label:combo, val:c.normalMonthly});
+  }
+  return steps;
+}
+
 function renderResultBox(item, idx, c, d, isSunap2) {
   var ki = itemKorCalc(item, c);
   var h = '';
@@ -1150,22 +1165,14 @@ function renderResultBox(item, idx, c, d, isSunap2) {
   h += '<div class="res-row"><span>기준요금' + (!isSunap2 && c.discLabel ? '<span class="disc-badge">' + c.discLabel + '</span>' : '') + bmpBadge + '</span><span>' + won(c.displayBase) + '/월</span></div>';
   if (c.tasabOn && c.tasabRental > 0) h += '<div class="res-sub" style="color:#7c3aed;font-weight:700"><span>&#8627; 타사보상 렌탈가</span><span>' + won(c.tasabRental) + '/월</span></div>';
 
-  if (c.tasab1년On) {
-    h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
-    h += '<div class="res-sub" style="color:#7c3aed"><span>&#8627; 1년간 (추가 -' + won(c.tasab1년Disc) + ')</span><span>' + won(c.tasab1년Rate) + '/월</span></div>';
-    h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - 12) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
-  } else if (c.isRe && c.re1년On && c.months > 12) {
-    h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
-    h += '<div class="res-sub" style="color:#7c3aed"><span>&#8627; 1년간 (재렌탈 할인 + 추가 -20%)</span><span>' + won(c.monthly) + '/월</span></div>';
-    h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - 12) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
-  } else if (ki && ki.isHanval) {
-    var _chainBase = c.displayBase;
+  if (ki && ki.isHanval) {
     var _st1 = item.선납 || 'none';
-    var _comboLabel = d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
+    var _periodLabel = c.tasab1년On ? '1년간' : (c.isRe && c.re1년On) ? '1년간' : '반값 기간';
     var _buildChain = function(useHalf) {
-      var steps = [{label:'정상가', val:_chainBase}];
-      if (_comboLabel) steps.push({label:_comboLabel, val:c.normalMonthly});
-      if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? '반값' : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
+      var steps = _baseChainSteps(item, c, d);
+      if (c.tasab1년On) steps.push({label:'타사보상 1년특가', val: useHalf?c.tasab1년Rate:c.normalMonthly});
+      else if (c.isRe && c.re1년On) steps.push({label:'재렌탈 1년특가', val: useHalf?c.monthly:c.normalMonthly});
+      else if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? '반값' : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
       else if (d.반값 && useHalf) steps.push({label:'반값', val:c.halfMonthly});
       steps.push({label:'코라솔', val: useHalf?ki.halfRenM:(ki.normalRenM!=null?ki.normalRenM:ki.renM)});
       return steps;
@@ -1175,19 +1182,46 @@ function renderResultBox(item, idx, c, d, isSunap2) {
       h += '<div class="res-sub" style="font-weight:700"><span>&#8627; 이후 ' + ki.normalInSup + '개월</span><span>' + won(ki.normalRenM) + '/월</span></div>';
       h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChain(false)) + '</div>';
     }
-    h += '<div class="res-sub" style="color:#0ea5e9"><span>&#8627; 반값 기간 ' + ki.hvInSup + '개월</span><span>' + won(ki.halfRenM) + '/월</span></div>';
+    h += '<div class="res-sub" style="color:#0ea5e9"><span>&#8627; ' + _periodLabel + ' ' + ki.hvInSup + '개월</span><span>' + won(ki.halfRenM) + '/월</span></div>';
     h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChain(true)) + '</div>';
+  } else if (c.tasab1년On) {
+    var _buildChainT = function(useHalf) {
+      var steps = _baseChainSteps(item, c, d);
+      steps.push({label:'타사보상 1년특가', val: useHalf?c.tasab1년Rate:c.normalMonthly});
+      return steps;
+    };
+    h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
+    h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - 12) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChainT(false)) + '</div>';
+    h += '<div class="res-sub" style="color:#7c3aed"><span>&#8627; 1년간 12개월</span><span>' + won(c.tasab1년Rate) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChainT(true)) + '</div>';
+  } else if (c.isRe && c.re1년On && c.months > 12) {
+    var _buildChainR = function(useHalf) {
+      var steps = _baseChainSteps(item, c, d);
+      steps.push({label:'재렌탈 1년특가', val: useHalf?c.monthly:c.normalMonthly});
+      return steps;
+    };
+    h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
+    h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - 12) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChainR(false)) + '</div>';
+    h += '<div class="res-sub" style="color:#7c3aed"><span>&#8627; 1년간 12개월</span><span>' + won(c.monthly) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChainR(true)) + '</div>';
   } else if (c.isHanval && c.hvMonths > 0 && c.hvMonths < c.months) {
+    var _buildChainH = function(useHalf) {
+      var steps = _baseChainSteps(item, c, d);
+      if (useHalf) steps.push({label:'반값', val:c.halfMonthly});
+      return steps;
+    };
     h += '<div class="res-main"><span>월 납입액</span><span>' + won(c.normalMonthly) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChainH(false)) + '</div>';
     h += '<div class="res-sub" style="color:#15803D"><span>&#8627; 반값 기간 ' + c.hvMonths + '개월</span><span>' + won(c.halfMonthly) + '/월</span></div>';
-    h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - c.hvMonths) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChainH(true)) + '</div>';
+    h += '<div class="res-sub" style="margin-top:4px"><span>&#8627; 이후 ' + (c.months - c.hvMonths) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
   } else if (item.선납 === '60' && c.months <= 60) {
     h += '<div class="res-main"><span>월 납입액</span><span style="color:#94a3b8">없음 (전기간 선납)</span></div>';
   } else if (ki) {
     var _st2 = item.선납 || 'none';
-    var _comboLabel2 = d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
-    var _chain2 = [{label:'정상가', val:c.displayBase}];
-    if (_comboLabel2) _chain2.push({label:_comboLabel2, val:c.normalMonthly});
+    var _chain2 = _baseChainSteps(item, c, d);
     if (_st2==='선납2' && c.sunap) _chain2.push({label:'선납2', val:c.sunap.인하후});
     _chain2.push({label:'코라솔', val:ki.renM});
     h += '<div class="res-main"><span>월 납입액</span><span>' + won(ki.renM) + '/월</span></div>';
@@ -1787,9 +1821,12 @@ function itemKorCalc(item,c){
   var renM,pbkM,pbkTotal,renTotal,halfRenM=null,normalRenM=null;
   var st=item.선납||'none';
   var hasS2Half=st==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0;
-  var hvMo=(c.isHanval&&c.hvMonths>0)?c.hvMonths:(hasS2Half?c.sunap.s2HalfMo:0);
-  var hvRate=(c.isHanval&&c.hvMonths>0)?c.halfMonthly:(hasS2Half?c.sunap.s2HalfM:0);
-  var afterRate=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:(hasS2Half?c.sunap.s2AfterM:effM);
+  var hvMo,hvRate,afterRate;
+  if (c.tasab1년On){ hvMo=12; hvRate=c.tasab1년Rate; afterRate=c.normalMonthly; }
+  else if (c.isRe&&c.re1년On){ hvMo=12; hvRate=c.monthly; afterRate=c.normalMonthly; }
+  else if (c.isHanval&&c.hvMonths>0){ hvMo=c.hvMonths; hvRate=c.halfMonthly; afterRate=c.normalMonthly; }
+  else if (hasS2Half){ hvMo=c.sunap.s2HalfMo; hvRate=c.sunap.s2HalfM; afterRate=c.sunap.s2AfterM; }
+  else { hvMo=0; hvRate=0; afterRate=effM; }
   if (hvMo>0){
     var hvInSup=Math.min(hvMo,supMo);
     var normalInSup=supMo-hvInSup;

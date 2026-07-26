@@ -1230,7 +1230,13 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     var mainMonthly = (isSunap2 && c.sunap) ? c.sunap.인하후 : c.monthly;
     var mainLabel   = '월 납입액';
     h += '<div class="res-main"><span>' + mainLabel + '</span><span>' + won(mainMonthly||c.normalMonthly) + '/월</span></div>';
-    if (c.isHanval && !isSunap2) h += '<div class="res-sub" style="color:#15803D"><span>&#8627; 전기간 반값 적용</span><span>' + won(c.halfMonthly) + '/월</span></div>';
+    var _stF = item.선납 || 'none';
+    var _chainF = _baseChainSteps(item, c, d);
+    if (_stF==='선납2' && c.sunap) _chainF.push({label:'선납2', val:c.sunap.인하후});
+    if (c.isHanval && !isSunap2) _chainF.push({label:'반값', val:c.halfMonthly});
+    if (_chainF.length > 1) {
+      h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_chainF) + '</div>';
+    }
   }
 
   if (c.tasabOn && c.tasabIlsibl > 0) {

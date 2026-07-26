@@ -700,9 +700,9 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
     }
   }
 
-  // 타사보상 1년간 만원 추가 할인
+  // 타사보상 1년간 추가 할인 (결합/동시구매 콤보와 무관하게 약정년 기준 고정 금액: 6년 이상 20,000원, 그 외 10,000원)
   var _tc1y=TASAB_COND[item.약정년]||{};
-  var _disc1y=d.동시구매?(_tc1y.동시구매||0):(d.결합?(_tc1y.결합||0):(_tc1y.base||0));
+  var _disc1y=_tc1y.base||0;
   var tasab1년On=!!(item.tasabosangOn&&item.tasab1년on&&hasTasab&&_disc1y>0);
   var tasab1년Disc=0;
   var tasab1년Rate=normalMonthly;
@@ -1060,7 +1060,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
         });
         h += (function(){
       var _tc=TASAB_COND[item.약정년]||{};
-      var _disc=d.동시구매?(_tc.동시구매||0):(d.결합?(_tc.결합||0):(_tc.base||0));
+      var _disc=_tc.base||0;
       var _canApply=_disc>0;
       var _lbl=_canApply?'1년간 '+won(_disc)+' 추가 할인':'1년 추가 할인 (해당 약정년 조건 없음)';
       return '</div><div class="check-row" style="margin-top:6px'+(_canApply?'':';opacity:.45;pointer-events:none')+'"><input type="checkbox"'+(item.tasab1년on&&_canApply?' checked':'')+(_canApply?'':' disabled')+' onchange="setTasab1년('+idx+',this.checked)" style="accent-color:#7c3aed"><span style="color:#7c3aed;font-weight:700">&#128161; '+_lbl+'</span></div>';

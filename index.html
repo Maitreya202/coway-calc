@@ -2553,7 +2553,8 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:left">품목</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:center;width:40px">수량</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">정상가</th>';
-  h+='<th style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
+  h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
+  if(opts.showIlsibl) h+='<th style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">일시불가</th>';
   h+='</tr>';
   dispRows.forEach(function(r,idx){
     h+='<tr>';
@@ -2567,7 +2568,16 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     h+='</td>';
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:center;font-weight:600">'+r.qty+'</td>';
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through">'+wM(r.lp)+'</td>';
-    h+='<td style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+wM(r.dp)+'</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+wM(r.dp)+'</td>';
+    if(opts.showIlsibl){
+      var ilVal=null;
+      if(!r.isCash && r.item.일시불>0){
+        var ilPrice=opts.showIlsiblDisc?Math.round(r.item.일시불*0.9):r.item.일시불;
+        var ilMember=(opts.showMembership&&r.item.memberCmpOn===true)?getMembershipTotal(r.item):0;
+        ilVal=ilPrice+ilMember;
+      }
+      h+='<td style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500">'+(ilVal!==null?wW(ilVal):'<span style="color:'+MUTE+'">-</span>')+'</td>';
+    }
     h+='</tr>';
   });
   h+='</table>';
@@ -2591,8 +2601,9 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   });
   h+='</div>';
   h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
-  h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">합계금액</div>';
-  h+='<div style="font-size:16px;font-weight:700">'+wM(totMKor)+'</div>';
+  h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">'+(totKor>0?'렌탈료 합계':'합계금액')+'</div>';
+  h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
+  if(totKor>0) h+='<div style="font-size:9.5px;color:'+MUTE+';margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">코라솔 합산 시 '+wM(totMKor)+'</div>';
   if(totKorPbk>0) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">렌탈 종료 후 페이백: '+wW(totKorPbk)+'</div>';
   h+='</div></div>';
 

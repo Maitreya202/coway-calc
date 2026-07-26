@@ -856,9 +856,12 @@ function getYakjs(nm,mdl,mth,jg){var r=[];PRODUCTS.forEach(function(p){if(p.제�
 // ── 한 줄: 제품 정보 + 능동형 옵션 태그 ──────────────────────────
 function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   var _inQ = item.inQuote || false;
+  var _ki = itemKorCalc(item, c);
+  var _kiPrice = _ki ? (_ki.isHanval ? (_ki.normalInSup > 0 ? _ki.normalRenM : _ki.halfRenM) : _ki.renM) : null;
   var compactPrice = isCashMode ? won(c.cashFinal)
-    : (c.sunap && isSunap2)  ? won(c.sunap.인하후) + '/월'
     : (c.sunap && !isSunap2) ? won(c.sunap.amt) + ' 선납'
+    : _kiPrice !== null      ? won(_kiPrice) + '/월'
+    : (c.sunap && isSunap2)  ? won(c.sunap.인하후) + '/월'
     : won(c.normalMonthly||c.monthly) + '/월';
   var _shortName = item.제품명.length > 7 ? item.제품명.slice(0, 7) + '\u2026' : item.제품명;
   var _pmTxt = isCashMode ? '일시불' : item.isRerental ? '재렌탈' : '신규';
@@ -927,8 +930,21 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   var pmLabel = isCashMode ? '일시불' : (item.isRerental ? '재렌탈' : '신규');
   // 가격 요약 바 (옵션 조정 중 항상 보이게)
   var _isSunap2=item.선납==='선납2';
-  var _baseP=isCashMode?won(c.cashFinal):(c.sunap&&_isSunap2)?won(c.sunap.인하후)+'/월':(c.sunap&&!_isSunap2)?won(c.sunap.amt)+' 선납':won(c.normalMonthly||c.monthly)+'/월';
-  var _sumPrice=(c.isHanval&&!isCashMode&&!_isSunap2)?_baseP+' <span style="font-size:12px;color:#86efac">→ '+won(c.halfMonthly)+'/월</span>':_baseP;
+  var _ki=itemKorCalc(item,c);
+  var _kiSteady=_ki?(_ki.isHanval?(_ki.normalInSup>0?_ki.normalRenM:_ki.halfRenM):_ki.renM):null;
+  var _baseP=isCashMode?won(c.cashFinal)
+    :(c.sunap&&!_isSunap2)?won(c.sunap.amt)+' 선납'
+    :_kiSteady!==null?won(_kiSteady)+'/월'
+    :(c.sunap&&_isSunap2)?won(c.sunap.인하후)+'/월'
+    :won(c.normalMonthly||c.monthly)+'/월';
+  var _sumPrice=_baseP;
+  if(!isCashMode){
+    if(_ki&&_ki.isHanval&&_ki.hvInSup>0&&_ki.normalInSup>0){
+      _sumPrice=_baseP+' <span style="font-size:12px;color:#fbbf24">(반값 '+_ki.hvInSup+'개월 '+won(_ki.halfRenM)+')</span>';
+    } else if(!_ki&&c.isHanval&&!_isSunap2){
+      _sumPrice=_baseP+' <span style="font-size:12px;color:#86efac">→ '+won(c.halfMonthly)+'/월</span>';
+    }
+  }
   var cMeths  = getMethods(item.제품명, item.모델명);
   var cJugis  = getJugis(item.제품명, item.모델명, item.관리방법).filter(function(j) { return j && j !== '-'; });
   var cYaks   = getYakjs(item.제품명, item.모델명, item.관리방법, item.관리주기);
@@ -1114,7 +1130,20 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
 }
 
 // ── 계산 결과 박스 ──────────────────────────────────────────────
+function _chainHtml(steps) {
+  return steps.map(function(s, i) {
+    var delta = '';
+    if (i > 0) {
+      var diff = steps[i - 1].val - s.val;
+      if (diff !== 0) delta = ' <span style="color:#ef4444;font-size:10px">(-' + won(Math.abs(diff)) + ')</span>';
+    }
+    return (i > 0 ? '<span style="color:#cbd5e1;margin:0 4px">&#8594;</span>' : '')
+      + '<span style="color:#94a3b8">' + s.label + '</span> <b style="color:#334155">' + won(s.val) + '</b>' + delta;
+  }).join('');
+}
+
 function renderResultBox(item, idx, c, d, isSunap2) {
+  var ki = itemKorCalc(item, c);
   var h = '';
   var bmpBadge = c.hasBmp ? '<span class="disc-badge" style="background:#f0fdf4;color:#15803d">별매품' + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : '') + '포함</span>' : '';
   h += '<div class="result-box">';
@@ -1129,12 +1158,40 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
     h += '<div class="res-sub" style="color:#7c3aed"><span>&#8627; 1년간 (재렌탈 할인 + 추가 -20%)</span><span>' + won(c.monthly) + '/월</span></div>';
     h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - 12) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
+  } else if (ki && ki.isHanval) {
+    var _chainBase = c.displayBase;
+    var _st1 = item.선납 || 'none';
+    var _comboLabel = d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
+    var _buildChain = function(useHalf) {
+      var steps = [{label:'정상가', val:_chainBase}];
+      if (_comboLabel) steps.push({label:_comboLabel, val:c.normalMonthly});
+      if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? '반값' : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
+      else if (d.반값 && useHalf) steps.push({label:'반값', val:c.halfMonthly});
+      steps.push({label:'코라솔', val: useHalf?ki.halfRenM:(ki.normalRenM!=null?ki.normalRenM:ki.renM)});
+      return steps;
+    };
+    h += '<div class="res-main"><span>월 납입액</span><span></span></div>';
+    if (ki.normalInSup > 0) {
+      h += '<div class="res-sub" style="font-weight:700"><span>&#8627; 이후 ' + ki.normalInSup + '개월</span><span>' + won(ki.normalRenM) + '/월</span></div>';
+      h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChain(false)) + '</div>';
+    }
+    h += '<div class="res-sub" style="color:#0ea5e9"><span>&#8627; 반값 기간 ' + ki.hvInSup + '개월</span><span>' + won(ki.halfRenM) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChain(true)) + '</div>';
   } else if (c.isHanval && c.hvMonths > 0 && c.hvMonths < c.months) {
     h += '<div class="res-main"><span>월 납입액</span><span>' + won(c.normalMonthly) + '/월</span></div>';
     h += '<div class="res-sub" style="color:#15803D"><span>&#8627; 반값 기간 ' + c.hvMonths + '개월</span><span>' + won(c.halfMonthly) + '/월</span></div>';
     h += '<div class="res-sub"><span>&#8627; 이후 ' + (c.months - c.hvMonths) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
   } else if (item.선납 === '60' && c.months <= 60) {
     h += '<div class="res-main"><span>월 납입액</span><span style="color:#94a3b8">없음 (전기간 선납)</span></div>';
+  } else if (ki) {
+    var _st2 = item.선납 || 'none';
+    var _comboLabel2 = d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
+    var _chain2 = [{label:'정상가', val:c.displayBase}];
+    if (_comboLabel2) _chain2.push({label:_comboLabel2, val:c.normalMonthly});
+    if (_st2==='선납2' && c.sunap) _chain2.push({label:'선납2', val:c.sunap.인하후});
+    _chain2.push({label:'코라솔', val:ki.renM});
+    h += '<div class="res-main"><span>월 납입액</span><span>' + won(ki.renM) + '/월</span></div>';
+    h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_chain2) + '</div>';
   } else {
     var mainMonthly = (isSunap2 && c.sunap) ? c.sunap.인하후 : c.monthly;
     var mainLabel   = '월 납입액';
@@ -1157,7 +1214,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     var ilMembership = memOn ? getMembershipTotal(item) : 0;
     var ilComp = (ilOn ? ilDisc : ilBase) + ilMembership;
     var rc, rl;
-    var rki = itemKorCalc(item, c);
+    var rki = ki;
     if (rki) { rc = rki.renTotal; rl = '코라솔 반영 렌탈 총납입'; }
     else if (c.sunap) { rc = getTrueTotal(item, c); rl = c.sunap.label + ' 총납입'; }
     else          { rc = c.total; rl = '렌탈 총납입'; }
@@ -1167,27 +1224,35 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     var resColor = cashWins ? '#15803D' : rentalWins ? '#2563eb' : '#64748b';
     var resBg    = cashWins ? '#ECFDF5' : rentalWins ? '#EFF6FF' : '#f1f5f9';
     var hasMemData = getMembershipFee(item) > 0;
+    var ilOpen = item._ilsiblCmpOpen || false;
     h += '<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:10px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleIlsiblCmp(' + idx + ')">'
       + '<span style="font-size:12px;font-weight:800;color:#334155">일시불 비교</span>'
-      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-      + '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#2563eb;font-weight:700;white-space:nowrap">'
-      + '<input type="checkbox"' + (ilOn ? ' checked' : '') + ' onchange="setIlsibl(' + idx + ',this.checked)" style="accent-color:#2563eb">동시구매 -10%</label>'
-      + (hasMemData ? '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#64748b;font-weight:700;white-space:nowrap"><input type="checkbox"' + (memOn ? ' checked' : '') + ' onchange="setMemberCmp(' + idx + ',this.checked)" style="accent-color:#2563eb">멤버십 포함</label>' : '')
-      + '</div></div>'
-      + '<div class="res-sub" style="color:#334155;font-weight:600"><span>일시불 정가</span><span>' + won(ilBase) + '</span></div>'
-      + (ilOn ? '<div class="res-sub" style="color:#2563eb;font-weight:700"><span>&#8627; 동시구매 (-10%)</span><span>' + won(ilDisc) + '</span></div>' : '')
-      + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + item.약정년 + '년차)</span><span>' + won(ilMembership) + '</span></div>' : '')
-      + '<div class="res-sub" style="color:#64748b"><span>비교 기준 (' + rl + ')</span><span>' + won(rc) + '</span></div>'
-      + '<div style="margin-top:6px;background:' + resBg + ';border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center">'
-      + '<span style="font-size:11px;font-weight:700;color:' + resColor + '">비교 결과</span>'
-      + '<span style="font-size:13px;font-weight:800;color:' + resColor + '">' + cr2 + '</span></div>'
-      + '</div>';
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="font-size:11px;font-weight:700;color:' + resColor + '">' + cr2 + '</span>'
+      + '<span style="font-size:12px;color:#94a3b8">' + (ilOpen ? '&#9650;' : '&#9660;') + '</span>'
+      + '</div></div>';
+    if (ilOpen) {
+      h += '<div style="margin-top:8px">'
+        + '<div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
+        + '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#2563eb;font-weight:700;white-space:nowrap">'
+        + '<input type="checkbox"' + (ilOn ? ' checked' : '') + ' onchange="event.stopPropagation();setIlsibl(' + idx + ',this.checked)" style="accent-color:#2563eb">동시구매 -10%</label>'
+        + (hasMemData ? '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#64748b;font-weight:700;white-space:nowrap"><input type="checkbox"' + (memOn ? ' checked' : '') + ' onchange="event.stopPropagation();setMemberCmp(' + idx + ',this.checked)" style="accent-color:#2563eb">멤버십 포함</label>' : '')
+        + '</div>'
+        + '<div class="res-sub" style="color:#334155;font-weight:600"><span>일시불 정가</span><span>' + won(ilBase) + '</span></div>'
+        + (ilOn ? '<div class="res-sub" style="color:#2563eb;font-weight:700"><span>&#8627; 동시구매 (-10%)</span><span>' + won(ilDisc) + '</span></div>' : '')
+        + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + item.약정년 + '년차)</span><span>' + won(ilMembership) + '</span></div>' : '')
+        + '<div class="res-sub" style="color:#64748b"><span>비교 기준 (' + rl + ')</span><span>' + won(rc) + '</span></div>'
+        + '</div>';
+    }
+    h += '</div>';
   }
 
   if (c.sunap) {
     h += '<div class="res-sunap"><div class="res-sunap-main"><span>&#128176; ' + c.sunap.label + '</span><span>' + won(c.sunap.amt) + '</span></div>';
-    if (c.sunap.s2HalfMo > 0) {
+    if (ki) {
+      h += '<p class="res-sunap-sub">코라솔 결합 시 실제 월 납입액은 위 "월 납입액"을 기준으로 해주세요</p>';
+    } else if (c.sunap.s2HalfMo > 0) {
       h += '<div class="res-sunap-after" style="color:#ea580c"><span>&#8627; 추가 할인 기간 ' + c.sunap.s2HalfMo + '개월</span><span>' + won(c.sunap.s2HalfM) + '/월</span></div>';
       h += '<div class="res-sunap-after"><span>&#8627; 이후 ' + c.sunap.s2AfterMo + '개월 (선납2 적용)</span><span>' + won(c.sunap.s2AfterM) + '/월</span></div>';
     } else {
@@ -1686,6 +1751,7 @@ function setBmp(idx,v){cart[idx].별매품on=v;if(v&&!cart[idx].별매품cnt)car
 function setBmpCnt(idx,v){cart[idx].별매품cnt=Math.max(1,parseInt(v)||1);renderCart();}
 function setHeadType(idx,v){cart[idx].headType=v;renderCart();}
 function setIlsibl(idx,v){cart[idx].ilsiblOn=v;renderCart();}
+function toggleIlsiblCmp(idx){cart[idx]._ilsiblCmpOpen=!cart[idx]._ilsiblCmpOpen;renderCart();}
 function setMemberCmp(idx,v){cart[idx].memberCmpOn=v;renderCart();}
 function setS2Grade(idx,g){cart[idx].s2=Object.assign({},cart[idx].s2,{grade:g,oi:0});renderCart();}
 function setS2Oi(idx,i){cart[idx].s2=Object.assign({},cart[idx].s2,{oi:parseInt(i)});renderCart();}
@@ -1741,6 +1807,8 @@ function itemKorCalc(item,c){
     renM=Math.max(0,effM-totalSupM);pbkM=Math.max(0,totalSupM-effM);
     pbkTotal=pbkM*maxSupMonths;renTotal=renM*supMo+effM*(c.months-supMo);
   }
+  // 선납2 결합 시 렌탈 총납입에 선납금(일시 지급액)도 포함 (일시불 비교 등에서 실제 총비용 기준으로 사용)
+  if (st==='선납2'&&c.sunap) renTotal+=c.sunap.amt;
   return {
     lines:lines,effM:effM,totalSupM:totalSupM,totalNabM:totalNabM,
     renM:renM,pbkM:pbkM,pbkTotal:pbkTotal,nabTotal:totalNabTotal,refund:totalRefund,

@@ -863,7 +863,6 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
     : _kiPrice !== null      ? won(_kiPrice) + '/월'
     : (c.sunap && isSunap2)  ? won(c.sunap.인하후) + '/월'
     : won(c.normalMonthly||c.monthly) + '/월';
-  var _shortName = item.제품명.length > 7 ? item.제품명.slice(0, 7) + '\u2026' : item.제품명;
   var _pmTxt = isCashMode ? '일시불' : item.isRerental ? '재렌탈' : '신규';
   var d = item.discounts || {};
 
@@ -1971,34 +1970,29 @@ function calcTotals(items){
     }
   });
   var totIlsibl=0,totIlsiblDisc=0;
-  var agg={ilsibl:0,halfM:0,halfMo:0,flatM:0,totalMo:0,normalM:0,korNabM:0,hasHalf:false,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
+  var agg={ilsibl:0,normalM:0,korNabM:0,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),ki=itemKorCalc(it,c);
     var st=it.선납||'none';
-    if (c.months>agg.totalMo) agg.totalMo=c.months;
     if (c.sunap) agg.ilsibl+=c.sunap.amt;
     if (it.일시불>0){agg.hasIlsibl=true;totIlsibl+=it.일시불;totIlsiblDisc+=Math.round(it.일시불*0.9);}
     if (ki){
       agg.hasKor=true;agg.korNabM+=ki.totalNabM;
       agg.korPbk+=ki.pbkTotal;agg.korRefund+=ki.refund;
       agg.korNabTotal+=ki.nabTotal;agg.korRenTotal+=ki.renTotal;
-      if (ki.isHanval){agg.hasHalf=true;agg.halfM+=ki.halfRenM||0;agg.normalM+=ki.normalRenM||0;if(c.hvMonths>agg.halfMo)agg.halfMo=c.hvMonths;}
-      else {agg.normalM+=ki.renM;agg.flatM+=ki.renM;}
+      agg.normalM+=ki.isHanval?(ki.normalRenM||0):ki.renM;
     } else {
       if (c.tasab1년On){
-        agg.hasHalf=true;agg.halfM+=c.tasab1년Rate;agg.normalM+=c.normalMonthly;
-        if (12>agg.halfMo) agg.halfMo=12;
+        agg.normalM+=c.normalMonthly;
       } else if (st==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){
-        agg.hasHalf=true;agg.halfM+=c.sunap.s2HalfM||0;agg.normalM+=c.sunap.s2AfterM||0;
-        if (c.sunap.s2HalfMo>agg.halfMo) agg.halfMo=c.sunap.s2HalfMo;
+        agg.normalM+=c.sunap.s2AfterM||0;
       } else if (c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){
-        agg.hasHalf=true;agg.halfM+=c.halfMonthly;agg.normalM+=c.normalMonthly;
-        if (c.hvMonths>agg.halfMo) agg.halfMo=c.hvMonths;
+        agg.normalM+=c.normalMonthly;
       } else {
         var eM=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly;
-        if (st==='선납2'&&c.sunap&&c.sunap.인하후){agg.normalM+=c.sunap.인하후;agg.flatM+=c.sunap.인하후;}
-        else if (st==='60'){if(c.months>60){agg.normalM+=eM;agg.flatM+=eM;}}
-        else {agg.normalM+=eM;agg.flatM+=eM;}
+        if (st==='선납2'&&c.sunap&&c.sunap.인하후) agg.normalM+=c.sunap.인하후;
+        else if (st==='60'){if(c.months>60) agg.normalM+=eM;}
+        else agg.normalM+=eM;
       }
     }
   });

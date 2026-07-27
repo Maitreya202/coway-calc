@@ -2543,6 +2543,7 @@ function computeQuoteRows(cart){
     var isCash=item.구매방법==='cash';
     var lp=item.정상가,dp=isCash?(c.cashFinal||0):c.monthly,sn=(c.sunap&&c.sunap.amt)?c.sunap.amt:0;
     var snPreM=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.인하후)?((c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly):0;
+    var snExcused=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.월인하)?c.sunap.월인하*c.months:0;
     if(!isCash){
       if(ki){dp=ki.isHanval?ki.halfRenM:ki.renM;}
       else if(c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){dp=c.normalMonthly;}
@@ -2582,11 +2583,12 @@ function computeQuoteRows(cart){
     discLabel=discBadge; // 뱃지에 표시할 텍스트 (결합/동시구매/타사보상/코라솔 등 명명된 할인이 있을 때만 채워짐)
     var trueTotal=isCash?dp:(ki?ki.renTotal:getTrueTotal(item,c));
     var korM=ki?ki.totalNabM:0;
-    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
+    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,snExcused:snExcused,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
   });
   var totM=rows.reduce(function(s,r){return s+r.dp;},0);
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
   var totSnPreM=rows.reduce(function(s,r){return s+r.snPreM;},0);
+  var totSnExcused=rows.reduce(function(s,r){return s+r.snExcused;},0);
   var totKor=rows.reduce(function(s,r){return s+r.korM;},0);
   var totKorSup=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supM:0);},0);
   var totKorSupTotal=rows.reduce(function(s,r){return s+(r.korInfo?r.korInfo.supTotal:0);},0);
@@ -2597,7 +2599,7 @@ function computeQuoteRows(cart){
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totSnPreM:totSnPreM,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totSn:totSn,totSnPreM:totSnPreM,totSnExcused:totSnExcused,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2611,7 +2613,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totSnExcused=_rd.totSnExcused, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2710,7 +2712,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   // [4] 합계 (가로 배치)
   var totMKor=totM+totKor;
   var sumItems=[];
-  if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn)});
+  if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn),sub:totSnExcused>0?('월납입 제외 총액 '+wW(totSnExcused)):''});
   if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
   if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:'<span style="white-space:nowrap">'+wW(totKorSup)+'/월</span><br><span style="white-space:nowrap;font-size:10.5px;font-weight:600">'+wW(totKorSupTotal)+'/총합</span>'});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});

@@ -39,9 +39,8 @@ input:focus,select:focus { border-color:#2563eb; }
 .empty .ico { font-size:52px; margin-bottom:12px; }
 .empty .t1 { font-size:15px; font-weight:600; color:#94a3b8; margin-bottom:4px; }
 .empty .t2 { font-size:13px; }
-.cart-list { background:white; border-radius:14px; box-shadow:0 1px 6px rgba(0,0,0,.07); border:1px solid #f1f5f9; overflow:visible; }
-.cart-card { border-bottom:1px solid #f1f5f9; overflow:visible; position:relative; }
-.cart-card:last-child { border-bottom:none; }
+.cart-list { background:transparent; overflow:visible; display:flex; flex-direction:column; gap:10px; }
+.cart-card { border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.05); overflow:visible; position:relative; }
 .cart-head { padding:14px; display:flex; align-items:flex-start; justify-content:space-between; }
 .cart-tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:6px; }
 .tag { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
@@ -834,8 +833,9 @@ function openConfig(idx){
   item.kors=[];item.별매품on=false;item.별매품cnt=1;
   item.headType='none';item.ilsiblOn=false;
   item.tasabosangOn=false;item.tasab1년on=false;
-  item._open=true;
+  item._detailOpen=true;
   if (searchTargetIdx===null){
+    cart.forEach(function(it){ it._detailOpen=false; });
     cart.push(item);
   } else {
     item.id=cart[searchTargetIdx]?cart[searchTargetIdx].id:item.id;
@@ -1135,19 +1135,28 @@ function _chainHtml(steps) {
     var delta = '';
     if (i > 0) {
       var diff = steps[i - 1].val - s.val;
-      if (diff !== 0) delta = ' <span style="color:#ef4444;font-size:10px">(-' + won(Math.abs(diff)) + ')</span>';
+      if (diff > 0) delta = ' <span style="color:#ef4444;font-size:10px">(-' + won(diff) + ')</span>';
+      else if (diff < 0) delta = ' <span style="color:#2563eb;font-size:10px">(+' + won(-diff) + ')</span>';
     }
     return (i > 0 ? '<span style="color:#cbd5e1;margin:0 4px">&#8594;</span>' : '')
       + '<span style="color:#94a3b8">' + s.label + '</span> <b style="color:#334155">' + won(s.val) + '</b>' + delta;
   }).join('');
 }
 
-// 정상가 → (타사보상 렌탈가 전환 시) → 콤보할인(동시구매/결합/페스타) 까지의 공통 단계
+// 정상가 → (타사보상 렌탈가 전환 시) → (별매품 추가 시) → 콤보할인(동시구매/결합/페스타) 까지의 공통 단계
 function _baseChainSteps(item, c, d) {
   var steps = [{label:'정상가', val:c.displayBase}];
+  var runningBase = c.displayBase;
   if (item.tasabosangOn) {
     var tasabBase = item.타사보상렌탈 > 0 ? item.타사보상렌탈 : item.타사보상지로;
     steps.push({label:'타사보상 렌탈가', val:tasabBase});
+    runningBase = tasabBase;
+  }
+  if (c.hasBmp && c.bmpAmt > 0) {
+    runningBase = runningBase + c.bmpAmt * c.bmpCnt;
+    steps.push({label:'별매품' + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : ''), val:runningBase});
+  }
+  if (item.tasabosangOn) {
     if (d.동시구매) steps.push({label:'동시구매 -10%', val:c.normalMonthly});
     else if (d.결합) steps.push({label:'결합 -5%', val:c.normalMonthly});
   } else {

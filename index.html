@@ -410,6 +410,7 @@ input:focus,select:focus { border-color:#2563eb; }
       <img id="quoteImg" style="width:100%;display:block;border-radius:4px" alt="견적서">
     </div>
     <div class="quote-foot">
+      <button class="btn-save" id="pdfPrintBtn" onclick="printQuote()" style="background:#059669;margin-bottom:8px">&#128424;&#65039; 바로 인쇄</button>
       <button class="btn-save" id="pdfSaveBtn" onclick="downloadQuotePDF()" style="background:#1D4ED8;margin-bottom:8px">&#128190; 현재 탭만 PDF 저장</button>
       <button class="btn-save" id="pdfSaveBothBtn" onclick="downloadBothQuotesPDF()" style="display:none;background:#7c3aed;margin-bottom:8px">&#128229; 2개 모두 PDF 저장</button>
     </div>
@@ -2341,6 +2342,87 @@ function downloadQuotePDF(){
       _qCanvas=canvas;
       document.getElementById('quoteImg').src=canvas.toDataURL('image/jpeg',0.92);
       doDownload();
+    });
+  }
+}
+
+// ── 바로 인쇄 (PC에서 저장 없이 인쇄 다이얼로그 바로 열기) ──────────
+function _sliceCanvasPages(canvas,breakpoints){
+  var pageW=210,pageH=297; // mm
+  var scale=pageW/canvas.width; // mm per px
+  if(!breakpoints||!breakpoints.length){
+    return [{dataUrl:canvas.toDataURL('image/jpeg',0.92),heightMm:Math.min(canvas.height*scale,pageH)}];
+  }
+  var pageHpx=pageH/scale;
+  var cuts=breakpoints.slice();
+  if(cuts[0]!==0) cuts.unshift(0);
+  if(cuts[cuts.length-1]<canvas.height) cuts.push(canvas.height);
+  var pages=[]; var curStart=0;
+  while(curStart<canvas.height-1){
+    var limit=curStart+pageHpx;
+    var nextStart=null;
+    for(var j=0;j<cuts.length;j++){
+      if(cuts[j]>curStart && cuts[j]<=limit) nextStart=cuts[j];
+      if(cuts[j]>limit) break;
+    }
+    if(nextStart===null) nextStart=Math.min(curStart+pageHpx,canvas.height);
+    pages.push({start:curStart,end:nextStart});
+    curStart=nextStart;
+  }
+  if(pages.length===0) pages.push({start:0,end:canvas.height});
+  return pages.map(function(p){
+    var h=p.end-p.start;
+    var c=document.createElement('canvas');
+    c.width=canvas.width; c.height=h;
+    c.getContext('2d').drawImage(canvas,0,-p.start);
+    return {dataUrl:c.toDataURL('image/jpeg',0.92),heightMm:h*scale};
+  });
+}
+
+function printCanvasPages(canvas,breakpoints){
+  var pages=_sliceCanvasPages(canvas,breakpoints);
+  var win=window.open('','_blank');
+  if(!win){ alert('팝업이 차단되어 인쇄창을 열 수 없습니다. 브라우저의 팝업 차단을 해제해주세요.'); return; }
+  var body=pages.map(function(p){return '<div class="pg"><img src="'+p.dataUrl+'"></div>';}).join('');
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서 인쇄</title><style>'
+    +'@page{size:A4;margin:0}'
+    +'html,body{margin:0;padding:0}'
+    +'.pg{width:210mm;page-break-after:always;}'
+    +'.pg:last-child{page-break-after:auto;}'
+    +'.pg img{display:block;width:210mm;}'
+    +'</style></head><body>'+body
+    +'<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};'
+    +'window.onafterprint=function(){window.close();};<\/script>'
+    +'</body></html>';
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+function printQuote(){
+  var btn=document.getElementById('pdfPrintBtn');
+  function doPrint(){
+    btn.disabled=true; btn.textContent='인쇄 준비 중...';
+    ensureAssetsLoaded(function(){
+      setTimeout(function(){
+        var canvas=_qActive==='basket'?_qCanvas2:_qCanvas;
+        var breaks=_qActive==='basket'?_qBreaks2:_qBreaks;
+        printCanvasPages(canvas,breaks);
+        btn.disabled=false; btn.textContent='🖨️ 바로 인쇄';
+      },30);
+    });
+  }
+  var activeCanvas=_qActive==='basket'?_qCanvas2:_qCanvas;
+  if(activeCanvas){
+    doPrint();
+  } else {
+    _showGenOverlay(true,'견적서 준비 중...');
+    generateQuoteAssets(_qItems||cart,_qCust,_qSalesperson,_qToday,function(err,canvas){
+      _showGenOverlay(false);
+      if(err){ alert('견적서 생성 실패: '+(err.message||err)); return; }
+      _qCanvas=canvas;
+      document.getElementById('quoteImg').src=canvas.toDataURL('image/jpeg',0.92);
+      doPrint();
     });
   }
 }

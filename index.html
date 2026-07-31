@@ -760,7 +760,7 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
     if (d.동시구매) discLabel+=' + 동시구매 -10%';
     else if (d.결합) discLabel+=' + 결합 -5%';
   } else {
-    if (d.동시결합) discLabel='동시구매+결합 -14.5%';
+    if (d.동시결합) discLabel='10%+5%';
     else if (d.동시구매) discLabel='동시구매 -10%';
     else if (d.결합) discLabel='결합 -5%';
     else if (d.페스타) discLabel='페스타 -15%';
@@ -1086,7 +1086,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     h += '</div>';
   } else {
     h += '<span class="sec-label" style="margin-top:0">할인 선택</span><div class="pill-group">';
-    var discOpts=[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%(-14.5%)'],['페스타','-15%'],['선납2','선납2']];
+    var discOpts=[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%'],['페스타','-15%'],['선납2','선납2']];
     if(hasTasabData) discOpts.splice(1,0,['타사보상','타사보상']);
     discOpts.forEach(function(optArr) {
       var opt = optArr[0]; var optLabel = optArr[1];
@@ -1193,7 +1193,7 @@ function _baseChainSteps(item, c, d) {
     if (d.동시구매) steps.push({label:'동시구매 -10%', val:c.normalMonthly});
     else if (d.결합) steps.push({label:'결합 -5%', val:c.normalMonthly});
   } else {
-    var combo = d.동시결합 ? '동시구매+결합 -14.5%' : d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
+    var combo = d.동시결합 ? '10%+5%' : d.동시구매 ? '동시구매 -10%' : d.결합 ? '결합 -5%' : d.페스타 ? '페스타 -15%' : null;
     if (combo) steps.push({label:combo, val:c.normalMonthly});
   }
   return steps;
@@ -1686,7 +1686,7 @@ var BULK_FIELD_DEFS = {
   method: { label:'구매방법', opts:[['rental','신규'],['rerental','재렌탈'],['cash','일시불']] },
   term:   { label:'약정기간', opts:[[3,'3년'],[5,'5년'],[6,'6년'],[7,'7년']] },
   mgmt:   { label:'관리방법', opts:[['방문관리','방문관리'],['자가관리','자가관리'],['서비스프리','서비스프리']] },
-  disc:   { label:'할인', opts:[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%(-14.5%)'],['페스타','-15%']] },
+  disc:   { label:'할인', opts:[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%'],['페스타','-15%']] },
   half:   { label:'반값 (-50%)', opts:[['off','미적용'],['on','반값 (-50%) 적용']] }
 };
 function renderBulkOptsHtml(){

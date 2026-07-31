@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.CowayCalc" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#1D4ED8</item>
+        <item name="colorPrimary">#1D4ED8</item>
+    </style>
+</resources>

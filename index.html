@@ -231,7 +231,12 @@ input:focus,select:focus { border-color:#2563eb; }
       </div>
     </div>
   </div>
-  <div class="wrap">
+  <div class="main-tabbar" style="max-width:480px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px 0;display:flex;gap:6px">
+    <button type="button" id="mtabEstimate" onclick="switchMainTab('estimate')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">📄 견적서</button>
+    <button type="button" id="mtabCard" onclick="switchMainTab('card')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">💳 제휴카드</button>
+  </div>
+
+  <div class="wrap" id="tabPanelEstimate">
     <div class="empty" id="emptyMsg">
       <div onclick="openSearchModal()" style="display:flex;align-items:center;gap:8px;background:#eff6ff;border:1.5px dashed #93c5fd;border-radius:12px;padding:12px 16px;cursor:pointer;margin-bottom:6px">
         <span style="font-size:18px;flex-shrink:0">🔍</span>
@@ -320,6 +325,21 @@ input:focus,select:focus { border-color:#2563eb; }
       <div id="basketTotalBar" style="display:none;margin-top:8px;border-top:1px solid #86EFAC;padding-top:8px"></div>
     </div>
   </div>
+
+  <div class="wrap" id="tabPanelCard" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <label style="font-size:12px;font-weight:700;color:#334155;white-space:nowrap">카드 선택</label>
+      <select id="cardSelect" onchange="cardOnSelectChange(this.value)" style="flex:1;padding:9px 10px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;font-family:inherit;background:#fff"></select>
+    </div>
+    <div id="cardNoDataMsg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.6">
+      제휴카드 데이터가 없습니다. 구글 시트의 "제휴카드_기본" 탭을 확인해주세요.
+    </div>
+    <div style="display:flex;gap:6px;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:14px">
+      <button type="button" id="ctabAgent" onclick="switchCardTab('agent')" style="flex:1;border:none;padding:9px 4px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">상담원용 상세보기</button>
+      <button type="button" id="ctabCustomer" onclick="switchCardTab('customer')" style="flex:1;border:none;padding:9px 4px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:#64748b">고객 발송 카드</button>
+    </div>
+    <div id="cardMain"></div>
+  </div>
 </div>
 
 <div class="modal-bg" id="quoteInfoModal">
@@ -346,6 +366,13 @@ input:focus,select:focus { border-color:#2563eb; }
       <label class="check-row" style="margin-bottom:6px">
         <input type="checkbox" id="quoteSavingToggle" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128184; 정상가 대비 절감 금액 표시</span>
       </label>
+      <label class="check-row" style="margin-bottom:6px">
+        <input type="checkbox" id="quoteCardToggle" onchange="toggleQuoteCardAmountWrap()" style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128179; 제휴카드 청구할인 반영</span>
+      </label>
+      <div id="quoteCardAmountWrap" style="display:none;margin:-2px 0 10px 26px">
+        <input type="number" id="quoteCardAmount" min="0" step="1000" placeholder="월 청구할인 금액 (원)" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12.5px;font-family:inherit;background:#f8fafc">
+        <p style="font-size:10.5px;color:#94a3b8;margin-top:4px">제휴카드 탭에서 카드별 청구할인 구간을 확인 후 입력하세요</p>
+      </div>
       <label class="check-row" style="margin-bottom:14px">
         <input type="checkbox" id="quoteTimelineToggle" checked style="accent-color:#2563eb;width:16px;height:16px"> <span>&#128197; 납부 타임라인 표시 (할인구간 여러 개일 때)</span>
       </label>
@@ -443,6 +470,7 @@ var SUNAP2 = {};   // 서버에서 로드
 var TASAB_COND = {}; // 타사보상 약정별 조건
 var MEMBERSHIP_CASH = {}; // 일시불 멤버십 요금 (제품군/기능구조/관리주기별)
 var HANVAL_PERIODS = [0, 2, 4, 6, 12, 18, 24];
+var CARDS = []; // 제휴카드 데이터 (서버에서 로드)
 
 function fixModalHeight() {
   document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
@@ -468,6 +496,9 @@ fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors',
     if (cond.tasab)  TASAB_COND = cond.tasab;
     if (cond.korasol) KORASOL = cond.korasol;
     if (cond.membershipCash) MEMBERSHIP_CASH = cond.membershipCash;
+    if (cond.cards) CARDS = cond.cards;
+    document.getElementById('cardNoDataMsg').style.display = (CARDS.length===0) ? 'block' : 'none';
+    _renderCardDropdown();
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('quoteBasketBar').style.display = 'none';
@@ -2222,6 +2253,10 @@ function openQuoteInfoModal(scope){
 
   document.getElementById('quoteInfoModal').classList.add('show');
 }
+function toggleQuoteCardAmountWrap(){
+  var on=document.getElementById('quoteCardToggle').checked;
+  document.getElementById('quoteCardAmountWrap').style.display=on?'block':'none';
+}
 function closeQuoteInfoModal(){
   document.getElementById('quoteInfoModal').classList.remove('show');
 }
@@ -2516,6 +2551,8 @@ function generateQuoteAssets(items,customer,salesperson,today,cb){
         showTotalPayment: !!(document.getElementById('quoteTotalToggle')&&document.getElementById('quoteTotalToggle').checked),
         showSaving: !!(document.getElementById('quoteSavingToggle')&&document.getElementById('quoteSavingToggle').checked),
         showTimeline: !!(document.getElementById('quoteTimelineToggle')&&document.getElementById('quoteTimelineToggle').checked),
+        showCard: !!(document.getElementById('quoteCardToggle')&&document.getElementById('quoteCardToggle').checked),
+        cardAmount: parseInt((document.getElementById('quoteCardAmount')&&document.getElementById('quoteCardAmount').value)||0)||0,
         salespersonPhone: phone
       };
       innerHtml=buildQuoteHTML(items,customer,salesperson,today,opts);
@@ -2796,10 +2833,12 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // [4] 합계 (가로 배치)
   var totMKor=totM+totKor;
+  var cardAmount=(opts.showCard&&opts.cardAmount>0)?opts.cardAmount:0;
   var sumItems=[];
   if(totSn>0) sumItems.push({label:'선납금',val:wW(totSn),sub:totSnExcused>0?('월납입 제외 총액 '+wW(totSnExcused)):''});
   if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
   if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:'<span style="white-space:nowrap">'+wW(totKorSup)+'/월</span><br><span style="white-space:nowrap;font-size:10.5px;font-weight:600">'+wW(totKorSupTotal)+'/총합</span>'});
+  if(cardAmount>0) sumItems.push({label:'제휴카드 청구할인',val:'-'+wW(cardAmount)+'/월',sub:'카드사 청구할인 · 렌탈료와 별도 적용'});
   sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';
@@ -2816,6 +2855,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">'+(totKor>0?'렌탈료 합계':'합계금액')+'</div>';
   h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
   if(totKor>0) h+='<div style="font-size:9.5px;color:'+MUTE+';margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">코라솔 합산 시 '+wM(totMKor)+'</div>';
+  if(cardAmount>0) h+='<div style="font-size:9.5px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">제휴카드 적용 시 '+wM(Math.max(0,totM-cardAmount))+'</div>';
   if(totKorPbk>0) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">렌탈 종료 후 페이백: '+wW(totKorPbk)+'</div>';
   h+='</div></div>';
 
@@ -3159,6 +3199,216 @@ function _giftSection(eyebrow,bodyText,metaText,PAPER,LINE,INK,INKS,SERIF,BRASSD
   h+='<p style="font-size:9.5px;color:#5a4a2e;line-height:'+LH_LOOSE+'">발송 요청 이후 <b style="color:'+BRASSD+'">대부분 설치일 기준 한 달 이내</b>에 사은품을 받아보실 수 있어요. 만약 <b style="color:'+BRASSD+'">한 달이 지나도록 도착하지 않는다면</b>, 번거로우시더라도 매장으로 편하게 연락 주세요.</p>';
   h+='</div></div>';
   return h;
+}
+
+// ================================================================
+// 제휴카드 탭
+// ================================================================
+var cardCurrentId = null;
+var cardActiveTab = 'agent'; // 'agent' | 'customer'
+
+function switchMainTab(tab){
+  var estPanel=document.getElementById('tabPanelEstimate'), cardPanel=document.getElementById('tabPanelCard');
+  var bEst=document.getElementById('mtabEstimate'), bCard=document.getElementById('mtabCard');
+  var showCard = tab==='card';
+  estPanel.style.display = showCard ? 'none' : 'block';
+  cardPanel.style.display = showCard ? 'block' : 'none';
+  bEst.style.background = showCard ? '#f1f5f9' : '#2563eb';
+  bEst.style.color = showCard ? '#64748b' : '#fff';
+  bCard.style.background = showCard ? '#2563eb' : '#f1f5f9';
+  bCard.style.color = showCard ? '#fff' : '#64748b';
+  if (showCard){
+    if (!cardCurrentId && CARDS.length) cardCurrentId = CARDS[0].id;
+    renderCardTabContent();
+  }
+}
+
+function _renderCardDropdown(){
+  var sel=document.getElementById('cardSelect');
+  if (!sel) return;
+  sel.innerHTML='';
+  if (!CARDS.length) return;
+  if (!cardCurrentId || !CARDS.some(function(c){return c.id===cardCurrentId;})) cardCurrentId=CARDS[0].id;
+  var promoGroup=document.createElement('optgroup'); promoGroup.label='프로모션 진행 중';
+  var plainGroup=document.createElement('optgroup'); plainGroup.label='기본 혜택 안내';
+  CARDS.forEach(function(c){
+    var opt=document.createElement('option');
+    opt.value=c.id;
+    opt.textContent=c.promo?(c.name+' (PROMO)'):c.name;
+    if(c.id===cardCurrentId) opt.selected=true;
+    (c.promo?promoGroup:plainGroup).appendChild(opt);
+  });
+  sel.appendChild(promoGroup); sel.appendChild(plainGroup);
+}
+function cardOnSelectChange(id){ cardCurrentId=id; renderCardTabContent(); }
+function switchCardTab(tab){ cardActiveTab=tab; renderCardTabContent(); }
+
+function renderCardTabContent(){
+  var a=document.getElementById('ctabAgent'), b=document.getElementById('ctabCustomer');
+  a.style.background = cardActiveTab==='agent' ? '#2563eb' : 'transparent';
+  a.style.color = cardActiveTab==='agent' ? '#fff' : '#64748b';
+  b.style.background = cardActiveTab==='customer' ? '#2563eb' : 'transparent';
+  b.style.color = cardActiveTab==='customer' ? '#fff' : '#64748b';
+  var card=CARDS.find(function(c){return c.id===cardCurrentId;});
+  var main=document.getElementById('cardMain');
+  if (!card){ main.innerHTML=''; return; }
+  main.innerHTML = cardActiveTab==='agent' ? _cardAgentHtml(card) : _cardCustomerHtml(card);
+  if (cardActiveTab==='customer') _wireCardCustomerButtons(card);
+}
+
+function _cardAgentHtml(card){
+  var h='<div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)">';
+  h+='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:4px">';
+  h+='<h3 style="font-size:18px;font-weight:800;color:#0F172A;margin:0">'+esc(card.name)+'</h3>';
+  if(card.promo && card.promoTitle) h+='<span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:#FFE9E2;color:#FF6B4A">'+esc(card.promoTitle)+'</span>';
+  if(card.promo && card.period) h+='<span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:#E8F3F8;color:#0B5C8C">'+esc(card.period)+'</span>';
+  h+='</div>';
+  h+='<div style="font-size:12px;color:#64748b;margin:6px 0 16px">카드 신청 문의 ☎ <a href="tel:'+card.contact.replace(/[^0-9]/g,'')+'" style="color:#2563eb;font-weight:600;text-decoration:none">'+esc(card.contact)+'</a></div>';
+  if(card.extra) h+='<div style="font-size:12px;background:#FFF7F3;border:1px solid #FBD9CB;border-radius:10px;padding:9px 11px;margin-bottom:10px;line-height:1.55">'+esc(card.extra)+'</div>';
+  if(card.promo && card.target) h+='<div style="font-size:12px;background:#FFF7F3;border:1px solid #FBD9CB;border-radius:10px;padding:9px 11px;margin-bottom:12px;line-height:1.55"><strong>대상 · </strong>'+esc(card.target)+'</div>';
+
+  h+='<p style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin:14px 0 7px">전월 실적별 청구할인</p>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:'+Math.max(280,card.tiers.length*90)+'px">';
+  h+='<thead><tr>'+card.tiers.map(function(t){return '<th style="border:1px solid #E1E8ED;padding:7px 6px;text-align:center;background:#F0F4F7;color:#0B2E45;font-weight:700;font-size:11px">'+esc(t.th)+'</th>';}).join('')+'</tr></thead><tbody>';
+  h+='<tr>'+card.tiers.map(function(t){return '<td style="border:1px solid #E1E8ED;padding:7px 6px;text-align:center">'+won(t.base)+'</td>';}).join('')+'</tr>';
+  if(card.promo){
+    var promoLabel=(card.tiers[0]&&card.tiers[0].promoLabel)||'프로모션';
+    h+='<tr style="color:#FF6B4A;font-weight:700">'+card.tiers.map(function(t){return '<td style="border:1px solid #E1E8ED;padding:7px 6px;text-align:center">'+(t.promo?'+'+won(t.promo):'-')+'</td>';}).join('')+'</tr>';
+    h+='<tr style="font-weight:800;font-size:13px;color:#0C3B63">'+card.tiers.map(function(t){return '<td style="border:1px solid #E1E8ED;padding:7px 6px;text-align:center">'+won(t.total)+'</td>';}).join('')+'</tr>';
+    h+='</tbody></table></div>';
+    h+='<p style="font-size:10.5px;color:#94a3b8;margin:4px 0 14px">총 할인 ('+(card.months||60)+'개월간) &middot; '+promoLabel+' 라벨 기준</p>';
+  } else {
+    h+='</tbody></table></div>';
+  }
+
+  if(card.promo && card.notes && card.notes.length){
+    h+='<p style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin:14px 0 7px">유의사항</p>';
+    h+='<ul style="margin:0 0 14px;padding-left:16px;font-size:11.5px;color:#64748b;line-height:1.7">'+card.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+'</ul>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    h+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:10px;padding:9px 10px"><div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:2px">연회비</div><div style="font-size:12px;font-weight:600">'+esc(card.fee||'-')+'</div></div>';
+    h+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:10px;padding:9px 10px"><div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:2px">신청 방법</div><div style="font-size:12px;font-weight:600">'+(card.url?('<a href="'+esc(card.url)+'" target="_blank" style="color:#2563eb;text-decoration:none">'+esc(card.issue)+'</a>'):esc(card.issue||'-'))+'</div></div>';
+    h+='</div>';
+  } else {
+    h+='<div style="font-size:11.5px;color:#64748b;background:#F7FAFB;border:1px dashed #E1E8ED;border-radius:10px;padding:9px 11px;margin-top:8px">이번 달 별도 프로모션은 진행되지 않는 카드예요. 표의 금액은 매월 기본 청구할인 금액입니다.</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function _cardBenefitRowsHtml(card){
+  return card.tiers.map(function(t){
+    var amt=card.promo?t.total:t.base;
+    return '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #D9EDF2"><span style="color:#64748b">'+esc(t.th)+'</span><span style="font-weight:800;color:#0C3B63">'+won(amt)+'</span></div>';
+  }).join('');
+}
+
+function cardCustomerText(card){
+  var headline=card.promo?card.promoTitle:'매달 청구할인 안내';
+  var periodLine=card.promo?(card.period+' 신규 발급 고객 대상'):'코웨이 렌탈료 자동이체 고객 대상';
+  var lines=[];
+  lines.push('[코웨이 '+card.name+' 안내]');
+  lines.push(headline+' · '+periodLine);
+  lines.push('');
+  lines.push('▶ 전월 실적별 청구할인 (매월)');
+  card.tiers.forEach(function(t){
+    var amt=card.promo?t.total:t.base;
+    lines.push('· '+t.th+': '+won(amt));
+  });
+  if(card.extra) lines.push(card.extra);
+  lines.push('');
+  lines.push('▶ 발급 안내');
+  lines.push('카드 신청 문의: '+card.contact);
+  if(card.url) lines.push('신청 링크: '+card.url);
+  lines.push('');
+  lines.push('▶ 결제수단 변경 안내');
+  lines.push('1) 제품 설치 완료');
+  lines.push('2) 설치일 기준 3영업일 후 결제수단 변경 가능');
+  lines.push('3) 렌탈료/멤버십료 자동이체를 발급받은 카드로 변경');
+  lines.push('   - 고객센터: 1588-5200');
+  lines.push('   - 코웨이 닷컴 앱: 플레이스토어 "코웨이닷컴" 검색');
+  lines.push('');
+  lines.push('※ 결제 수단이 제휴카드로 변경 완료되어야 카드사 청구할인이 적용됩니다.');
+  return lines.join('\n');
+}
+
+function _cardCustomerHtml(card){
+  var headline=card.promo?card.promoTitle:'매달 청구할인 안내';
+  var periodLine=card.promo?(card.period+' 신규 발급 고객 대상'):'코웨이 렌탈료 자동이체 고객 대상';
+  var text=cardCustomerText(card);
+
+  var cardHtml='<div id="cardCustCardEl" style="width:100%;max-width:420px;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(11,46,69,0.14);border:1px solid #E7EDF1">';
+  cardHtml+='<div style="background:linear-gradient(135deg,#0C3B63,#0B5C8C 85%);color:#fff;padding:18px 20px 20px">';
+  cardHtml+='<div style="font-size:11px;font-weight:700;color:#BFE3F0;letter-spacing:.06em;margin-bottom:4px">제휴카드 안내</div>';
+  cardHtml+='<div style="font-size:17px;font-weight:800">'+esc(card.name)+'</div>';
+  cardHtml+='<div style="margin-top:5px;font-size:11.5px;color:#D6E9F1">'+esc(headline)+' · '+esc(periodLine)+'</div>';
+  cardHtml+='</div>';
+  cardHtml+='<div style="padding:18px 20px 4px">';
+  cardHtml+='<div style="background:#F4FAFB;border:1px solid #D9EDF2;border-radius:14px;padding:14px 16px;margin-bottom:18px">';
+  cardHtml+='<div style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin-bottom:8px">전월 실적별 '+(card.promo?'총 ':'')+'청구할인 (매월)</div>';
+  cardHtml+=_cardBenefitRowsHtml(card);
+  if(card.extra) cardHtml+='<div style="font-size:10.5px;color:#64748b;margin-top:8px;line-height:1.5">'+esc(card.extra)+'</div>';
+  cardHtml+='</div>';
+  cardHtml+='<div style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin-bottom:8px">발급 안내</div>';
+  cardHtml+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:10px;padding:9px 12px;margin-bottom:18px">';
+  cardHtml+='<div style="font-size:10.5px;color:#0B5C8C;font-weight:700;margin-bottom:2px">카드 신청 문의</div><div style="font-size:13px;font-weight:800;color:#0B2E45">'+esc(card.contact)+'</div>';
+  if(card.url) cardHtml+='<div style="font-size:10.5px;color:#0B5C8C;font-weight:700;margin-top:7px;margin-bottom:2px">신청 링크</div><div style="font-size:12px;font-weight:600;word-break:break-all">'+esc(card.url)+'</div>';
+  cardHtml+='</div>';
+  cardHtml+='<div style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin-bottom:10px">결제수단 변경 안내</div>';
+  [['1','제품 설치 완료','기사님 방문 설치가 끝나는 시점이에요.'],['2','3영업일 대기','설치일 기준 3영업일이 지나면 결제 수단 변경이 가능해요.'],['3','결제 수단을 제휴카드로 변경','렌탈료/멤버십료 자동이체를 발급받은 카드로 변경해야 할인이 시작돼요.']].forEach(function(s,i){
+    cardHtml+='<div style="display:flex;gap:10px;margin-bottom:'+(i<2?'16px':'8px')+'">';
+    cardHtml+='<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#DCEAF5;color:#0C3B63;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center">'+s[0]+'</div>';
+    cardHtml+='<div><div style="font-size:13px;font-weight:800;color:#0B2E45;margin-bottom:2px">'+s[1]+'</div><div style="font-size:11.5px;color:#64748b;line-height:1.5">'+s[2]+'</div>';
+    if(s[0]==='3'){
+      cardHtml+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:8px;padding:6px 9px;margin-top:8px"><div style="font-size:10px;color:#0B5C8C;font-weight:700">고객센터</div><div style="font-size:12.5px;font-weight:700">1588-5200</div></div>';
+      cardHtml+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:8px;padding:6px 9px;margin-top:6px"><div style="font-size:10px;color:#0B5C8C;font-weight:700">코웨이 닷컴 앱</div><div style="font-size:12px;font-weight:700">플레이스토어 "코웨이닷컴" 검색</div></div>';
+    }
+    cardHtml+='</div></div>';
+  });
+  cardHtml+='</div>';
+  cardHtml+='<div style="background:#FCEBEA;color:#C0392B;font-size:11.5px;font-weight:700;border-radius:0;padding:12px 20px;line-height:1.6">결제 수단이 제휴카드로 변경 완료되어야 카드사 청구할인이 적용됩니다.</div>';
+  cardHtml+='</div>';
+
+  var h='';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  h+='<label style="font-size:12px;font-weight:700;color:#334155;white-space:nowrap">고객 전화번호 (선택)</label>';
+  h+='<input type="tel" inputmode="tel" placeholder="010-1234-5678" id="cardCustPhone" style="flex:1;min-width:140px;padding:8px 10px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;font-family:inherit">';
+  h+='</div>';
+  h+='<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
+  h+='<button id="cardSmsBtn" style="flex:1;min-width:120px;background:#0C3B63;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">문자로 바로 보내기</button>';
+  h+='<button id="cardCopyBtn" style="flex:1;min-width:100px;background:#fff;color:#0C3B63;border:1px solid #C7D9E2;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">텍스트 복사<span id="cardCopyToast" style="display:inline-block;font-size:11px;color:#0FA3A0;font-weight:700;margin-left:4px;opacity:0;transition:opacity .2s">복사됨</span></button>';
+  h+='<button id="cardSaveImgBtn" style="flex:1;min-width:100px;background:#fff;color:#0C3B63;border:1px solid #C7D9E2;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">이미지 저장</button>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">"문자로 바로 보내기"는 휴대폰의 기본 메시지 앱을 열어 아래 문구를 미리 채워줘요 — 마지막 전송 버튼만 눌러주시면 돼요</div>';
+  h+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:12px;padding:14px 16px;font-size:12px;line-height:1.7;color:#16303F;white-space:pre-wrap;margin-bottom:16px">'+esc(text)+'</div>';
+  h+='<div style="display:flex;justify-content:center">'+cardHtml+'</div>';
+  return h;
+}
+
+function _wireCardCustomerButtons(card){
+  var text=cardCustomerText(card);
+  var smsBtn=document.getElementById('cardSmsBtn');
+  if(smsBtn) smsBtn.onclick=function(){
+    var phone=(document.getElementById('cardCustPhone').value||'').trim().replace(/[^0-9]/g,'');
+    var isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    var sep=isiOS?'&':'?';
+    window.location.href='sms:'+phone+sep+'body='+encodeURIComponent(text);
+  };
+  var copyBtn=document.getElementById('cardCopyBtn');
+  if(copyBtn) copyBtn.onclick=function(){
+    navigator.clipboard.writeText(text).then(function(){
+      var t=document.getElementById('cardCopyToast');
+      t.style.opacity='1';
+      setTimeout(function(){t.style.opacity='0';},1500);
+    });
+  };
+  var saveBtn=document.getElementById('cardSaveImgBtn');
+  if(saveBtn) saveBtn.onclick=function(){
+    saveBtn.disabled=true; saveBtn.textContent='저장 중...';
+    ensureAssetsLoaded(function(){
+      var el=document.getElementById('cardCustCardEl');
+      doSave(el,'cardSaveImgBtn','코웨이_'+card.name.replace(/\s+/g,'')+'_안내카드');
+    });
+  };
 }
 
 </script>

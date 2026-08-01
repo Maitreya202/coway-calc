@@ -2812,12 +2812,14 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     }
     h+='</td>';
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:center;font-weight:600">'+r.qty+'</td>';
-    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through;font-size:11.5px;white-space:nowrap">'+(r.isCash?'<span style="text-decoration:none">-</span>':wM(r.lp))+'</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through;font-size:11.5px;white-space:nowrap">'+(r.isCash?(r.hasDiscount?wM(r.regularPrice):'<span style="text-decoration:none">-</span>'):wM(r.lp))+'</td>';
     var dpSub='';
     if(r.korInfo&&r.korInfo.effM>0){
       dpSub='결합전 '+wM(r.item.선납==='선납2'?calcItem(r.item).normalMonthly:r.korInfo.effM);
     } else if(r.snPreM>0){
       dpSub='선납 적용전 '+wM(r.snPreM);
+    } else if(r.isCash&&r.hasDiscount){
+      dpSub='-'+wW(r.totalSaving)+' 할인';
     }
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500;font-size:11.5px;white-space:nowrap">'+wM(r.dp)+(dpSub?'<div style="font-size:9px;color:'+MUTE+';font-weight:400;margin-top:1px;white-space:nowrap">'+dpSub+'</div>':'')+'</td>';
     if(opts.showIlsibl){

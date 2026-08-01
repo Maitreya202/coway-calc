@@ -2709,7 +2709,8 @@ function computeQuoteRows(cart){
     var korM=ki?ki.totalNabM:0;
     return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,snExcused:snExcused,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
   });
-  var totM=rows.reduce(function(s,r){return s+r.dp;},0);
+  var totM=rows.reduce(function(s,r){return r.isCash?s:s+r.dp;},0);
+  var totCash=rows.reduce(function(s,r){return r.isCash?s+r.dp:s;},0);
   var totSn=rows.reduce(function(s,r){return s+r.sn;},0);
   var totSnPreM=rows.reduce(function(s,r){return s+r.snPreM;},0);
   var totSnExcused=rows.reduce(function(s,r){return s+r.snExcused;},0);
@@ -2723,7 +2724,7 @@ function computeQuoteRows(cart){
   var totPay=rows.reduce(function(s,r){return s+r.totalPay;},0);
   var totTrue=rows.reduce(function(s,r){return s+r.trueTotal;},0);
   var totSaving=rows.reduce(function(s,r){return s+r.totalSaving;},0);
-  return {rows:rows,totM:totM,totSn:totSn,totSnPreM:totSnPreM,totSnExcused:totSnExcused,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
+  return {rows:rows,totM:totM,totCash:totCash,totSn:totSn,totSnPreM:totSnPreM,totSnExcused:totSnExcused,totKor:totKor,totKorSup:totKorSup,totKorSupTotal:totKorSupTotal,totKorEffM:totKorEffM,totKorRefund:totKorRefund,totKorCnt:totKorCnt,totKorPbk:totKorPbk,totPay:totPay,totTrue:totTrue,totSaving:totSaving};
 }
 
 function buildQuoteHTML(cart,customer,salesperson,today,opts){
@@ -2737,7 +2738,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
 
   // ── 행 데이터 계산 (공용 헬퍼) ──
   var _rd=computeQuoteRows(cart);
-  var rows=_rd.rows, totM=_rd.totM, totSn=_rd.totSn, totSnExcused=_rd.totSnExcused, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
+  var rows=_rd.rows, totM=_rd.totM, totCash=_rd.totCash, totSn=_rd.totSn, totSnExcused=_rd.totSnExcused, totKor=_rd.totKor, totKorSup=_rd.totKorSup, totKorSupTotal=_rd.totKorSupTotal, totKorRefund=_rd.totKorRefund, totKorCnt=_rd.totKorCnt, totKorPbk=_rd.totKorPbk, totTrue=_rd.totTrue, totSaving=_rd.totSaving;
 
   // ── 견적번호: 날짜+시각 기반 자동 생성 ──
   var now=new Date();
@@ -2855,22 +2856,34 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     h+='</div>';
   });
   h+='</div>';
-  h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
-  h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">'+(totKor>0?'렌탈료 합계':'합계금액')+'</div>';
-  h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
-  if(totKor>0) h+='<div style="font-size:9.5px;color:'+MUTE+';margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">코라솔 합산 시 '+wM(totMKor)+'</div>';
-  if(cardAmount>0) h+='<div style="font-size:9.5px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">제휴카드 적용 시 '+wM(Math.max(0,totM-cardAmount))+'</div>';
-  if(totKorPbk>0) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">렌탈 종료 후 페이백: '+wW(totKorPbk)+'</div>';
-  h+='</div></div>';
+  if(totM>0){
+    h+='<div style="width:170px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
+    h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">'+(totKor>0?'렌탈료 합계':(totCash>0?'렌탈료 합계':'합계금액'))+'</div>';
+    h+='<div style="font-size:16px;font-weight:700">'+wM(totM)+'</div>';
+    if(totKor>0) h+='<div style="font-size:9.5px;color:'+MUTE+';margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">코라솔 합산 시 '+wM(totMKor)+'</div>';
+    if(cardAmount>0) h+='<div style="font-size:9.5px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">제휴카드 적용 시 '+wM(Math.max(0,totM-cardAmount))+'</div>';
+    if(totKorPbk>0) h+='<div style="font-size:10px;color:#15803D;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">렌탈 종료 후 페이백: '+wW(totKorPbk)+'</div>';
+    h+='</div>';
+  }
+  if(totCash>0){
+    h+='<div style="width:150px;flex-shrink:0;background:'+HEADBG+';border-left:1px solid '+LINED+';padding:10px 16px;display:flex;flex-direction:column;justify-content:center">';
+    h+='<div style="font-size:10.5px;color:'+SUB+';margin-bottom:3px;font-weight:700">일시불 합계</div>';
+    h+='<div style="font-size:16px;font-weight:700">'+wW(totCash)+'</div>';
+    h+='</div>';
+  }
+  h+='</div>';
 
   // [4-a] 납부 타임라인 (할인구간이 2개 이상 겹칠 때만, 스키니 한 줄)
   var qTimeline=opts.showTimeline?buildTimeline(cart):[];
   if(qTimeline.length>1){
     h+='<div style="border-top:1px solid '+LINED+';padding:8px 20px;background:'+HEADBG+';display:flex;align-items:center;gap:16px;flex-wrap:wrap">';
     h+='<span style="font-size:10px;font-weight:700;color:'+SUB+';letter-spacing:.05em;flex-shrink:0">납부 타임라인</span>';
+    if(totCash>0){
+      h+='<span style="font-size:11.5px;white-space:nowrap"><b>일시불</b>&nbsp;'+wW(totCash)+'</span>';
+    }
     qTimeline.forEach(function(seg,i){
       var tlabel=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
-      h+='<span style="font-size:11.5px;white-space:nowrap;'+(i>0?'border-left:1px solid '+LINE+';padding-left:16px;':'')+'"><b>'+tlabel+'</b>&nbsp;'+wM(seg.total)+'</span>';
+      h+='<span style="font-size:11.5px;white-space:nowrap;'+(i>0||totCash>0?'border-left:1px solid '+LINE+';padding-left:16px;':'')+'">'+(i===0&&totCash>0?'<b>월별</b>&nbsp;':'')+'<b>'+tlabel+'</b>&nbsp;'+wM(seg.total)+'</span>';
     });
     h+='</div>';
   }

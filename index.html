@@ -2812,7 +2812,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
     }
     h+='</td>';
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:center;font-weight:600">'+r.qty+'</td>';
-    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through;font-size:11.5px;white-space:nowrap">'+wM(r.lp)+'</td>';
+    h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;color:'+MUTE+';text-decoration:line-through;font-size:11.5px;white-space:nowrap">'+(r.isCash?'<span style="text-decoration:none">-</span>':wM(r.lp))+'</td>';
     var dpSub='';
     if(r.korInfo&&r.korInfo.effM>0){
       dpSub='결합전 '+wM(r.item.선납==='선납2'?calcItem(r.item).normalMonthly:r.korInfo.effM);

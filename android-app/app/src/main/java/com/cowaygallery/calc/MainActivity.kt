@@ -31,20 +31,19 @@ class MainActivity : AppCompatActivity() {
             (function(){
               if (window.__abridgeInstalled) return;
               window.__abridgeInstalled = true;
-              document.addEventListener('click', function(e){
-                var a = e.target;
-                while (a && a.tagName !== 'A') a = a.parentElement;
-                if (!a || !a.href || !a.hasAttribute('download')) return;
+
+              function handleDownload(a){
+                if (!a || !a.href || !a.hasAttribute || !a.hasAttribute('download')) return false;
                 var href = a.href;
                 var filename = a.getAttribute('download') || 'download';
                 if (href.indexOf('data:') === 0) {
-                  e.preventDefault(); e.stopPropagation();
                   var mime = (href.match(/^data:([^;,]+)/) || [null,'application/octet-stream'])[1];
                   if (window.AndroidBridge && window.AndroidBridge.saveBase64File) {
                     window.AndroidBridge.saveBase64File(href, filename, mime);
                   }
-                } else if (href.indexOf('blob:') === 0) {
-                  e.preventDefault(); e.stopPropagation();
+                  return true;
+                }
+                if (href.indexOf('blob:') === 0) {
                   fetch(href).then(function(r){ return r.blob(); }).then(function(blob){
                     var reader = new FileReader();
                     reader.onloadend = function(){
@@ -55,7 +54,31 @@ class MainActivity : AppCompatActivity() {
                     };
                     reader.readAsDataURL(blob);
                   });
+                  return true;
                 }
+                return false;
+              }
+
+              // jsPDF/FileSaver 등은 문서에 붙지 않은(detached) <a>를 click()하는 경우가 많아
+              // document 이벤트 리스너로는 못 잡는다 — click() 메서드 자체를 가로챈다.
+              var origClick = HTMLAnchorElement.prototype.click;
+              HTMLAnchorElement.prototype.click = function(){
+                if (handleDownload(this)) return;
+                return origClick.apply(this, arguments);
+              };
+
+              // dispatchEvent(new MouseEvent('click'))로 클릭을 흉내내는 구현 대비
+              var origDispatch = HTMLAnchorElement.prototype.dispatchEvent;
+              HTMLAnchorElement.prototype.dispatchEvent = function(evt){
+                if (evt && evt.type === 'click' && handleDownload(this)) return true;
+                return origDispatch.call(this, evt);
+              };
+
+              // 사용자가 직접 다운로드 링크를 탭하는 경우(문서에 붙어있는 케이스) 대비 보조 리스너
+              document.addEventListener('click', function(e){
+                var a = e.target;
+                while (a && a.tagName !== 'A') a = a.parentElement;
+                if (a && handleDownload(a)) { e.preventDefault(); e.stopPropagation(); }
               }, true);
             })();
         """

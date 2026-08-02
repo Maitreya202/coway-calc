@@ -9,12 +9,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var progressBar: ProgressBar
 
     companion object {
@@ -90,7 +88,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webView)
-        swipeRefresh = findViewById(R.id.swipeRefresh)
         progressBar = findViewById(R.id.progressBar)
 
         with(webView.settings) {
@@ -116,7 +113,6 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                swipeRefresh.isRefreshing = false
                 view?.evaluateJavascript(BLOB_DOWNLOAD_HOOK_JS, null)
             }
         }
@@ -127,8 +123,6 @@ class MainActivity : AppCompatActivity() {
                 progressBar.visibility = if (newProgress in 1..99) android.view.View.VISIBLE else android.view.View.GONE
             }
         }
-
-        swipeRefresh.setOnRefreshListener { webView.reload() }
 
         webView.loadUrl(SITE_URL)
     }

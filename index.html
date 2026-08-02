@@ -234,6 +234,7 @@ input:focus,select:focus { border-color:#2563eb; }
   <div class="main-tabbar" style="max-width:480px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px 0;display:flex;gap:6px">
     <button type="button" id="mtabEstimate" onclick="switchMainTab('estimate')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">📄 견적서</button>
     <button type="button" id="mtabCard" onclick="switchMainTab('card')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">💳 제휴카드</button>
+    <button type="button" id="mtabNotice" onclick="switchMainTab('notice')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">📢 고객 안내문</button>
   </div>
 
   <div class="wrap" id="tabPanelEstimate">
@@ -339,6 +340,10 @@ input:focus,select:focus { border-color:#2563eb; }
       <button type="button" id="ctabCustomer" onclick="switchCardTab('customer')" style="flex:1;border:none;padding:9px 4px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:#64748b">고객 발송 카드</button>
     </div>
     <div id="cardMain"></div>
+  </div>
+
+  <div class="wrap" id="tabPanelNotice" style="display:none">
+    <div id="noticeMain"></div>
   </div>
 </div>
 
@@ -3225,18 +3230,21 @@ var cardCurrentId = null;
 var cardActiveTab = 'agent'; // 'agent' | 'customer'
 
 function switchMainTab(tab){
-  var estPanel=document.getElementById('tabPanelEstimate'), cardPanel=document.getElementById('tabPanelCard');
-  var bEst=document.getElementById('mtabEstimate'), bCard=document.getElementById('mtabCard');
-  var showCard = tab==='card';
-  estPanel.style.display = showCard ? 'none' : 'block';
-  cardPanel.style.display = showCard ? 'block' : 'none';
-  bEst.style.background = showCard ? '#f1f5f9' : '#2563eb';
-  bEst.style.color = showCard ? '#64748b' : '#fff';
-  bCard.style.background = showCard ? '#2563eb' : '#f1f5f9';
-  bCard.style.color = showCard ? '#fff' : '#64748b';
-  if (showCard){
+  var panels={estimate:'tabPanelEstimate',card:'tabPanelCard',notice:'tabPanelNotice'};
+  var btns={estimate:'mtabEstimate',card:'mtabCard',notice:'mtabNotice'};
+  Object.keys(panels).forEach(function(key){
+    var panel=document.getElementById(panels[key]);
+    var btn=document.getElementById(btns[key]);
+    var active = key===tab;
+    panel.style.display = active ? 'block' : 'none';
+    btn.style.background = active ? '#2563eb' : '#f1f5f9';
+    btn.style.color = active ? '#fff' : '#64748b';
+  });
+  if (tab==='card'){
     if (!cardCurrentId && CARDS.length) cardCurrentId = CARDS[0].id;
     renderCardTabContent();
+  } else if (tab==='notice'){
+    renderNoticeTabContent();
   }
 }
 
@@ -3424,6 +3432,145 @@ function _wireCardCustomerButtons(card){
     ensureAssetsLoaded(function(){
       var el=document.getElementById('cardCustCardEl');
       doSave(el,'cardSaveImgBtn','코웨이_'+card.name.replace(/\s+/g,'')+'_안내카드');
+    });
+  };
+}
+
+// ================================================================
+// 고객 안내문 탭
+// ================================================================
+var noticeInstallDate = '';  // 'YYYY-MM-DD'
+var noticeCardOn = false;
+var noticeGiftOn = false;
+
+function noticeFormatDate(v){
+  if (!v) return '';
+  var p = v.split('-');
+  if (p.length !== 3) return v;
+  return Number(p[0]) + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일';
+}
+
+function setNoticeDate(v){ noticeInstallDate=v; renderNoticeTabContent(); }
+function setNoticeCardOn(v){ noticeCardOn=v; renderNoticeTabContent(); }
+function setNoticeGiftOn(v){ noticeGiftOn=v; renderNoticeTabContent(); }
+
+function noticeText(){
+  var dateLabel = noticeInstallDate ? noticeFormatDate(noticeInstallDate) : '미정 (날짜를 선택해 주세요)';
+  var lines=[];
+  lines.push('[코웨이 갤러리 원주점 주문 안내]');
+  lines.push('');
+  lines.push('고객님, 저희 코웨이 갤러리 원주점에서 주문해 주셔서 감사합니다.');
+  lines.push('');
+  lines.push('▶ 설치 예정일');
+  lines.push(dateLabel);
+  lines.push('');
+  lines.push('▶ 설치 안내');
+  lines.push('설치 시간 배정이 어려운 지역·제품의 경우, 설치 예정일 1일 전 오후 중 도착 예정 시간을 안내드리기 위해 연락드립니다.');
+  lines.push('※ 기사님 이동 순서에 따라 시간이 배정되어 원하시는 시간에 맞추기 어려울 수 있는 점 양해 부탁드립니다.');
+  lines.push('');
+  lines.push('설치일 변경이나 주문 제품 변경은 설치 예정일 5일 전까지 알려주시면 원활하게 처리해드릴 수 있습니다.');
+  if (noticeCardOn){
+    lines.push('');
+    lines.push('▶ 제휴카드 발급 안내');
+    lines.push('제휴카드 발급을 신청하신 경우, 안내드린 방법으로 신청해 주시고 제품 설치 후 반드시 해당 카드로 렌탈료를 납부해 주셔야 청구할인이 적용됩니다.');
+    lines.push('(자세한 내용은 제휴카드 안내문을 참고해 주세요)');
+  }
+  if (noticeGiftOn){
+    lines.push('');
+    lines.push('▶ 사은품 안내');
+    lines.push('안내드린 사은품은 설치 완료 2주 후부터 발송이 시작됩니다.');
+    lines.push('설치 후 한 달이 지나도 도착하지 않으면 번거로우시더라도 연락 주세요. 빠르게 확인해 드리겠습니다.');
+  }
+  lines.push('');
+  lines.push('제품 이용 중 궁금하신 점이나 문의사항은 언제든 편하게 연락 주세요.');
+  lines.push('항상 고객님의 일상을 살피는 코웨이 갤러리가 되겠습니다. 감사합니다.');
+  return lines.join('\n');
+}
+
+function _noticeCardHtml(){
+  var dateLabel = noticeInstallDate ? noticeFormatDate(noticeInstallDate) : '날짜 미정';
+  var h='<div id="noticeCardEl" style="width:100%;max-width:420px;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(11,46,69,0.14);border:1px solid #E7EDF1">';
+  h+='<div style="background:linear-gradient(135deg,#0C3B63,#0B5C8C 85%);color:#fff;padding:18px 20px 20px">';
+  h+='<div style="font-size:11px;font-weight:700;color:#BFE3F0;letter-spacing:.06em;margin-bottom:4px">주문 안내</div>';
+  h+='<div style="font-size:17px;font-weight:800">코웨이 갤러리 원주점</div>';
+  h+='<div style="margin-top:5px;font-size:11.5px;color:#D6E9F1">주문해 주셔서 감사합니다</div>';
+  h+='</div>';
+  h+='<div style="padding:18px 20px 20px">';
+  h+='<div style="background:#F4FAFB;border:1px solid #D9EDF2;border-radius:14px;padding:14px 16px;margin-bottom:16px">';
+  h+='<div style="font-size:11.5px;font-weight:800;color:#0B5C8C;margin-bottom:6px">설치 예정일</div>';
+  h+='<div style="font-size:16px;font-weight:800;color:#0B2E45">'+esc(dateLabel)+'</div>';
+  h+='</div>';
+  h+='<div style="font-size:11.5px;color:#334155;line-height:1.7;margin-bottom:'+(noticeCardOn||noticeGiftOn?'14':'0')+'px">';
+  h+='설치 시간 배정이 어려운 지역·제품의 경우, 설치 예정일 1일 전 오후 중 도착 예정 시간을 안내드리기 위해 연락드립니다.<br>';
+  h+='설치일·제품 변경은 설치 예정일 5일 전까지 알려주시면 처리해드릴 수 있어요.';
+  h+='</div>';
+  if (noticeCardOn){
+    h+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:10px;padding:10px 12px;margin-bottom:10px">';
+    h+='<div style="font-size:11px;font-weight:800;color:#0B5C8C;margin-bottom:3px">💳 제휴카드 발급 안내</div>';
+    h+='<div style="font-size:11px;color:#64748b;line-height:1.6">설치 후 반드시 해당 카드로 렌탈료를 납부하셔야 청구할인이 적용됩니다.</div>';
+    h+='</div>';
+  }
+  if (noticeGiftOn){
+    h+='<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 12px">';
+    h+='<div style="font-size:11px;font-weight:800;color:#15803D;margin-bottom:3px">🎁 사은품 안내</div>';
+    h+='<div style="font-size:11px;color:#64748b;line-height:1.6">설치 완료 2주 후부터 발송이 시작돼요.</div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+
+function renderNoticeTabContent(){
+  var main=document.getElementById('noticeMain');
+  var text=noticeText();
+  var h='';
+  h+='<div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px">';
+  h+='<p style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px">설치 예정일</p>';
+  h+='<input type="date" id="noticeInstallDateInput" value="'+esc(noticeInstallDate)+'" onchange="setNoticeDate(this.value)" style="width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:13px;font-family:inherit;background:#f8fafc;margin-bottom:14px">';
+  h+='<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">';
+  h+='<input type="checkbox"'+(noticeCardOn?' checked':'')+' onchange="setNoticeCardOn(this.checked)" style="width:16px;height:16px;accent-color:#2563eb"><span style="font-size:13px;color:#334155">💳 제휴카드 발급 예정 안내 포함</span>';
+  h+='</label>';
+  h+='<label style="display:flex;align-items:center;gap:8px;cursor:pointer">';
+  h+='<input type="checkbox"'+(noticeGiftOn?' checked':'')+' onchange="setNoticeGiftOn(this.checked)" style="width:16px;height:16px;accent-color:#2563eb"><span style="font-size:13px;color:#334155">🎁 사은품 안내 포함</span>';
+  h+='</label>';
+  h+='</div>';
+
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  h+='<label style="font-size:12px;font-weight:700;color:#334155;white-space:nowrap">고객 전화번호 (선택)</label>';
+  h+='<input type="tel" inputmode="tel" placeholder="010-1234-5678" id="noticeCustPhone" style="flex:1;min-width:140px;padding:8px 10px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;font-family:inherit">';
+  h+='</div>';
+  h+='<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
+  h+='<button id="noticeSmsBtn" style="flex:1;min-width:120px;background:#0C3B63;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">문자로 전송하기</button>';
+  h+='<button id="noticeCopyBtn" style="flex:1;min-width:100px;background:#fff;color:#0C3B63;border:1px solid #C7D9E2;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">텍스트 복사<span id="noticeCopyToast" style="display:inline-block;font-size:11px;color:#0FA3A0;font-weight:700;margin-left:4px;opacity:0;transition:opacity .2s">복사됨</span></button>';
+  h+='<button id="noticeSaveImgBtn" style="flex:1;min-width:100px;background:#fff;color:#0C3B63;border:1px solid #C7D9E2;border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">이미지 저장</button>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">"문자로 전송하기"는 휴대폰의 기본 메시지 앱을 열어 아래 문구를 미리 채워줘요 — 마지막 전송 버튼만 눌러주시면 돼요</div>';
+  h+='<div style="background:#F7FAFB;border:1px solid #E1E8ED;border-radius:12px;padding:14px 16px;font-size:12px;line-height:1.7;color:#16303F;white-space:pre-wrap;margin-bottom:16px">'+esc(text)+'</div>';
+  h+='<div style="display:flex;justify-content:center">'+_noticeCardHtml()+'</div>';
+  main.innerHTML=h;
+
+  var smsBtn=document.getElementById('noticeSmsBtn');
+  if(smsBtn) smsBtn.onclick=function(){
+    var phone=(document.getElementById('noticeCustPhone').value||'').trim().replace(/[^0-9]/g,'');
+    var isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    var sep=isiOS?'&':'?';
+    window.location.href='sms:'+phone+sep+'body='+encodeURIComponent(text);
+  };
+  var copyBtn=document.getElementById('noticeCopyBtn');
+  if(copyBtn) copyBtn.onclick=function(){
+    navigator.clipboard.writeText(text).then(function(){
+      var t=document.getElementById('noticeCopyToast');
+      t.style.opacity='1';
+      setTimeout(function(){t.style.opacity='0';},1500);
+    });
+  };
+  var saveBtn=document.getElementById('noticeSaveImgBtn');
+  if(saveBtn) saveBtn.onclick=function(){
+    saveBtn.disabled=true; saveBtn.textContent='저장 중...';
+    ensureAssetsLoaded(function(){
+      var el=document.getElementById('noticeCardEl');
+      doSave(el,'noticeSaveImgBtn','코웨이_주문안내');
     });
   };
 }

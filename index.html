@@ -475,6 +475,7 @@ var SUNAP2 = {};   // 서버에서 로드
 var TASAB_COND = {}; // 타사보상 약정별 조건
 var MEMBERSHIP_CASH = {}; // 일시불 멤버십 요금 (제품군/기능구조/관리주기별)
 var HANVAL_PERIODS = [0, 2, 4, 6, 12, 18, 24];
+var JIRO_SURCHARGE = 900; // 지로납부 가산액 — 자동납부 할인분(퍼센트 할인 적용 후 기준) 고정액, % 할인 적용 전 base에 더함
 var CARDS = []; // 제휴카드 데이터 (서버에서 로드)
 var BMP_PAIRINGS = {}; // 모델명별 별매품 옵션 목록 (서버에서 로드, 별매품페어링 시트)
 
@@ -656,17 +657,17 @@ function calcItem(item) {
       isCash:true,base:cashBase,displayBase:cashBase,cashFinal:cashFinal,discLabel:cashLabel,
       monthly:0,halfMonthly:0,normalMonthly:0,months:0,total:cashFinal,sunap:null,hasPromo:false,
       hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,bmpLines:null,bmpBadgeLabel:'',
-      hasTasab:false,tasabOn:false,tasabRental:0,tasabJiro:0,tasabIlsibl:0,
+      hasTasab:false,tasabOn:false,tasabRental:0,jiroOn:false,jiroSurcharge:0,tasabIlsibl:0,
       tasab1년On:false,tasab1년Rate:0,tasab1년Disc:0
     };
   }
 
   var hasPromo=item.프로모션>0&&item.프로모션사용!==false;
-  var hasTasab=(item.타사보상렌탈>0||item.타사보상지로>0);
+  var hasTasab=item.타사보상렌탈>0;
   var displayBase=(item.isRerental&&item.재렌탈>0)?item.재렌탈:(hasPromo?item.프로모션:item.정상가);
   var base;
   if (item.tasabosangOn&&hasTasab) {
-    base=item.타사보상렌탈>0?item.타사보상렌탈:(item.타사보상지로||item.프로모션||item.정상가);
+    base=item.타사보상렌탈;
   } else { base=displayBase; }
 
   var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null;
@@ -700,6 +701,7 @@ function calcItem(item) {
   }
   var hasBmp=(isCfssFrameCalc?(item.headType&&item.headType!=='none'):bmpPrice>0);
   if (hasBmp) base=base+bmpPrice;
+  if (item.지로On) base=base+JIRO_SURCHARGE;
 
   var d=item.discounts||{};
   var isRe=!!item.isRerental;
@@ -721,9 +723,11 @@ function calcItem(item) {
 var monthly,halfMonthly,hvMonths;
 
 if (item.tasabosangOn&&hasTasab) {
-  var tasabBase=item.타사보상렌탈>0?item.타사보상렌탈:item.타사보상지로;
+  var tasabBase=item.타사보상렌탈;
+  if (hasBmp) tasabBase = tasabBase + bmpPrice;
+  if (item.지로On) tasabBase = tasabBase + JIRO_SURCHARGE;
   if (d.동시구매) tasabBase = f10(tasabBase * 0.9);
-else if (d.결합) tasabBase = f10(tasabBase * 0.95);
+  else if (d.결합) tasabBase = f10(tasabBase * 0.95);
   normalMonthly=tasabBase;
   monthly=tasabBase; halfMonthly=0; hvMonths=0;
 } else if (re1년On) {
@@ -816,7 +820,8 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
     bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
     bmpBadgeLabel:isCfssFrameCalc?'별매품':(bmpLines&&bmpLines.length>1?'별매품 '+bmpLines.length+'종':'별매품'),
     hasTasab:hasTasab,tasabOn:!!item.tasabosangOn,
-    tasabRental:(item.tasabosangOn&&hasTasab&&d.동시구매)?f10((item.타사보상렌탈||0)*0.9):(item.tasabosangOn&&hasTasab&&d.결합)?f10((item.타사보상렌탈||0)*0.95):(item.타사보상렌탈||0),tasabJiro:item.타사보상지로||0,
+    tasabRental:(item.tasabosangOn&&hasTasab&&d.동시구매)?f10((item.타사보상렌탈||0)*0.9):(item.tasabosangOn&&hasTasab&&d.결합)?f10((item.타사보상렌탈||0)*0.95):(item.타사보상렌탈||0),
+    jiroOn:!!item.지로On,jiroSurcharge:item.지로On?JIRO_SURCHARGE:0,
     tasabIlsibl:(item.tasabosangOn&&hasTasab)?(item.타사보상일시불||0):0,
     tasab1년On:tasab1년On,tasab1년Rate:tasab1년Rate,tasab1년Disc:tasab1년Disc,
     isRe:isRe,re1년On:re1년On
@@ -908,7 +913,7 @@ function openConfig(idx){
   item.재렌탈할인='none';item.재렌탈1년on=false;
   item.discounts={};item.반값개월=0;item.선납='none';
   item.s2={grade:'A',oi:0,반값월:0};
-  item.kors=[];item.별매품선택={};
+  item.kors=[];item.별매품선택={};item.지로On=false;
   item.headType='none';item.ilsiblOn=false;
   item.tasabosangOn=false;item.tasab1년on=false;
   item._detailOpen=true;
@@ -1076,7 +1081,7 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
 function renderDiscPanels(item, idx, c, d, isSunap2) {
   var h = '';
   var isTasab     = !!item.tasabosangOn;
-  var hasTasabData = item.타사보상렌탈 > 0 || item.타사보상지로 > 0;
+  var hasTasabData = item.타사보상렌탈 > 0;
   var curDisc = d.동시결합 ? '동시결합' : d.동시구매 ? '동시구매' : d.결합 ? '결합' : d.페스타 ? '페스타' : '없음';
   var isCfssFrame = item.s === '안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임') === 0;
 
@@ -1123,6 +1128,11 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       h += '</div>';
     }
   }
+
+  // 지로납부 (자동납부 할인 미적용, 고정 가산액 — % 할인 전에 더해짐)
+  h += '<div class="check-row" style="margin-bottom:10px">'
+    + '<input type="checkbox"' + (item.지로On ? ' checked' : '') + ' onchange="setJiro(' + idx + ',this.checked)">'
+    + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
 
   // 할인 패널
   h += '<div class="box-panel">';
@@ -1224,18 +1234,21 @@ function _chainHtml(steps) {
   }).join('');
 }
 
-// 정상가 → (타사보상 렌탈가 전환 시) → (별매품 추가 시) → 콤보할인(동시구매/결합/페스타) 까지의 공통 단계
+// 정상가 → (타사보상 렌탈가 전환 시) → (별매품 추가 시) → (지로납부 가산) → 콤보할인(동시구매/결합/페스타) 까지의 공통 단계
 function _baseChainSteps(item, c, d) {
   var steps = [{label:'정상가', val:c.displayBase}];
   var runningBase = c.displayBase;
-  if (item.tasabosangOn) {
-    var tasabBase = item.타사보상렌탈 > 0 ? item.타사보상렌탈 : item.타사보상지로;
-    steps.push({label:'타사보상 렌탈가', val:tasabBase});
-    runningBase = tasabBase;
+  if (item.tasabosangOn && item.타사보상렌탈 > 0) {
+    steps.push({label:'타사보상 렌탈가', val:item.타사보상렌탈});
+    runningBase = item.타사보상렌탈;
   }
   if (c.hasBmp && c.bmpAmt > 0) {
     runningBase = runningBase + c.bmpAmt;
     steps.push({label:c.bmpBadgeLabel + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : ''), val:runningBase});
+  }
+  if (c.jiroOn && c.jiroSurcharge > 0) {
+    runningBase = runningBase + c.jiroSurcharge;
+    steps.push({label:'지로납부 가산', val:runningBase});
   }
   if (item.tasabosangOn) {
     if (d.동시구매) steps.push({label:'동시구매 -10%', val:c.normalMonthly});
@@ -1883,6 +1896,7 @@ function setBmpCnt(idx,key,v){
   renderCart();
 }
 function setHeadType(idx,v){cart[idx].headType=v;renderCart();}
+function setJiro(idx,v){cart[idx].지로On=v;renderCart();}
 function setIlsibl(idx,v){cart[idx].ilsiblOn=v;renderCart();}
 function toggleIlsiblCmp(idx){cart[idx]._ilsiblCmpOpen=!cart[idx]._ilsiblCmpOpen;renderCart();}
 function setMemberCmp(idx,v){cart[idx].memberCmpOn=v;renderCart();}

@@ -2027,6 +2027,8 @@ function buildQuoteParts(t){
     rows.push({label:'렌탈료', value:won(t.timeline[0].total)+'/월'});
   }
   if (a.hasKor)      rows.push({label:'코라솔', value:won(a.korNabM)+'/월'});
+  // 렌탈+일시불이 섞인 견적에서는 월액 타임라인만으로 렌탈 총액이 안 보이므로 총합을 따로 표기
+  if (t.timeline.length>0 && a.cashCnt>0) rows.push({label:'렌탈료 총합', value:won(t.totT-a.cashTotal)});
   if (a.cashCnt>0)   rows.push({label:'일시불 결제'+(a.cashCnt>1?' '+a.cashCnt+'건':''), value:won(a.cashTotal)});
   if (a.ilsibl>0)    rows.push({label:'선납', value:won(a.ilsibl)});
   if (a.korPbk>0)    rows.push({label:'페이백', value:'-'+won(a.korPbk)});

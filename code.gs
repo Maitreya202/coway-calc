@@ -65,6 +65,12 @@ function doPost(e) {
     if (action === 'updateProduct') {
       return _json(_updateProduct(body));
     }
+    if (action === 'addBmpPairing') {
+      return _json(_addBmpPairing(body));
+    }
+    if (action === 'removeBmpPairing') {
+      return _json(_removeBmpPairing(body));
+    }
     return _json({error: 'unknown action'});
   } catch(err) {
     return _json({error: err.message});
@@ -609,42 +615,117 @@ function getConditions() {
 }
 
 // 별매품페어링 시트 파싱 — 1행 헤더 텍스트로 컬럼을 찾음(제품DB와 별개로 이 시트는 헤더가 1행)
-function _parseBmpPairings(sheet) {
-  var BMP_HEADERS = {
-    모델명: '대상모델명', 별매품명: '별매품명', 약정년: '약정(년)',
-    월렌탈가: '월렌탈가', 재렌탈가: '재렌탈가', 일시불가: '일시불가', 개당여부: '1개당여부'
-  };
-  var lastRow = sheet.getLastRow();
-  var lastCol = sheet.getLastColumn();
-  if (lastRow < 2) return {};
+// 2026-08-04부터 가격 컬럼은 시트에 없음 — 별매품은 제품DB에 제품군(s)="별매품"으로 정식 등록된 행이고,
+// 이 시트는 "메인 모델 ↔ 별매품 모델" 연결 관계만 저장함. 가격은 index.html에서 PRODUCTS를 그 별매품 모델명 +
+// 카트 아이템의 약정년으로 조회해서 매번 최신값을 가져옴(정상가/프로모션가/재렌탈가 등 중복 저장 방지).
+var BMP_PAIR_HEADERS = { 모델명: '대상모델명', 별매품모델명: '별매품모델명', 개당여부: '1개당여부' };
 
+function _bmpColMap(sheet) {
+  var lastCol = sheet.getLastColumn();
   var header = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   var colMap = {};
   header.forEach(function(h, i) {
     var t = _norm(h);
-    Object.keys(BMP_HEADERS).forEach(function(f) {
-      if (_norm(BMP_HEADERS[f]) === t) colMap[f] = i;
+    Object.keys(BMP_PAIR_HEADERS).forEach(function(f) {
+      if (_norm(BMP_PAIR_HEADERS[f]) === t) colMap[f] = i;
     });
   });
-  if (colMap.모델명 === undefined || colMap.별매품명 === undefined) return {};
+  return colMap;
+}
 
+function _parseBmpPairings(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {};
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) return {};
+
+  var lastCol = sheet.getLastColumn();
   var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
   var map = {};
   raw.forEach(function(row) {
     var model = String(row[colMap.모델명] || '').trim();
-    var name = String(row[colMap.별매품명] || '').trim();
-    if (!model || !name) return;
+    var bmpModel = String(row[colMap.별매품모델명] || '').trim();
+    if (!model || !bmpModel) return;
     if (!map[model]) map[model] = [];
     map[model].push({
-      name: name,
-      약정년: colMap.약정년 !== undefined ? (Number(row[colMap.약정년]) || 0) : 0,
-      월렌탈가: colMap.월렌탈가 !== undefined ? toNum(row[colMap.월렌탈가]) : 0,
-      재렌탈가: colMap.재렌탈가 !== undefined ? toNum(row[colMap.재렌탈가]) : 0,
-      일시불가: colMap.일시불가 !== undefined ? toNum(row[colMap.일시불가]) : 0,
+      모델명: bmpModel,
       개당: colMap.개당여부 !== undefined ? (String(row[colMap.개당여부] || 'N').trim().toUpperCase() === 'Y') : false
     });
   });
   return map;
+}
+
+// ----------------------------------------------------------------
+// admin.html "별매품 연결" UI 전용 — 별매품페어링 시트에 연결 행 추가/삭제
+// ----------------------------------------------------------------
+function _addBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  var 개당 = body.개당 ? 'Y' : 'N';
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    var lastCol = sheet.getLastColumn();
+    var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    for (var i = 0; i < raw.length; i++) {
+      if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+          String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+        return {error: '이미 연결되어 있습니다'};
+      }
+    }
+  }
+
+  var newRow = [];
+  var lastCol2 = Math.max(sheet.getLastColumn(), colMap.모델명 + 1, colMap.별매품모델명 + 1, (colMap.개당여부 !== undefined ? colMap.개당여부 + 1 : 0));
+  for (var c = 0; c < lastCol2; c++) newRow.push('');
+  newRow[colMap.모델명] = 모델명;
+  newRow[colMap.별매품모델명] = 별매품모델명;
+  if (colMap.개당여부 !== undefined) newRow[colMap.개당여부] = 개당;
+
+  sheet.appendRow(newRow);
+  CacheService.getScriptCache().remove('appData');
+  return {ok: true};
+}
+
+function _removeBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {error: '연결된 행이 없습니다'};
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  for (var i = 0; i < raw.length; i++) {
+    if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+        String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+      sheet.deleteRow(i + 2);
+      CacheService.getScriptCache().remove('appData');
+      return {ok: true};
+    }
+  }
+  return {error: '일치하는 연결을 찾지 못했습니다'};
 }
 
 // 멤버십요금 시트에서 "【 일시불 멤버십 】" 표만 파싱

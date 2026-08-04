@@ -621,16 +621,22 @@ function getMembershipTotal(item) {
   return monthly * months;
 }
 
-// 제품에 붙을 수 있는 별매품 옵션 목록 — 별매품페어링 시트(약정년 일치하는 것만)에서만 가져옴
-// (제품DB의 레거시 별매품 4필드는 2026-08-04에 제거됨 — 별매품페어링 시트 정리 전까지 사용 안 함)
+// 제품에 붙을 수 있는 별매품 옵션 목록 — 별매품페어링 시트는 "메인모델↔별매품모델" 연결 관계만 갖고 있고,
+// 가격은 그 별매품 자신의 제품DB 행(PRODUCTS)에서 item의 약정년/재렌탈여부에 맞춰 그때그때 조회함
+// (별매품 가격을 페어링 시트에 따로 저장하면 제품DB 쪽 가격을 고쳤을 때 어긋날 수 있어서, 원천을 하나로 통일함)
 function itemBmpOptions(item) {
   var opts = [];
-  var pairs = (BMP_PAIRINGS[item.모델명] || []).filter(function(p) { return !p.약정년 || p.약정년 === item.약정년; });
+  var pairs = BMP_PAIRINGS[item.모델명] || [];
   pairs.forEach(function(p) {
+    var row = PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.약정년 === item.약정년; })
+      || PRODUCTS.find(function(r) { return r.모델명 === p.모델명; });
+    if (!row) return;
+    var hasPromoBmp = row.프로모션 > 0 && row.프로모션사용 !== false;
+    var priceNew = hasPromoBmp ? row.프로모션 : row.정상가;
     opts.push({
-      name: p.name,
-      price: (item.isRerental && p.재렌탈가 > 0) ? p.재렌탈가 : (p.월렌탈가 || 0),
-      isPer: p.개당 || p.name.indexOf('1개당') >= 0
+      name: row.제품명,
+      price: (item.isRerental && row.재렌탈 > 0) ? row.재렌탈 : (priceNew || 0),
+      isPer: p.개당 || row.제품명.indexOf('1개당') >= 0
     });
   });
   return opts;

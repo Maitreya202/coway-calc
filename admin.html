@@ -92,6 +92,16 @@ tr.row-saved td { background:#f0fdf4; }
     <div class="tbl-wrap">
       <table class="edit-tbl" id="editTable"></table>
     </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid #f1f5f9">
+      <p style="font-size:13px;font-weight:800;margin-bottom:8px">별매품 연결</p>
+      <div id="bmpLinkedList" style="margin-bottom:12px"></div>
+      <label class="field" style="margin-bottom:6px">
+        <span class="lbl">별매품 검색 (제품군=별매품)</span>
+        <input type="text" id="bmpSearchInput" placeholder="별매품 모델명/제품명 검색">
+      </label>
+      <div id="bmpSearchResults"></div>
+    </div>
   </div>
 </div>
 
@@ -100,6 +110,9 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qf
 var ADMIN_PW = null; // 메모리에만 보관, localStorage/sessionStorage 저장 안 함 — 새로고침하면 다시 입력 필요
 var PRODUCTS = [];
 var CUR_ROWS = []; // 현재 표에 펼쳐진 행들(제품명+모델명 일치)
+var CUR_MODEL = ''; // 현재 표가 열려있는 메인 제품의 모델명 (별매품 연결 대상)
+var BMP_PAIRINGS = {}; // {대상모델명: [{모델명:별매품모델명, 개당:bool}]}
+var BMP_PRODUCTS = []; // 제품군(s)="별매품"으로 등록된 제품 목록 (모델명+제품명 단위로 중복 제거)
 
 var EDITABLE_NUM = ['정상가','프로모션','재렌탈','타사보상렌탈','일시불','타사보상일시불'];
 var TOGGLE_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용'];
@@ -159,6 +172,16 @@ function loadProducts(){
                  타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
                  프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N' };
       });
+      BMP_PAIRINGS = (resp.conditions && resp.conditions.bmpPairings) || {};
+      var seenBmp = {};
+      BMP_PRODUCTS = [];
+      PRODUCTS.forEach(function(p){
+        if (p.s !== '별매품') return;
+        var key = p.모델명 + '|' + p.제품명;
+        if (seenBmp[key]) return;
+        seenBmp[key] = true;
+        BMP_PRODUCTS.push({ 모델명:p.모델명, 제품명:p.제품명, 분류:p.분류 });
+      });
     })
     .catch(function(e){ alert('제품 데이터 로딩 실패: ' + e.message); });
 }
@@ -211,8 +234,12 @@ function openTable(g){
     .sort(function(a,b){
       return (a.관리방법||'').localeCompare(b.관리방법||'') || (a.관리주기||'').localeCompare(b.관리주기||'') || (a.약정년-b.약정년);
     });
+  CUR_MODEL = g.모델명;
   document.getElementById('identityBox').innerHTML = '<b>' + esc(g.제품명) + '</b> · ' + esc(g.모델명) + ' · ' + esc(g.분류) + ' · 총 ' + CUR_ROWS.length + '개 행';
   renderTable();
+  document.getElementById('bmpSearchInput').value = '';
+  document.getElementById('bmpSearchResults').innerHTML = '';
+  renderBmpLinkedList();
   document.getElementById('searchView').classList.add('hidden');
   document.getElementById('tableView').classList.remove('hidden');
 }
@@ -304,6 +331,86 @@ function saveRow(ri, btn){
       btn.disabled = false;
       msgEl.textContent = '연결 실패: ' + e.message; msgEl.className = 'row-msg err';
     });
+}
+
+// ── 별매품 연결 ──────────────────────────────────────────────
+// 별매품페어링 시트는 "메인모델 ↔ 별매품모델" 연결 관계만 저장함(가격은 그 별매품 자신의 제품DB 행을 그대로 씀).
+function renderBmpLinkedList(){
+  var el = document.getElementById('bmpLinkedList');
+  var links = BMP_PAIRINGS[CUR_MODEL] || [];
+  if (!links.length){ el.innerHTML = '<p style="font-size:12px;color:#94a3b8">연결된 별매품 없음</p>'; return; }
+  el.innerHTML = links.map(function(link, i){
+    var prod = BMP_PRODUCTS.find(function(p){ return p.모델명===link.모델명; });
+    var label = prod ? (esc(prod.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(prod.모델명) + '</span>') : esc(link.모델명) + ' <span class="badge off">제품DB에 없음</span>';
+    return '<div class="result-item" data-i="' + i + '">'
+      + '<div><div class="result-name">' + label + (link.개당 ? ' <span class="badge">1개당</span>' : '') + '</div></div>'
+      + '<button class="btn-secondary" data-unlink="' + i + '">연결 해제</button>'
+      + '</div>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('[data-unlink]'), function(btn){
+    btn.onclick = function(){ unlinkBmp(links[Number(this.dataset.unlink)].모델명, this); };
+  });
+}
+
+document.getElementById('bmpSearchInput').addEventListener('input', function(){
+  var q = this.value.trim().toLowerCase();
+  var el = document.getElementById('bmpSearchResults');
+  if (!q){ el.innerHTML=''; return; }
+  var linkedModels = (BMP_PAIRINGS[CUR_MODEL] || []).map(function(l){ return l.모델명; });
+  var matched = BMP_PRODUCTS.filter(function(p){
+    return (p.모델명.toLowerCase().indexOf(q)>=0 || p.제품명.toLowerCase().indexOf(q)>=0) && linkedModels.indexOf(p.모델명)<0;
+  }).slice(0, 20);
+  if (!matched.length){ el.innerHTML = '<p style="font-size:12px;color:#94a3b8;padding:8px 0">검색 결과 없음 (제품군=별매품 대상만 검색됨)</p>'; return; }
+  el.innerHTML = matched.map(function(p, i){
+    return '<div class="result-item" data-i="' + i + '">'
+      + '<div><div class="result-name">' + esc(p.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(p.모델명) + '</span></div>'
+      + '<div class="result-sub">' + esc(p.분류) + '</div></div>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><input type="checkbox" data-per="' + i + '">1개당</label>'
+      + '<button class="btn-secondary" data-link="' + i + '">연결</button>'
+      + '</div>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('[data-link]'), function(btn){
+    btn.onclick = function(){
+      var i = Number(this.dataset.link);
+      var per = el.querySelector('input[data-per="' + i + '"]').checked;
+      linkBmp(matched[i].모델명, per, this);
+    };
+  });
+});
+
+function linkBmp(bmpModel, isPer, btn){
+  btn.disabled = true;
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer})})
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      btn.disabled = false;
+      if (resp.ok){
+        if (!BMP_PAIRINGS[CUR_MODEL]) BMP_PAIRINGS[CUR_MODEL] = [];
+        BMP_PAIRINGS[CUR_MODEL].push({ 모델명:bmpModel, 개당:isPer });
+        document.getElementById('bmpSearchInput').value = '';
+        document.getElementById('bmpSearchResults').innerHTML = '';
+        renderBmpLinkedList();
+      } else {
+        alert(resp.error || '연결 실패');
+      }
+    })
+    .catch(function(e){ btn.disabled = false; alert('연결 실패: ' + e.message); });
+}
+
+function unlinkBmp(bmpModel, btn){
+  btn.disabled = true;
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'removeBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel})})
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      btn.disabled = false;
+      if (resp.ok){
+        BMP_PAIRINGS[CUR_MODEL] = (BMP_PAIRINGS[CUR_MODEL] || []).filter(function(l){ return l.모델명 !== bmpModel; });
+        renderBmpLinkedList();
+      } else {
+        alert(resp.error || '연결 해제 실패');
+      }
+    })
+    .catch(function(e){ btn.disabled = false; alert('연결 해제 실패: ' + e.message); });
 }
 </script>
 </body>

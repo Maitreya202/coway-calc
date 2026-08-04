@@ -82,14 +82,9 @@ function _checkAdminPassword(pw) {
   return String(pw || '') === String(expected);
 }
 
-// 수정 가능한 필드 = 컬럼 번호(1-based) 매핑. 식별용 필드(모델명/제품명/관리방법/관리주기/약정년/분류/s)는 이 도구로 바꿀 수 없음 —
-// 식별자를 바꾸면 다른 행과 헷갈릴 위험이 있어 시트에서 직접 수정하도록 의도적으로 제외함.
-var PRODUCT_EDITABLE_FIELDS = {
-  정상가:8, 프로모션:9, 재렌탈:10, 일시불:11,
-  타사보상렌탈:12, 타사보상지로:13, 타사보상일시불:14,
-  별매품명:15, 별매품가:16, 별매품가재렌탈:17, 별매품가일시불:18,
-  프로모션사용:19
-};
+// 수정 가능한 필드 목록. 식별용 필드(모델명/제품명/관리방법/관리주기/약정년/분류/제품군)는 이 도구로 바꿀 수 없음 —
+// 식별자를 바꾸면 다른 행과 혼동될 위험이 있어 시트에서 직접 수정하도록 의도적으로 제외함.
+var PRODUCT_EDITABLE_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품명','별매품가','별매품가재렌탈','별매품가일시불','프로모션사용'];
 var PRODUCT_NUMERIC_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품가','별매품가재렌탈','별매품가일시불'];
 
 function _updateProduct(body) {
@@ -103,7 +98,7 @@ function _updateProduct(body) {
 
   // 필드 값 검증 — 숫자 필드는 유한하고 0 이상인지, 프로모션사용은 Y/N인지 확인
   for (var f in fields) {
-    if (!PRODUCT_EDITABLE_FIELDS[f]) return {error: '수정할 수 없는 필드입니다: ' + f};
+    if (PRODUCT_EDITABLE_FIELDS.indexOf(f) < 0) return {error: '수정할 수 없는 필드입니다: ' + f};
     if (PRODUCT_NUMERIC_FIELDS.indexOf(f) >= 0) {
       var n = Number(fields[f]);
       if (!isFinite(n) || n < 0) return {error: f + ' 값이 올바르지 않습니다: ' + fields[f]};
@@ -117,17 +112,29 @@ function _updateProduct(body) {
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) return {error: '시트를 찾을 수 없음: "' + SHEET_NAME + '"'};
 
+  var colMap = _headerColMap(sheet);
+  var keyFields = ['모델명','제품명','관리방법','관리주기','약정년'];
+  for (var i=0;i<keyFields.length;i++) {
+    if (keyFields[i]==='관리방법'||keyFields[i]==='관리주기') continue; // 일부 제품군엔 없을 수 있어 선택 항목
+    if (!colMap[keyFields[i]]) return {error: '"' + FIELD_HEADERS[keyFields[i]] + '" 헤더 컬럼을 시트에서 찾지 못했습니다'};
+  }
+  for (var field2 in fields) {
+    if (!colMap[field2]) return {error: '"' + FIELD_HEADERS[field2] + '" 헤더 컬럼을 시트에서 찾지 못했습니다 — 3행 헤더 텍스트를 확인해주세요'};
+  }
+
   var lastRow = sheet.getLastRow();
   if (lastRow < HEADER_ROW + 1) return {error: '제품 데이터가 없습니다'};
 
-  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, PRODUCT_COLS).getValues();
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues();
+  function cellAt(row, field) { var c = colMap[field]; return c ? row[c-1] : ''; }
   var matches = [];
   raw.forEach(function(row, i) {
-    if (String(row[2]).trim() === String(key.모델명).trim() &&
-        String(row[3]).trim() === String(key.제품명).trim() &&
-        String(row[4]).trim() === String(key.관리방법 || '').trim() &&
-        String(row[5]).trim() === String(key.관리주기 || '').trim() &&
-        Number(row[6]) === Number(key.약정년)) {
+    if (String(cellAt(row,'모델명')).trim() === String(key.모델명).trim() &&
+        String(cellAt(row,'제품명')).trim() === String(key.제품명).trim() &&
+        String(cellAt(row,'관리방법')||'').trim() === String(key.관리방법 || '').trim() &&
+        String(cellAt(row,'관리주기')||'').trim() === String(key.관리주기 || '').trim() &&
+        Number(cellAt(row,'약정년')) === Number(key.약정년)) {
       matches.push(i);
     }
   });
@@ -136,9 +143,9 @@ function _updateProduct(body) {
   if (matches.length > 1) return {error: '조건에 맞는 행이 ' + matches.length + '개 발견되어 안전하게 수정할 수 없습니다. 시트에서 직접 확인해주세요'};
 
   var sheetRow = HEADER_ROW + 1 + matches[0];
-  for (var field in fields) {
-    var col = PRODUCT_EDITABLE_FIELDS[field];
-    var val = PRODUCT_NUMERIC_FIELDS.indexOf(field) >= 0 ? Number(fields[field]) : String(fields[field]);
+  for (var field3 in fields) {
+    var col = colMap[field3];
+    var val = PRODUCT_NUMERIC_FIELDS.indexOf(field3) >= 0 ? Number(fields[field3]) : String(fields[field3]);
     sheet.getRange(sheetRow, col).setValue(val);
   }
 
@@ -639,42 +646,96 @@ function getData() {
   return data;
 }
 
-// 제품DB 컬럼 순서 (1-based). 19번째 "프로모션사용" 컬럼이 없는 시트도
-// 하위 호환되도록 항상 비어있으면 'Y'(사용)로 취급한다.
-var PRODUCT_COLS = 19;
+// ----------------------------------------------------------------
+// 헤더 텍스트 기반 컬럼 매핑 — 위치(번호) 대신 3행 헤더 텍스트로 컬럼을 찾는다.
+// 컬럼을 나중에 추가/삭제/재배치해도 헤더 텍스트만 유지되면 코드가 안 깨짐.
+// ----------------------------------------------------------------
+
+// 내부 필드명 → 실제 시트 헤더 텍스트. 시트 헤더를 바꾸면 이 표만 고치면 됨.
+var FIELD_HEADERS = {
+  s: '제품군', 분류: '분류', 모델명: '모델명', 제품명: '제품명',
+  관리방법: '관리방법', 관리주기: '관리주기', 약정년: '약정(년)',
+  정상가: '월렌탈료(정상)', 프로모션: '월렌탈료(프로모션)', 재렌탈: '재렌탈료(프로모션)', 일시불: '일시불가',
+  타사보상렌탈: '타사보상_렌탈', 타사보상지로: '타사보상_지로가', 타사보상일시불: '타사보상_일시불',
+  별매품명: '별매품명', 별매품가: '별매품_월렌탈 추가_신규',
+  별매품가재렌탈: '별매품_월렌탈 추가_재렌탈', 별매품가일시불: '별매품_월렌탈 추가_일시불',
+  프로모션사용: '프로모션사용'
+};
+
+function _norm(s) { return String(s || '').replace(/\s+/g, '').trim(); }
+
+// 헤더 행을 읽어 {필드명: 1-based 컬럼번호} 맵을 만든다. 헤더에 없는 필드는 맵에서 빠짐(호출 쪽에서 처리).
+function _headerColMap(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var header = sheet.getRange(HEADER_ROW, 1, 1, lastCol).getValues()[0];
+  var textToCol = {};
+  header.forEach(function(h, i) {
+    var t = _norm(h);
+    if (t) textToCol[t] = i + 1;
+  });
+  var colMap = {};
+  Object.keys(FIELD_HEADERS).forEach(function(field) {
+    var col = textToCol[_norm(FIELD_HEADERS[field])];
+    if (col) colMap[field] = col;
+  });
+  return colMap;
+}
+
+// Apps Script 편집기에서 수동 실행 → 실행 로그(보기 → 로그)로 매핑 결과 확인용.
+// 시트 헤더 문구를 바꿨을 때 코드가 제대로 컬럼을 찾는지 배포 전에 확인하는 용도.
+function _testHeaderMap() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var colMap = _headerColMap(sheet);
+  var missing = Object.keys(FIELD_HEADERS).filter(function(f) { return !colMap[f]; });
+  Logger.log('찾은 컬럼: ' + JSON.stringify(colMap));
+  Logger.log('못 찾은 필드(헤더 텍스트 확인 필요): ' + JSON.stringify(missing));
+  var sample = sheet.getRange(HEADER_ROW + 1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  Object.keys(colMap).forEach(function(f) {
+    Logger.log(f + ' = ' + sample[colMap[f] - 1]);
+  });
+  return {colMap: colMap, missing: missing};
+}
 
 function _fetchData() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error('시트를 찾을 수 없음: "' + SHEET_NAME + '"');
 
+  var colMap = _headerColMap(sheet);
+  if (!colMap.제품명 || !colMap.약정년) {
+    throw new Error('필수 헤더("' + FIELD_HEADERS.제품명 + '", "' + FIELD_HEADERS.약정년 + '")를 시트에서 찾지 못했습니다. 3행 헤더 텍스트를 확인해주세요');
+  }
+
   var lastRow = sheet.getLastRow();
   if (lastRow < HEADER_ROW + 1) return { products: [], conditions: getConditions() };
 
-  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, PRODUCT_COLS).getValues();
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues();
   var products = [];
+  function cellAt(row, field) { var c = colMap[field]; return c ? row[c - 1] : ''; }
 
   raw.forEach(function(row) {
-    var prodName = String(row[3] || '').trim();
+    var prodName = String(cellAt(row, '제품명') || '').trim();
     if (!prodName) return;
-    var yakj = Number(row[6]);
+    var yakj = Number(cellAt(row, '약정년'));
     if (!yakj || isNaN(yakj) || yakj <= 0) return;
 
-    var bunryu = String(row[1] || '').trim();
-    if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(row[0] || '').trim();
-    var bmpName = String(row[14] || '').trim();
+    var bunryu = String(cellAt(row, '분류') || '').trim();
+    if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(cellAt(row, 's') || '').trim();
+    var bmpName = String(cellAt(row, '별매품명') || '').trim();
     if (bmpName === '-' || bmpName === '–') bmpName = '';
-    var promoOn = String(row[18] || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var promoOn = String(cellAt(row, '프로모션사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
 
     products.push([
-      String(row[0] || '').trim(), bunryu,
-      String(row[2] || '').trim(), prodName,
-      String(row[4] || '').trim(), String(row[5] || '').trim(),
+      String(cellAt(row, 's') || '').trim(), bunryu,
+      String(cellAt(row, '모델명') || '').trim(), prodName,
+      String(cellAt(row, '관리방법') || '').trim(), String(cellAt(row, '관리주기') || '').trim(),
       yakj,
-      toNum(row[7]), toNum(row[8]), toNum(row[9]), toNum(row[10]),
-      toNum(row[11]), toNum(row[12]), toNum(row[13]),
+      toNum(cellAt(row, '정상가')), toNum(cellAt(row, '프로모션')), toNum(cellAt(row, '재렌탈')), toNum(cellAt(row, '일시불')),
+      toNum(cellAt(row, '타사보상렌탈')), toNum(cellAt(row, '타사보상지로')), toNum(cellAt(row, '타사보상일시불')),
       bmpName,
-      toNum(row[15]), toNum(row[16]), toNum(row[17]),
+      toNum(cellAt(row, '별매품가')), toNum(cellAt(row, '별매품가재렌탈')), toNum(cellAt(row, '별매품가일시불')),
       promoOn
     ]);
   });

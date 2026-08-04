@@ -1645,7 +1645,7 @@ function updateBasketTotalBar(){
   if(t.hasIlsiblCmp){
     var cdiff=t.ilsiblCmpRental-(t.ilsiblCmpBase+t.ilsiblCmpMembership);
     var cLabel=cdiff>0?'일시불이 '+won(cdiff)+' 더 저렴':cdiff<0?'렌탈이 '+won(-cdiff)+' 더 저렴':'동일';
-    notes+='<p style="font-size:10px;color:#4b5563;margin-top:4px">일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
+    notes+='<p style="font-size:10px;color:#4b5563;margin-top:4px">구매 비교(렌탈 항목 기준): 일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
   }
   var line='<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline">'+
     parts.map(function(p){return '<span style="font-size:11px;color:#166534">'+p+'</span>';}).join('<span style="color:#86EFAC">/</span>')
@@ -1995,13 +1995,12 @@ function calcTotals(items){
       ilsiblCmpRental+=itemTrueTotal;
     }
   });
-  var totIlsibl=0,totIlsiblDisc=0;
   // 월 렌탈료 합산은 buildTimeline()(itemPhases 기반)이 유일한 소스 — 여기서 별도로 재계산하지 않음
-  var agg={ilsibl:0,korNabM:0,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
+  var agg={ilsibl:0,korNabM:0,hasKor:false,cashCnt:0,cashTotal:0,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),ki=itemKorCalc(it,c);
     if (c.sunap) agg.ilsibl+=c.sunap.amt;
-    if (it.일시불>0){agg.hasIlsibl=true;totIlsibl+=it.일시불;totIlsiblDisc+=Math.round(it.일시불*0.9);}
+    if (it.구매방법==='cash'){agg.cashCnt++;agg.cashTotal+=c.cashFinal||0;}
     if (ki){
       agg.hasKor=true;agg.korNabM+=ki.totalNabM;
       agg.korPbk+=ki.pbkTotal;agg.korRefund+=ki.refund;
@@ -2010,7 +2009,7 @@ function calcTotals(items){
   });
   return {totM:totM,totT:totT,sn36:sn36,sn24:sn24,sn60:sn60,sn2:sn2,
           korNabTotal:korNabTotal,korPbkTotal:korPbkTotal,korRefundTotal:korRefundTotal,
-          totIlsibl:totIlsibl,totIlsiblDisc:totIlsiblDisc,agg:agg,
+          agg:agg,
           timeline:buildTimeline(items),
           hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpMembership:ilsiblCmpMembership,ilsiblCmpRental:ilsiblCmpRental};
 }
@@ -2028,6 +2027,7 @@ function buildQuoteParts(t){
     parts.push('월렌탈료 <strong>'+won(t.timeline.length?t.timeline[0].total:0)+'</strong>/월');
   }
   if (a.hasKor)      parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
+  if (a.cashCnt>0)   parts.push('일시불 결제 '+a.cashCnt+'건 <strong>'+won(a.cashTotal)+'</strong>');
   if (a.ilsibl>0)    parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
   if (a.korPbk>0)    parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
   if (a.korRefund>0) parts.push('만기환급 <strong>'+won(a.korRefund)+'</strong>');
@@ -2046,7 +2046,7 @@ function updateTotalBar(){
   if (t.hasIlsiblCmp){
     var cdiff=t.ilsiblCmpRental-(t.ilsiblCmpBase+t.ilsiblCmpMembership);
     var cLabel=cdiff>0?'일시불이 '+won(cdiff)+' 더 저렴':cdiff<0?'렌탈이 '+won(-cdiff)+' 더 저렴':'동일';
-    notes+='<p class="snote">일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
+    notes+='<p class="snote">구매 비교(렌탈 항목 기준): 일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
   }
   if (t.sn36>0) notes+='<p class="snote">36선납 '+t.sn36+'개 — 36개월간 청구 없음</p>';
   if (t.sn24>0) notes+='<p class="snote">24선납 '+t.sn24+'개 — 24개월간 청구 없음</p>';

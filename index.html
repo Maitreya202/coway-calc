@@ -1129,11 +1129,6 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     }
   }
 
-  // 지로납부 (자동납부 할인 미적용, 고정 가산액 — % 할인 전에 더해짐)
-  h += '<div class="check-row" style="margin-bottom:10px">'
-    + '<input type="checkbox"' + (item.지로On ? ' checked' : '') + ' onchange="setJiro(' + idx + ',this.checked)">'
-    + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
-
   // 할인 패널
   h += '<div class="box-panel">';
   if (item.isRerental) {
@@ -1217,6 +1212,12 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
 
   // 코라솔 패널
   h += '<div class="box-panel">' + renderKorItem(item, idx) + '</div>';
+
+  // 지로납부 (자동납부 할인 미적용, 고정 가산액 — % 할인 전에 더해짐) — 사용 빈도 낮아 맨 아래 배치
+  h += '<div class="check-row" style="margin:4px 2px 0">'
+    + '<input type="checkbox"' + (item.지로On ? ' checked' : '') + ' onchange="setJiro(' + idx + ',this.checked)">'
+    + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
+
   return h;
 }
 

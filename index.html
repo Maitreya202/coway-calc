@@ -494,9 +494,8 @@ fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors',
     PRODUCTS = rows.map(function(r) {
       return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
-               타사보상렌탈:r[11]||0, 타사보상지로:r[12]||0, 타사보상일시불:r[13]||0,
-               별매품명:r[14]||'', 별매품가:r[15]||0, 별매품가재렌탈:r[16]||0, 별매품가일시불:r[17]||0,
-               프로모션사용:(r[18]||'Y')!=='N' };
+               타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
+               프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N' };
     });
     // 조건 데이터 로드
     var cond = resp.conditions || {};
@@ -622,16 +621,10 @@ function getMembershipTotal(item) {
   return monthly * months;
 }
 
-// 제품에 붙을 수 있는 별매품 옵션 목록 — 제품DB의 단일 레거시 필드 + 별매품페어링 시트(약정년 일치하는 것만) 합산
+// 제품에 붙을 수 있는 별매품 옵션 목록 — 별매품페어링 시트(약정년 일치하는 것만)에서만 가져옴
+// (제품DB의 레거시 별매품 4필드는 2026-08-04에 제거됨 — 별매품페어링 시트 정리 전까지 사용 안 함)
 function itemBmpOptions(item) {
   var opts = [];
-  if (item.별매품명 && (item.별매품가 > 0 || item.별매품가재렌탈 > 0)) {
-    opts.push({
-      name: item.별매품명,
-      price: (item.isRerental && item.별매품가재렌탈 > 0) ? item.별매품가재렌탈 : (item.별매품가 || 0),
-      isPer: item.별매품명.indexOf('1개당') >= 0
-    });
-  }
   var pairs = (BMP_PAIRINGS[item.모델명] || []).filter(function(p) { return !p.약정년 || p.약정년 === item.약정년; });
   pairs.forEach(function(p) {
     opts.push({
@@ -663,7 +656,7 @@ function calcItem(item) {
   }
 
   var hasPromo=item.프로모션>0&&item.프로모션사용!==false;
-  var hasTasab=item.타사보상렌탈>0;
+  var hasTasab=item.타사보상렌탈>0&&item.타사보상사용!==false;
   var displayBase=(item.isRerental&&item.재렌탈>0)?item.재렌탈:(hasPromo?item.프로모션:item.정상가);
   var base;
   if (item.tasabosangOn&&hasTasab) {
@@ -671,22 +664,13 @@ function calcItem(item) {
   } else { base=displayBase; }
 
   var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null;
-  // CFSS 프레임 헤드보드 처리 — 별매품 목록과 무관한 전용 라디오 선택
+  // CFSS 프레임 헤드보드 처리 — 가격 출처였던 제품DB 레거시 별매품 필드가 2026-08-04에 제거됨.
+  // 별매품페어링 시트 정리 전까지 기능 임시 비활성화(항상 0원) — UI도 renderDiscPanels()에서 "정리 중" 안내로 대체됨.
   var isCfssFrameCalc = item.s==='안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임')===0;
   if (isCfssFrameCalc) {
-    var htp = item.headType||'none';
-    var isRS = item.분류==='CFSS_프레임_RS';
-    if (htp==='single') {
-      bmpPrice = (item.isRerental&&item.별매품가재렌탈>0)?item.별매품가재렌탈:(item.별매품가||0);
-    } else if (htp==='twin') {
-      var tBase = item.별매품가||0;
-      var tRe   = item.별매품가재렌탈||0;
-      bmpPrice  = (item.isRerental&&tRe>0)?tRe:tBase;
-    } else {
-      bmpPrice = 0;
-    }
+    bmpPrice = 0;
   } else {
-    // 여러 별매품(제품DB 레거시 필드 + 별매품페어링) 중 선택된 것들을 합산
+    // 여러 별매품(별매품페어링 시트) 중 선택된 것들을 합산
     var bmpSel = item.별매품선택||{};
     bmpLines=[];
     itemBmpOptions(item).forEach(function(o) {
@@ -699,7 +683,7 @@ function calcItem(item) {
     });
     if (bmpLines.length===1 && bmpLines[0].isPer) { isBmpPer=true; bmpCnt=bmpLines[0].cnt; }
   }
-  var hasBmp=(isCfssFrameCalc?(item.headType&&item.headType!=='none'):bmpPrice>0);
+  var hasBmp=bmpPrice>0;
   if (hasBmp) base=base+bmpPrice;
   if (item.지로On) base=base+JIRO_SURCHARGE;
 
@@ -815,10 +799,9 @@ if (item.tasabosangOn&&hasTasab) {
     months:months,total:total,sunap:sunap,hasPromo:hasPromo,
     hvMonths:hvMonths,isHanval:isHv,discLabel:discLabel,
     hasBmp:hasBmp,
-    bmpName:(isCfssFrameCalc&&item.headType&&item.headType!=='none')?(item.headType==='twin'?((item.분류==='CFSS_프레임_RS'?'RS ':'')+'트윈 헤드보드'):'싱글 헤드보드')
-      :(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
+    bmpName:(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
     bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
-    bmpBadgeLabel:isCfssFrameCalc?'별매품':(bmpLines&&bmpLines.length>1?'별매품 '+bmpLines.length+'종':'별매품'),
+    bmpBadgeLabel:bmpLines&&bmpLines.length>1?'별매품 '+bmpLines.length+'종':'별매품',
     hasTasab:hasTasab,tasabOn:!!item.tasabosangOn,
     tasabRental:(item.tasabosangOn&&hasTasab&&d.동시구매)?f10((item.타사보상렌탈||0)*0.9):(item.tasabosangOn&&hasTasab&&d.결합)?f10((item.타사보상렌탈||0)*0.95):(item.타사보상렌탈||0),
     jiroOn:!!item.지로On,jiroSurcharge:item.지로On?JIRO_SURCHARGE:0,
@@ -1036,7 +1019,7 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
 
   // 구매방법 + 제품변경 패널
   var pmOpts = [['rental', '신규(렌탈)']];
-  if (item.재렌탈 > 0) pmOpts.push(['rerental', '재렌탈']);
+  if (item.재렌탈 > 0 && item.재렌탈사용 !== false) pmOpts.push(['rerental', '재렌탈']);
   if (item.일시불 > 0) pmOpts.push(['cash', '일시불']);
   h += '<div class="box-panel"><span class="sec-label" style="margin-top:0">구매방법</span>'
     + '<div class="pill-group" style="margin-bottom:10px">';
@@ -1081,29 +1064,16 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
 function renderDiscPanels(item, idx, c, d, isSunap2) {
   var h = '';
   var isTasab     = !!item.tasabosangOn;
-  var hasTasabData = item.타사보상렌탈 > 0;
+  var hasTasabData = item.타사보상렌탈 > 0 && item.타사보상사용 !== false;
   var curDisc = d.동시결합 ? '동시결합' : d.동시구매 ? '동시구매' : d.결합 ? '결합' : d.페스타 ? '페스타' : '없음';
   var isCfssFrame = item.s === '안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임') === 0;
 
   // 별매품/헤드보드 패널
   if (isCfssFrame) {
-    var isRS    = item.분류 === 'CFSS_프레임_RS';
-    var hType   = item.headType || 'none';
-    var snglP   = (item.isRerental && item.별매품가재렌탈 > 0) ? item.별매품가재렌탈 : (item.별매품가 || 0);
-    var twinP   = (item.isRerental && (item.별매품가재렌탈||0) > 0) ? item.별매품가재렌탈 : (item.별매품가||0);
-    h += '<div style="margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 10px">';
-    h += '<p style="font-size:11px;font-weight:800;color:#15803d;margin-bottom:6px">&#127968; 헤드보드 선택</p>';
-    h += '<div style="display:flex;flex-direction:column;gap:5px">';
-    [['none', '없음 (기본형)', 0],
-     ['single', '싱글 헤드보드 <em style="font-weight:400;font-size:11px">+' + won(snglP) + '/월</em>', snglP],
-     ['twin', (isRS ? 'RS ' : '') + '트윈 헤드보드 <em style="font-weight:400;font-size:11px">+' + won(twinP) + '/월</em>', twinP]
-    ].forEach(function(opt) {
-      if (isRS && opt[0] === 'single') return;
-      h += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">';
-      h += '<input type="radio" name="head_' + idx + '" value="' + opt[0] + '"' + (hType === opt[0] ? ' checked' : '') + ' onchange="setHeadType(' + idx + ',\'' + opt[0] + '\')" style="accent-color:#15803d">';
-      h += '<span style="font-size:12px;color:#15803d;font-weight:700">' + opt[1] + '</span></label>';
-    });
-    h += '</div></div>';
+    // 헤드보드 가격 출처였던 레거시 별매품 필드 제거(2026-08-04)로 인해 별매품페어링 시트 정리 전까지 선택 기능 임시 비활성화
+    h += '<div style="margin-bottom:10px;background:#fef3c7;border-radius:8px;padding:8px 10px">';
+    h += '<p style="font-size:12px;color:#92400e;font-weight:700">헤드보드 옵션 정리 중 — 잠시 선택 불가</p>';
+    h += '</div>';
   } else {
     var bmpOptsUI = itemBmpOptions(item);
     if (bmpOptsUI.length > 0) {
@@ -1516,9 +1486,10 @@ function refreshCartItemRow(idx){
   });
   if(!row)return;
   ['정상가','프로모션','재렌탈','일시불',
-   '타사보상렌탈','타사보상지로','타사보상일시불',
-   '별매품가','별매품가재렌탈','별매품가일시불'].forEach(function(f){item[f]=row[f]||0;});
+   '타사보상렌탈','타사보상일시불'].forEach(function(f){item[f]=row[f]||0;});
   item.프로모션사용=row.프로모션사용;
+  item.타사보상사용=row.타사보상사용;
+  item.재렌탈사용=row.재렌탈사용;
 }
 function setCartRerental(idx,v){cart[idx].isRerental=v;renderCart();}
 function setPurchaseMethod(idx,v){cart[idx].구매방법=v;renderCart();}
@@ -1589,9 +1560,8 @@ function doUpdate(){
       PRODUCTS=rows.map(function(r){
         return {s:r[0],분류:r[1],모델명:r[2],제품명:r[3],관리방법:r[4],관리주기:r[5],
           약정년:r[6],정상가:r[7],프로모션:r[8],재렌탈:r[9],일시불:r[10],
-          타사보상렌탈:r[11]||0,타사보상지로:r[12]||0,타사보상일시불:r[13]||0,
-          별매품명:r[14]||'',별매품가:r[15]||0,별매품가재렌탈:r[16]||0,별매품가일시불:r[17]||0,
-          프로모션사용:(r[18]||'Y')!=='N'};
+          타사보상렌탈:r[11]||0,타사보상일시불:r[12]||0,
+          프로모션사용:(r[13]||'Y')!=='N',타사보상사용:(r[14]||'Y')!=='N',재렌탈사용:(r[15]||'Y')!=='N'};
       });
       var cond=resp.conditions||{};
       if(cond.sunap2) SUNAP2=cond.sunap2;
@@ -1766,7 +1736,7 @@ function toggleBulkHalfMonthsWrap(){
 }
 function bulkCanApply(item,field,val){
   if (field==='method'){
-    if (val==='rerental') return item.재렌탈>0;
+    if (val==='rerental') return item.재렌탈>0&&item.재렌탈사용!==false;
     if (val==='cash') return item.일시불>0;
     return true; // 신규는 항상 가능
   }

@@ -101,23 +101,21 @@ var ADMIN_PW = null; // 메모리에만 보관, localStorage/sessionStorage 저�
 var PRODUCTS = [];
 var CUR_ROWS = []; // 현재 표에 펼쳐진 행들(제품명+모델명 일치)
 
-var EDITABLE_NUM = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품가','별매품가재렌탈','별매품가일시불'];
+var EDITABLE_NUM = ['정상가','프로모션','재렌탈','타사보상렌탈','일시불','타사보상일시불'];
+var TOGGLE_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용'];
 var COLS = [
   {f:'관리방법', label:'관리방법', id:true},
   {f:'관리주기', label:'관리주기', id:true},
   {f:'약정년',   label:'약정(년)', id:true},
   {f:'정상가',   label:'정상가', num:true},
   {f:'프로모션', label:'프로모션가', num:true},
-  {f:'프로모션사용', label:'프로모션사용', toggle:true},
   {f:'재렌탈',   label:'재렌탈가', num:true},
+  {f:'타사보상렌탈', label:'타사보상', num:true},
   {f:'일시불',   label:'일시불가', num:true},
-  {f:'타사보상렌탈', label:'타사보상 렌탈', num:true},
-  {f:'타사보상지로', label:'타사보상 지로', num:true},
   {f:'타사보상일시불', label:'타사보상 일시불', num:true},
-  {f:'별매품명', label:'별매품명', text:true},
-  {f:'별매품가', label:'별매품가', num:true},
-  {f:'별매품가재렌탈', label:'별매품가 재렌탈', num:true},
-  {f:'별매품가일시불', label:'별매품가 일시불', num:true}
+  {f:'프로모션사용', label:'프로모션 사용', toggle:true},
+  {f:'타사보상사용', label:'타사보상 사용', toggle:true},
+  {f:'재렌탈사용', label:'재렌탈 사용', toggle:true}
 ];
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -158,9 +156,8 @@ function loadProducts(){
       PRODUCTS = rows.map(function(r){
         return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                  약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
-                 타사보상렌탈:r[11]||0, 타사보상지로:r[12]||0, 타사보상일시불:r[13]||0,
-                 별매품명:r[14]||'', 별매품가:r[15]||0, 별매품가재렌탈:r[16]||0, 별매품가일시불:r[17]||0,
-                 프로모션사용:(r[18]||'Y')!=='N' };
+                 타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
+                 프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N' };
       });
     })
     .catch(function(e){ alert('제품 데이터 로딩 실패: ' + e.message); });
@@ -267,15 +264,18 @@ function saveRow(ri, btn){
 
   EDITABLE_NUM.forEach(function(f){
     var inp = tr.querySelector('input[data-f="' + f + '"]');
-    if (!inp) return; // 별매품명은 text라 여기 안 걸림
+    if (!inp) return;
     var v = Number(inp.value);
     if (!isFinite(v) || v < 0) { invalidField = f; return; }
     fields[f] = v;
   });
-  var nameInp = tr.querySelector('input[data-f="별매품명"]');
-  if (nameInp) fields.별매품명 = nameInp.value.trim();
-  var promoInp = tr.querySelector('input[data-f="프로모션사용"]');
-  if (promoInp) fields.프로모션사용 = promoInp.checked ? 'Y' : 'N';
+  var toggleFields = {};
+  TOGGLE_FIELDS.forEach(function(f){
+    var inp = tr.querySelector('input[data-f="' + f + '"]');
+    if (!inp) return;
+    fields[f] = inp.checked ? 'Y' : 'N';
+    toggleFields[f] = inp.checked;
+  });
 
   var msgEl = document.querySelector('.row-msg[data-ri="' + ri + '"]');
   if (invalidField) { msgEl.textContent = invalidField + ' 값 오류'; msgEl.className = 'row-msg err'; return; }
@@ -291,11 +291,11 @@ function saveRow(ri, btn){
         msgEl.textContent = '저장 완료'; msgEl.className = 'row-msg ok';
         tr.classList.add('row-saved');
         Array.prototype.forEach.call(tr.querySelectorAll('input.dirty'), function(inp){ inp.classList.remove('dirty'); });
-        Object.assign(row, fields, {프로모션사용: fields.프로모션사용==='Y'});
+        Object.assign(row, fields, toggleFields);
         var idx = PRODUCTS.findIndex(function(p){
           return p.모델명===key.모델명 && p.제품명===key.제품명 && p.관리방법===key.관리방법 && p.관리주기===key.관리주기 && p.약정년===key.약정년;
         });
-        if (idx>=0) Object.assign(PRODUCTS[idx], fields, {프로모션사용: fields.프로모션사용==='Y'});
+        if (idx>=0) Object.assign(PRODUCTS[idx], fields, toggleFields);
       } else {
         msgEl.textContent = resp.error || '저장 실패'; msgEl.className = 'row-msg err';
       }

@@ -85,8 +85,9 @@ function _checkAdminPassword(pw) {
 
 // 수정 가능한 필드 목록. 식별용 필드(모델명/제품명/관리방법/관리주기/약정년/분류/제품군)는 이 도구로 바꿀 수 없음 —
 // 식별자를 바꾸면 다른 행과 혼동될 위험이 있어 시트에서 직접 수정하도록 의도적으로 제외함.
-var PRODUCT_EDITABLE_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품명','별매품가','별매품가재렌탈','별매품가일시불','프로모션사용'];
-var PRODUCT_NUMERIC_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품가','별매품가재렌탈','별매품가일시불'];
+var PRODUCT_EDITABLE_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','프로모션사용','타사보상사용','재렌탈사용'];
+var PRODUCT_NUMERIC_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'];
+var PRODUCT_YN_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용'];
 
 function _updateProduct(body) {
   if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
@@ -104,8 +105,8 @@ function _updateProduct(body) {
       var n = Number(fields[f]);
       if (!isFinite(n) || n < 0) return {error: f + ' 값이 올바르지 않습니다: ' + fields[f]};
     }
-    if (f === '프로모션사용' && ['Y','N'].indexOf(String(fields[f]).toUpperCase()) < 0) {
-      return {error: '프로모션사용 값은 Y 또는 N 이어야 합니다'};
+    if (PRODUCT_YN_FIELDS.indexOf(f) >= 0 && ['Y','N'].indexOf(String(fields[f]).toUpperCase()) < 0) {
+      return {error: f + ' 값은 Y 또는 N 이어야 합니다'};
     }
   }
 
@@ -702,10 +703,8 @@ var FIELD_HEADERS = {
   s: '제품군', 분류: '분류', 모델명: '모델명', 제품명: '제품명',
   관리방법: '관리방법', 관리주기: '관리주기', 약정년: '약정(년)',
   정상가: '월렌탈료(정상)', 프로모션: '월렌탈료(프로모션)', 재렌탈: '재렌탈료(프로모션)', 일시불: '일시불가',
-  타사보상렌탈: '타사보상_렌탈', 타사보상지로: '타사보상_지로가', 타사보상일시불: '타사보상_일시불',
-  별매품명: '별매품명', 별매품가: '별매품_월렌탈 추가_신규',
-  별매품가재렌탈: '별매품_월렌탈 추가_재렌탈', 별매품가일시불: '별매품_월렌탈 추가_일시불',
-  프로모션사용: '프로모션사용'
+  타사보상렌탈: '타사보상_렌탈', 타사보상일시불: '타사보상_일시불',
+  프로모션사용: '프로모션사용', 타사보상사용: '타사보상사용', 재렌탈사용: '재렌탈사용'
 };
 
 function _norm(s) { return String(s || '').replace(/\s+/g, '').trim(); }
@@ -769,9 +768,9 @@ function _fetchData() {
 
     var bunryu = String(cellAt(row, '분류') || '').trim();
     if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(cellAt(row, 's') || '').trim();
-    var bmpName = String(cellAt(row, '별매품명') || '').trim();
-    if (bmpName === '-' || bmpName === '–') bmpName = '';
     var promoOn = String(cellAt(row, '프로모션사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var tasabOn = String(cellAt(row, '타사보상사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var rerentalOn = String(cellAt(row, '재렌탈사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
 
     products.push([
       String(cellAt(row, 's') || '').trim(), bunryu,
@@ -779,10 +778,8 @@ function _fetchData() {
       String(cellAt(row, '관리방법') || '').trim(), String(cellAt(row, '관리주기') || '').trim(),
       yakj,
       toNum(cellAt(row, '정상가')), toNum(cellAt(row, '프로모션')), toNum(cellAt(row, '재렌탈')), toNum(cellAt(row, '일시불')),
-      toNum(cellAt(row, '타사보상렌탈')), toNum(cellAt(row, '타사보상지로')), toNum(cellAt(row, '타사보상일시불')),
-      bmpName,
-      toNum(cellAt(row, '별매품가')), toNum(cellAt(row, '별매품가재렌탈')), toNum(cellAt(row, '별매품가일시불')),
-      promoOn
+      toNum(cellAt(row, '타사보상렌탈')), toNum(cellAt(row, '타사보상일시불')),
+      promoOn, tasabOn, rerentalOn
     ]);
   });
 

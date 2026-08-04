@@ -1638,20 +1638,8 @@ function updateBasketTotalBar(){
   var btb=document.getElementById('basketTotalBar');
   if(!btb) return;
   if(quoteBasket.length===0){btb.innerHTML='';btb.style.display='none';return;}
-  var t=calcTotals(quoteBasket),a=t.agg;
-  var parts=[];
-  if (t.timeline.length>1){
-    t.timeline.forEach(function(seg){
-      var label=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
-      parts.push(label+' <strong>'+won(seg.total)+'</strong>/월');
-    });
-  } else {
-    parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
-  }
-  if(a.hasKor) parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
-  if(a.ilsibl>0) parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
-  if(a.korPbk>0) parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
-  if(a.korRefund>0) parts.push('만기환급 <strong>'+won(a.korRefund)+'</strong>');
+  var t=calcTotals(quoteBasket);
+  var parts=buildQuoteParts(t);
   parts.push('합산 총액 <strong>'+won(t.totT)+'</strong>');
   var notes='';
   if(t.hasIlsiblCmp){
@@ -2008,33 +1996,18 @@ function calcTotals(items){
     }
   });
   var totIlsibl=0,totIlsiblDisc=0;
-  var agg={ilsibl:0,normalM:0,korNabM:0,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
+  // 월 렌탈료 합산은 buildTimeline()(itemPhases 기반)이 유일한 소스 — 여기서 별도로 재계산하지 않음
+  var agg={ilsibl:0,korNabM:0,hasKor:false,hasIlsibl:false,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),ki=itemKorCalc(it,c);
-    var st=it.선납||'none';
     if (c.sunap) agg.ilsibl+=c.sunap.amt;
     if (it.일시불>0){agg.hasIlsibl=true;totIlsibl+=it.일시불;totIlsiblDisc+=Math.round(it.일시불*0.9);}
     if (ki){
       agg.hasKor=true;agg.korNabM+=ki.totalNabM;
       agg.korPbk+=ki.pbkTotal;agg.korRefund+=ki.refund;
       agg.korNabTotal+=ki.nabTotal;agg.korRenTotal+=ki.renTotal;
-      agg.normalM+=ki.isHanval?(ki.normalRenM||0):ki.renM;
-    } else {
-      if (c.tasab1년On){
-        agg.normalM+=c.normalMonthly;
-      } else if (st==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){
-        agg.normalM+=c.sunap.s2AfterM||0;
-      } else if (c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){
-        agg.normalM+=c.normalMonthly;
-      } else {
-        var eM=(c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly;
-        if (st==='선납2'&&c.sunap&&c.sunap.인하후) agg.normalM+=c.sunap.인하후;
-        else if (st==='60'){if(c.months>60) agg.normalM+=eM;}
-        else agg.normalM+=eM;
-      }
     }
   });
-  agg.totalM=agg.normalM+agg.korNabM;
   return {totM:totM,totT:totT,sn36:sn36,sn24:sn24,sn60:sn60,sn2:sn2,
           korNabTotal:korNabTotal,korPbkTotal:korPbkTotal,korRefundTotal:korRefundTotal,
           totIlsibl:totIlsibl,totIlsiblDisc:totIlsiblDisc,agg:agg,
@@ -2042,11 +2015,9 @@ function calcTotals(items){
           hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpMembership:ilsiblCmpMembership,ilsiblCmpRental:ilsiblCmpRental};
 }
 
-function updateTotalBar(){
-  var totalBar=document.getElementById('totalBar');
-  var ab=document.getElementById('actionBtns');
-  if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';return;}
-  var t=calcTotals(),a=t.agg;
+// 합산 견적 바(장바구니/견적담기 공통) — 월 청구액 줄들을 t.timeline 하나의 소스로 구성
+function buildQuoteParts(t){
+  var a=t.agg;
   var parts=[];
   if (t.timeline.length>1){
     t.timeline.forEach(function(seg){
@@ -2054,12 +2025,21 @@ function updateTotalBar(){
       parts.push(label+' <strong>'+won(seg.total)+'</strong>/월');
     });
   } else {
-    parts.push('월렌탈료 <strong>'+won(a.normalM)+'</strong>/월');
+    parts.push('월렌탈료 <strong>'+won(t.timeline.length?t.timeline[0].total:0)+'</strong>/월');
   }
-  if (a.hasKor)    parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
-  if (a.ilsibl>0)  parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
-  if (a.korPbk>0)  parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
+  if (a.hasKor)      parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
+  if (a.ilsibl>0)    parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
+  if (a.korPbk>0)    parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
   if (a.korRefund>0) parts.push('만기환급 <strong>'+won(a.korRefund)+'</strong>');
+  return parts;
+}
+
+function updateTotalBar(){
+  var totalBar=document.getElementById('totalBar');
+  var ab=document.getElementById('actionBtns');
+  if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';return;}
+  var t=calcTotals();
+  var parts=buildQuoteParts(t);
   parts.push('합산 총액 <strong style="font-size:15px">'+won(t.totT)+'</strong>');
 
   var notes='';

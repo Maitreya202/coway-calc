@@ -1090,19 +1090,19 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     });
     h += '</div>';
   } else {
-    h += '<span class="sec-label" style="margin-top:0">할인 선택</span><div class="pill-group">';
+    h += '<span class="sec-label" style="margin-top:0">할인 선택</span>';
     var discOpts=[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%'],['페스타','-15%'],['선납2','선납2']];
     if(hasTasabData) discOpts.splice(1,0,['타사보상','타사보상']);
+    h += '<select onchange="var v=this.value; if(v===\'타사보상\'){setTasab('+idx+',true);}else{setDisc('+idx+',v);}" style="margin-bottom:8px">';
     discOpts.forEach(function(optArr) {
       var opt = optArr[0]; var optLabel = optArr[1];
       var isActive = opt === '선납2' ? isSunap2
         : opt === '타사보상' ? isTasab
         : opt === '없음' ? (!isSunap2 && !isTasab && curDisc === '없음')
         : (!isSunap2 && !isTasab && curDisc === opt);
-      var onclk=opt==='타사보상'?'setTasab('+idx+','+(!isTasab)+')':("setDisc("+idx+",'"+opt+"')");
-      h += '<button class="pill' + (isActive ? ' active' : '') + '" onclick="'+onclk+'">' + optLabel + '</button>';
+      h += '<option value="' + opt + '"' + (isActive ? ' selected' : '') + '>' + optLabel + '</option>';
     });
-    h += '</div>';
+    h += '</select>';
     if (hasTasabData && isTasab) {
       h += '<div style="margin-bottom:8px;background:#fdf4ff;border-radius:8px;padding:8px 10px">';
       if (isTasab) {

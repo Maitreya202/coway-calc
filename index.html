@@ -1639,18 +1639,18 @@ function updateBasketTotalBar(){
   if(!btb) return;
   if(quoteBasket.length===0){btb.innerHTML='';btb.style.display='none';return;}
   var t=calcTotals(quoteBasket);
-  var parts=buildQuoteParts(t);
-  parts.push('합산 총액 <strong>'+won(t.totT)+'</strong>');
+  var rows=buildQuoteParts(t);
   var notes='';
   if(t.hasIlsiblCmp){
     var cdiff=t.ilsiblCmpRental-(t.ilsiblCmpBase+t.ilsiblCmpMembership);
     var cLabel=cdiff>0?'일시불이 '+won(cdiff)+' 더 저렴':cdiff<0?'렌탈이 '+won(-cdiff)+' 더 저렴':'동일';
     notes+='<p style="font-size:10px;color:#4b5563;margin-top:4px">구매 비교(렌탈 항목 기준): 일시불가 합계 '+won(t.ilsiblCmpBase)+(t.ilsiblCmpMembership>0?' + 멤버십 '+won(t.ilsiblCmpMembership):'')+' (렌탈 총납입 대비 '+cLabel+')</p>';
   }
-  var line='<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline">'+
-    parts.map(function(p){return '<span style="font-size:11px;color:#166534">'+p+'</span>';}).join('<span style="color:#86EFAC">/</span>')
-    +'</div>';
-  btb.innerHTML='<p style="font-size:11px;font-weight:700;color:#15803D;margin-bottom:6px">합산 견적 ('+quoteBasket.length+'개 제품)</p>'+line+notes;
+  var rowsHtml=rows.map(function(r){
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:1px 0"><span style="font-size:11px;color:#166534;opacity:.85">'+r.label+'</span><span style="font-size:12px;font-weight:700;color:#15803D">'+r.value+'</span></div>';
+  }).join('');
+  var totalRow='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px;padding-top:6px;border-top:1px solid #86EFAC"><span style="font-size:12px;font-weight:700;color:#15803D">합산 총액</span><span style="font-size:15px;font-weight:800;color:#15803D">'+won(t.totT)+'</span></div>';
+  btb.innerHTML='<p style="font-size:11px;font-weight:700;color:#15803D;margin-bottom:6px">합산 견적 ('+quoteBasket.length+'개 제품)</p>'+rowsHtml+totalRow+notes;
   var bl=document.getElementById('basketList');
   if(bl&&bl.style.display==='block') btb.style.display='block';
 }
@@ -2014,24 +2014,24 @@ function calcTotals(items){
           hasIlsiblCmp:hasIlsiblCmp,ilsiblCmpBase:ilsiblCmpBase,ilsiblCmpMembership:ilsiblCmpMembership,ilsiblCmpRental:ilsiblCmpRental};
 }
 
-// 합산 견적 바(장바구니/견적담기 공통) — 월 청구액 줄들을 t.timeline 하나의 소스로 구성
+// 합산 견적 바(장바구니/견적담기 공통) — 렌탈/일시불/선납 등 항목별 줄을 {label,value} 행으로 구성 (t.timeline이 렌탈 월액의 유일한 소스)
 function buildQuoteParts(t){
   var a=t.agg;
-  var parts=[];
+  var rows=[];
   if (t.timeline.length>1){
-    t.timeline.forEach(function(seg){
-      var label=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
-      parts.push(label+' <strong>'+won(seg.total)+'</strong>/월');
+    t.timeline.forEach(function(seg,i){
+      var segLabel=seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월';
+      rows.push({label:(i===0?'렌탈료 · ':'&#8618; ')+segLabel, value:won(seg.total)+'/월'});
     });
-  } else {
-    parts.push('월렌탈료 <strong>'+won(t.timeline.length?t.timeline[0].total:0)+'</strong>/월');
+  } else if (t.timeline.length===1){
+    rows.push({label:'렌탈료', value:won(t.timeline[0].total)+'/월'});
   }
-  if (a.hasKor)      parts.push('코라솔 <strong>'+won(a.korNabM)+'</strong>/월');
-  if (a.cashCnt>0)   parts.push('일시불 결제 '+a.cashCnt+'건 <strong>'+won(a.cashTotal)+'</strong>');
-  if (a.ilsibl>0)    parts.push('선납 <strong>'+won(a.ilsibl)+'</strong>');
-  if (a.korPbk>0)    parts.push('페이백 <strong>-'+won(a.korPbk)+'</strong>');
-  if (a.korRefund>0) parts.push('만기환급 <strong>'+won(a.korRefund)+'</strong>');
-  return parts;
+  if (a.hasKor)      rows.push({label:'코라솔', value:won(a.korNabM)+'/월'});
+  if (a.cashCnt>0)   rows.push({label:'일시불 결제'+(a.cashCnt>1?' '+a.cashCnt+'건':''), value:won(a.cashTotal)});
+  if (a.ilsibl>0)    rows.push({label:'선납', value:won(a.ilsibl)});
+  if (a.korPbk>0)    rows.push({label:'페이백', value:'-'+won(a.korPbk)});
+  if (a.korRefund>0) rows.push({label:'만기환급', value:won(a.korRefund)});
+  return rows;
 }
 
 function updateTotalBar(){
@@ -2039,8 +2039,7 @@ function updateTotalBar(){
   var ab=document.getElementById('actionBtns');
   if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';return;}
   var t=calcTotals();
-  var parts=buildQuoteParts(t);
-  parts.push('합산 총액 <strong style="font-size:15px">'+won(t.totT)+'</strong>');
+  var rows=buildQuoteParts(t);
 
   var notes='';
   if (t.hasIlsiblCmp){
@@ -2052,10 +2051,12 @@ function updateTotalBar(){
   if (t.sn24>0) notes+='<p class="snote">24선납 '+t.sn24+'개 — 24개월간 청구 없음</p>';
   if (t.sn60>0) notes+='<p class="snote">60선납 '+t.sn60+'개 — 월 청구 없음 (상담 안내)</p>';
 
-  var line='<div style="display:flex;flex-wrap:wrap;gap:5px 12px;align-items:baseline">'+
-    parts.map(function(p){return '<span style="font-size:12px;opacity:.85">'+p+'</span>';}).join('<span style="opacity:.4">/</span>')
-    +'</div>';
-  totalBar.innerHTML='<div class="total-bar"><p class="tl">합산 견적 ('+cart.length+'개 제품)</p>'+line+notes+'</div>';
+  var rowsHtml=rows.map(function(r){
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:2px 0"><span style="font-size:12px;opacity:.8">'+r.label+'</span><span style="font-size:13px;font-weight:700">'+r.value+'</span></div>';
+  }).join('');
+  var totalRow='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)"><span style="font-size:13px;font-weight:700">합산 총액</span><span style="font-size:19px;font-weight:800;color:#60a5fa">'+won(t.totT)+'</span></div>';
+
+  totalBar.innerHTML='<div class="total-bar"><p class="tl">합산 견적 ('+cart.length+'개 제품)</p>'+rowsHtml+totalRow+notes+'</div>';
   totalBar.style.display='block';
   if (ab) ab.style.display='block';
 }

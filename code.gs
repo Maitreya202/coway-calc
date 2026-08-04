@@ -18,7 +18,8 @@ var COND_SHEETS = {
   MEMBERSHIP: '멤버십요금',
   CARD_BASE: '제휴카드_기본',
   CARD_TIER: '제휴카드_구간',
-  CARD_NOTE: '제휴카드_유의사항'
+  CARD_NOTE: '제휴카드_유의사항',
+  BMP_PAIR:  '별매품페어링'
 };
 
 // ----------------------------------------------------------------
@@ -597,7 +598,52 @@ function getConditions() {
     result.cards = cardOrder.map(function(id) { return cardMap[id]; });
   }
 
+  // 별매품페어링 — 제품(모델명)당 여러 개 붙을 수 있는 별매품 옵션 (약정년별 가격 상이)
+  var bmpSheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (bmpSheet) {
+    result.bmpPairings = _parseBmpPairings(bmpSheet);
+  }
+
   return result;
+}
+
+// 별매품페어링 시트 파싱 — 1행 헤더 텍스트로 컬럼을 찾음(제품DB와 별개로 이 시트는 헤더가 1행)
+function _parseBmpPairings(sheet) {
+  var BMP_HEADERS = {
+    모델명: '대상모델명', 별매품명: '별매품명', 약정년: '약정(년)',
+    월렌탈가: '월렌탈가', 재렌탈가: '재렌탈가', 일시불가: '일시불가', 개당여부: '1개당여부'
+  };
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return {};
+
+  var header = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var colMap = {};
+  header.forEach(function(h, i) {
+    var t = _norm(h);
+    Object.keys(BMP_HEADERS).forEach(function(f) {
+      if (_norm(BMP_HEADERS[f]) === t) colMap[f] = i;
+    });
+  });
+  if (colMap.모델명 === undefined || colMap.별매품명 === undefined) return {};
+
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var map = {};
+  raw.forEach(function(row) {
+    var model = String(row[colMap.모델명] || '').trim();
+    var name = String(row[colMap.별매품명] || '').trim();
+    if (!model || !name) return;
+    if (!map[model]) map[model] = [];
+    map[model].push({
+      name: name,
+      약정년: colMap.약정년 !== undefined ? (Number(row[colMap.약정년]) || 0) : 0,
+      월렌탈가: colMap.월렌탈가 !== undefined ? toNum(row[colMap.월렌탈가]) : 0,
+      재렌탈가: colMap.재렌탈가 !== undefined ? toNum(row[colMap.재렌탈가]) : 0,
+      일시불가: colMap.일시불가 !== undefined ? toNum(row[colMap.일시불가]) : 0,
+      개당: colMap.개당여부 !== undefined ? (String(row[colMap.개당여부] || 'N').trim().toUpperCase() === 'Y') : false
+    });
+  });
+  return map;
 }
 
 // 멤버십요금 시트에서 "【 일시불 멤버십 】" 표만 파싱

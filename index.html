@@ -476,6 +476,7 @@ var TASAB_COND = {}; // 타사보상 약정별 조건
 var MEMBERSHIP_CASH = {}; // 일시불 멤버십 요금 (제품군/기능구조/관리주기별)
 var HANVAL_PERIODS = [0, 2, 4, 6, 12, 18, 24];
 var CARDS = []; // 제휴카드 데이터 (서버에서 로드)
+var BMP_PAIRINGS = {}; // 모델명별 별매품 옵션 목록 (서버에서 로드, 별매품페어링 시트)
 
 function fixModalHeight() {
   document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
@@ -503,6 +504,7 @@ fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors',
     if (cond.korasol) KORASOL = cond.korasol;
     if (cond.membershipCash) MEMBERSHIP_CASH = cond.membershipCash;
     if (cond.cards) CARDS = cond.cards;
+    if (cond.bmpPairings) BMP_PAIRINGS = cond.bmpPairings;
     document.getElementById('cardNoDataMsg').style.display = (CARDS.length===0) ? 'block' : 'none';
     _renderCardDropdown();
     document.getElementById('loadingScreen').style.display = 'none';
@@ -619,6 +621,27 @@ function getMembershipTotal(item) {
   return monthly * months;
 }
 
+// 제품에 붙을 수 있는 별매품 옵션 목록 — 제품DB의 단일 레거시 필드 + 별매품페어링 시트(약정년 일치하는 것만) 합산
+function itemBmpOptions(item) {
+  var opts = [];
+  if (item.별매품명 && (item.별매품가 > 0 || item.별매품가재렌탈 > 0)) {
+    opts.push({
+      name: item.별매품명,
+      price: (item.isRerental && item.별매품가재렌탈 > 0) ? item.별매품가재렌탈 : (item.별매품가 || 0),
+      isPer: item.별매품명.indexOf('1개당') >= 0
+    });
+  }
+  var pairs = (BMP_PAIRINGS[item.모델명] || []).filter(function(p) { return !p.약정년 || p.약정년 === item.약정년; });
+  pairs.forEach(function(p) {
+    opts.push({
+      name: p.name,
+      price: (item.isRerental && p.재렌탈가 > 0) ? p.재렌탈가 : (p.월렌탈가 || 0),
+      isPer: p.개당 || p.name.indexOf('1개당') >= 0
+    });
+  });
+  return opts;
+}
+
 function calcItem(item) {
   // ── 일시불 구매 ── 약정/관리방법/반값/코라솔 없음. 정가에서 할인만 적용.
   if (item.구매방법==='cash') {
@@ -632,7 +655,7 @@ function calcItem(item) {
     return {
       isCash:true,base:cashBase,displayBase:cashBase,cashFinal:cashFinal,discLabel:cashLabel,
       monthly:0,halfMonthly:0,normalMonthly:0,months:0,total:cashFinal,sunap:null,hasPromo:false,
-      hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,
+      hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,bmpLines:null,bmpBadgeLabel:'',
       hasTasab:false,tasabOn:false,tasabRental:0,tasabJiro:0,tasabIlsibl:0,
       tasab1년On:false,tasab1년Rate:0,tasab1년Disc:0
     };
@@ -646,10 +669,8 @@ function calcItem(item) {
     base=item.타사보상렌탈>0?item.타사보상렌탈:(item.타사보상지로||item.프로모션||item.정상가);
   } else { base=displayBase; }
 
-  var isBmpPer=item.별매품명&&item.별매품명.indexOf('1개당')>=0;
-  var bmpCnt=(isBmpPer&&item.별매품cnt>0)?(item.별매품cnt||1):1;
-  var bmpPrice=(item.isRerental&&item.별매품가재렌탈>0)?item.별매품가재렌탈:(item.별매품가||0);
-  // CFSS 프레임 헤드보드 처리
+  var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null;
+  // CFSS 프레임 헤드보드 처리 — 별매품 목록과 무관한 전용 라디오 선택
   var isCfssFrameCalc = item.s==='안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임')===0;
   if (isCfssFrameCalc) {
     var htp = item.headType||'none';
@@ -663,9 +684,22 @@ function calcItem(item) {
     } else {
       bmpPrice = 0;
     }
+  } else {
+    // 여러 별매품(제품DB 레거시 필드 + 별매품페어링) 중 선택된 것들을 합산
+    var bmpSel = item.별매품선택||{};
+    bmpLines=[];
+    itemBmpOptions(item).forEach(function(o) {
+      var s = bmpSel[o.name];
+      if (s && s.on && o.price>0) {
+        var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
+        bmpPrice += o.price*cnt;
+        bmpLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+      }
+    });
+    if (bmpLines.length===1 && bmpLines[0].isPer) { isBmpPer=true; bmpCnt=bmpLines[0].cnt; }
   }
-  var hasBmp=(isCfssFrameCalc?(item.headType&&item.headType!=='none'):(item.별매품on&&bmpPrice>0));
-  if (hasBmp) base=base+bmpPrice*bmpCnt;
+  var hasBmp=(isCfssFrameCalc?(item.headType&&item.headType!=='none'):bmpPrice>0);
+  if (hasBmp) base=base+bmpPrice;
 
   var d=item.discounts||{};
   var isRe=!!item.isRerental;
@@ -776,7 +810,11 @@ else if (d.결합) tasabBase = f10(tasabBase * 0.95);
     monthly:monthly,halfMonthly:halfMonthly,normalMonthly:normalMonthly,
     months:months,total:total,sunap:sunap,hasPromo:hasPromo,
     hvMonths:hvMonths,isHanval:isHv,discLabel:discLabel,
-    hasBmp:hasBmp,bmpName:(isCfssFrameCalc&&item.headType&&item.headType!=='none')?(item.headType==='twin'?((item.분류==='CFSS_프레임_RS'?'RS ':'')+'트윈 헤드보드'):'싱글 헤드보드'):(item.별매품명||''),bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,
+    hasBmp:hasBmp,
+    bmpName:(isCfssFrameCalc&&item.headType&&item.headType!=='none')?(item.headType==='twin'?((item.분류==='CFSS_프레임_RS'?'RS ':'')+'트윈 헤드보드'):'싱글 헤드보드')
+      :(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
+    bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
+    bmpBadgeLabel:isCfssFrameCalc?'별매품':(bmpLines&&bmpLines.length>1?'별매품 '+bmpLines.length+'종':'별매품'),
     hasTasab:hasTasab,tasabOn:!!item.tasabosangOn,
     tasabRental:(item.tasabosangOn&&hasTasab&&d.동시구매)?f10((item.타사보상렌탈||0)*0.9):(item.tasabosangOn&&hasTasab&&d.결합)?f10((item.타사보상렌탈||0)*0.95):(item.타사보상렌탈||0),tasabJiro:item.타사보상지로||0,
     tasabIlsibl:(item.tasabosangOn&&hasTasab)?(item.타사보상일시불||0):0,
@@ -870,7 +908,7 @@ function openConfig(idx){
   item.재렌탈할인='none';item.재렌탈1년on=false;
   item.discounts={};item.반값개월=0;item.선납='none';
   item.s2={grade:'A',oi:0,반값월:0};
-  item.kors=[];item.별매품on=false;item.별매품cnt=1;
+  item.kors=[];item.별매품선택={};
   item.headType='none';item.ilsiblOn=false;
   item.tasabosangOn=false;item.tasab1년on=false;
   item._detailOpen=true;
@@ -1061,24 +1099,29 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       h += '<span style="font-size:12px;color:#15803d;font-weight:700">' + opt[1] + '</span></label>';
     });
     h += '</div></div>';
-  } else if (item.별매품명 && (item.별매품가 > 0 || item.별매품가재렌탈 > 0)) {
-    var isPer   = item.별매품명.indexOf('1개당') >= 0;
-    var bCnt    = item.별매품cnt || 1;
-    var bPrice  = (item.isRerental && item.별매품가재렌탈 > 0) ? item.별매품가재렌탈 : (item.별매품가 || 0);
-    h += '<div style="margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 10px">';
-    h += '<div class="check-row" style="margin-bottom:' + (isPer && item.별매품on ? '8' : '0') + 'px">'
-      + '<input type="checkbox"' + (item.별매품on ? ' checked' : '') + ' onchange="setBmp(' + idx + ',this.checked)">'
-      + '<span style="color:#15803d">별매품 ' + item.별매품명 + ' <em style="font-weight:400;font-size:11px">+' + won(bPrice) + '/월</em></span></div>';
-    if (isPer && item.별매품on) {
-      h += '<div style="display:flex;align-items:center;gap:8px;padding-left:24px">'
-        + '<span style="font-size:12px;color:#15803d;font-weight:700">패널 수량</span>'
-        + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
-        + '<button onclick="setBmpCnt(' + idx + ',' + (bCnt - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
-        + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + bCnt + '</span>'
-        + '<button onclick="setBmpCnt(' + idx + ',' + (bCnt + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
-        + '<span style="font-size:11px;color:#15803d">' + bCnt + '장 &times; ' + won(bPrice) + ' = <strong>' + won(bPrice * bCnt) + '/월</strong></span></div>';
+  } else {
+    var bmpOptsUI = itemBmpOptions(item);
+    if (bmpOptsUI.length > 0) {
+      var bmpSelUI = item.별매품선택 || {};
+      h += '<div style="margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 10px">';
+      bmpOptsUI.forEach(function(o) {
+        var sel = bmpSelUI[o.name] || {on:false, cnt:1};
+        var keyJs = "'" + String(o.name).replace(/'/g, "\\'") + "'";
+        h += '<div class="check-row" style="margin-bottom:' + (o.isPer && sel.on ? '8' : '4') + 'px">'
+          + '<input type="checkbox"' + (sel.on ? ' checked' : '') + ' onchange="setBmp(' + idx + ',' + keyJs + ',this.checked)">'
+          + '<span style="color:#15803d">별매품 ' + o.name + ' <em style="font-weight:400;font-size:11px">+' + won(o.price) + '/월</em></span></div>';
+        if (o.isPer && sel.on) {
+          h += '<div style="display:flex;align-items:center;gap:8px;padding-left:24px;margin-bottom:4px">'
+            + '<span style="font-size:12px;color:#15803d;font-weight:700">수량</span>'
+            + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
+            + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
+            + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt||1) + '</span>'
+            + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
+            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(o.price) + ' = <strong>' + won(o.price*(sel.cnt||1)) + '/월</strong></span></div>';
+        }
+      });
+      h += '</div>';
     }
-    h += '</div>';
   }
 
   // 할인 패널
@@ -1191,8 +1234,8 @@ function _baseChainSteps(item, c, d) {
     runningBase = tasabBase;
   }
   if (c.hasBmp && c.bmpAmt > 0) {
-    runningBase = runningBase + c.bmpAmt * c.bmpCnt;
-    steps.push({label:'별매품' + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : ''), val:runningBase});
+    runningBase = runningBase + c.bmpAmt;
+    steps.push({label:c.bmpBadgeLabel + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : ''), val:runningBase});
   }
   if (item.tasabosangOn) {
     if (d.동시구매) steps.push({label:'동시구매 -10%', val:c.normalMonthly});
@@ -1207,7 +1250,7 @@ function _baseChainSteps(item, c, d) {
 function renderResultBox(item, idx, c, d, isSunap2) {
   var ki = itemKorCalc(item, c);
   var h = '';
-  var bmpBadge = c.hasBmp ? '<span class="disc-badge" style="background:#f0fdf4;color:#15803d">별매품' + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : '') + '포함</span>' : '';
+  var bmpBadge = c.hasBmp ? '<span class="disc-badge" style="background:#f0fdf4;color:#15803d">' + c.bmpBadgeLabel + (c.isBmpPer ? ' ' + c.bmpCnt + '장' : '') + '포함</span>' : '';
   h += '<div class="result-box">';
   h += '<div class="res-row"><span>기준요금' + (!isSunap2 && c.discLabel ? '<span class="disc-badge">' + c.discLabel + '</span>' : '') + bmpBadge + '</span><span>' + won(c.displayBase) + '/월</span></div>';
   if (c.tasabOn && c.tasabRental > 0) h += '<div class="res-sub" style="color:#7c3aed;font-weight:700"><span>&#8627; 타사보상 렌탈가</span><span>' + won(c.tasabRental) + '/월</span></div>';
@@ -1541,6 +1584,7 @@ function doUpdate(){
       if(cond.tasab) TASAB_COND=cond.tasab;
       if(cond.korasol) KORASOL=cond.korasol;
       if(cond.membershipCash) MEMBERSHIP_CASH=cond.membershipCash;
+      if(cond.bmpPairings) BMP_PAIRINGS=cond.bmpPairings;
       document.getElementById('loadingScreen').style.display='none';
       document.getElementById('app').style.display='block';
       renderCart();
@@ -1824,8 +1868,20 @@ function setS2Combo(idx,opt){
 function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;renderCart();}
 function setHanvalPeriod(idx,p){cart[idx].반값개월=p;renderCart();}
 function setSunap(idx,v){cart[idx].선납=v;renderCart();}
-function setBmp(idx,v){cart[idx].별매품on=v;if(v&&!cart[idx].별매품cnt)cart[idx].별매품cnt=1;renderCart();}
-function setBmpCnt(idx,v){cart[idx].별매품cnt=Math.max(1,parseInt(v)||1);renderCart();}
+function setBmp(idx,key,v){
+  var it=cart[idx];
+  if(!it.별매품선택)it.별매품선택={};
+  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
+  it.별매품선택[key].on=v;
+  renderCart();
+}
+function setBmpCnt(idx,key,v){
+  var it=cart[idx];
+  if(!it.별매품선택)it.별매품선택={};
+  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
+  it.별매품선택[key].cnt=Math.max(1,parseInt(v)||1);
+  renderCart();
+}
 function setHeadType(idx,v){cart[idx].headType=v;renderCart();}
 function setIlsibl(idx,v){cart[idx].ilsiblOn=v;renderCart();}
 function toggleIlsiblCmp(idx){cart[idx]._ilsiblCmpOpen=!cart[idx]._ilsiblCmpOpen;renderCart();}

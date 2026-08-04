@@ -27,10 +27,10 @@ https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijcc
 ## 데이터 흐름
 
 ```
-GitHub Pages (index.html)
+Cloudflare Pages (index.html)
 → fetch(GAS_URL + '?action=getData')
 → GAS doGet() → CacheService → 구글 시트
-→ { products: [...], conditions: { sunap2, tasab, korasol } }
+→ { products: [...], conditions: { sunap2, tasab, korasol, bmpPairings, ... } }
 ```
 
 ## 조건 데이터 (구글 시트 탭)
@@ -49,7 +49,7 @@ GitHub Pages (index.html)
 ## GitHub 저장소
 - URL: `https://github.com/Maitreya202/coway-calc`
 - Branch: `main`
-- 배포: GitHub Pages (Settings → Pages → main/root)
+- 배포: Cloudflare Pages(`coway-calc.pages.dev`)가 이 저장소 `main`과 연결되어 `git push` 시 자동 배포. GitHub Pages는 사용 안 함(의도적으로 꺼둠)
 
 ## 제품 데이터 구조 (구글 시트 제품DB)
 ```
@@ -79,3 +79,13 @@ GitHub Pages (index.html)
 - 식별 필드(모델명/제품명/관리방법/관리주기/약정년/분류/s)는 admin.html에서 수정 불가 — 이 값들을 바꾸면 다른 행과 혼동될 위험이 있어 의도적으로 시트에서 직접 수정하도록 남겨둠.
 - 저장 후 서버에서 자동으로 `clearCache()` 호출 — index.html은 다음 로드(또는 "데이터 업데이트" 버튼) 시 최신 값을 받음.
 - **code.gs를 수정한 뒤에는 Apps Script 편집기에 붙여넣고 새 버전으로 재배포해야** 실제 GAS_URL에 반영됨 — 로컬 `code.gs` 파일을 고치는 것만으로는 라이브 배포가 바뀌지 않음.
+
+## 별매품 다중 선택 (별매품페어링 시트)
+- 제품DB의 별매품 4개 컬럼(별매품명/가/재렌탈/일시불)은 "제품당 별매품 1개"만 표현 가능한 레거시 구조. 제품 하나에 별매품이 여러 개 붙어야 할 때는 별도 시트 `별매품페어링`(1행 헤더)을 씀:
+  `대상모델명 | 별매품명 | 약정(년) | 월렌탈가 | 재렌탈가 | 일시불가 | 1개당여부`
+  - 모델명당 여러 행 가능(별매품 종류별로, 약정년별로) — 관리방법/관리주기는 가격에 영향 없어서 키에서 제외
+  - `code.gs`의 `_parseBmpPairings()`가 헤더 텍스트로 컬럼을 찾아 모델명별로 묶어서 `getConditions().bmpPairings`로 반환
+  - `일시불가` 컬럼은 레거시 별매품가일시불과 마찬가지로 **아직 계산 로직에서 사용 안 함** (일시불 구매 모드엔 별매품 자체가 적용 안 되는 구조 — cash 분기가 `calcItem()` 초반에 별도 early return)
+- `index.html`의 `itemBmpOptions(item)`이 레거시 필드 + `BMP_PAIRINGS[item.모델명]`(item.약정년과 일치하는 것만)을 합쳐 선택 가능한 옵션 목록을 만듦. `renderDiscPanels()`가 이 목록을 체크박스 여러 개로 렌더링하고, 선택 상태는 `item.별매품선택 = {별매품명: {on, cnt}}`에 저장(과거의 `item.별매품on`/`item.별매품cnt` 단일 필드는 제거됨).
+- `calcItem()`은 선택된 옵션들의 가격(1개당 옵션은 수량 곱해서)을 전부 합산 — CFSS 프레임 헤드보드(`headType` 라디오)는 이 목록과 무관한 별도 로직으로 그대로 유지됨.
+- admin.html에서는 아직 이 페어링 시트를 관리하는 UI가 없음 — 지금은 시트에서 직접 행을 추가/삭제해야 함.

@@ -912,7 +912,7 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
     var mgmt = getMgmtLabel(item);
     tags.push(mgmt + (item.관리주기 && item.관리주기 !== '-' ? ' · ' + item.관리주기 : ''));
   }
-  if (item.tasabosangOn) tags.push('타사보상' + (c.discLabel ? ' · ' + c.discLabel : ''));
+  if (!isCashMode && item.tasabosangOn) tags.push('타사보상' + (c.discLabel ? ' · ' + c.discLabel : ''));
   else if (c.discLabel) tags.push(c.discLabel);
   if (!isCashMode) {
     if (item.isRerental && item.재렌탈1년on) tags.push('1년 -20%');
@@ -921,7 +921,6 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   }
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
   if (korCnt > 0) tags.push('코라솔 ' + korCnt + '건');
-  if (isCashMode && item.일시불할인 !== 'none') tags.push({none:'',10:'-10%',15:'-15%','1010':'-19%'}[item.일시불할인]||'');
 
   var h = '';
   h += '<div style="display:flex;align-items:flex-start;gap:6px;cursor:pointer" onclick="toggleDetail('+idx+')">';

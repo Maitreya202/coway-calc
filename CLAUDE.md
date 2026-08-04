@@ -5,7 +5,8 @@
 - **프론트엔드**: `index.html` (HTML/CSS/JS 단일 파일)
 - **관리자 페이지**: `admin.html` — 제품 로우 데이터 조회/수정 (비밀번호 게이트, 별도 탭)
 - **백엔드 API**: Google Apps Script (`code.gs`) → 개인 구글 계정
-- **호스팅**: GitHub Pages (`https://maitreya202.github.io/coway-calc`)
+- **호스팅**: Cloudflare Pages (`https://coway-calc.pages.dev`) — 이 GitHub 저장소(`main` 브랜치)와 연결되어 `git push` 시 자동 배포됨. GitHub Pages는 코드 노출 방지 목적으로 의도적으로 꺼둔 상태(계정 Settings → Pages에서 비활성화) — 다시 켜지 말 것.
+  Cloudflare Access가 도메인 전체를 막고 있어 접속 시 로그인 필요(관리자 개인 인증 방식) — admin.html의 비밀번호 게이트와는 별개의, 그 앞단 보안 계층임.
 - **데이터**: 구글 시트 (`17wd6OMYMazzveTZ6LcnMSi8a84XYuHSyWESYdwWCN8s`)
 
 ## GAS API URL
@@ -70,7 +71,7 @@ GitHub Pages (index.html)
 - 시트 헤더 텍스트를 바꾸거나 새 필드를 연결할 땐, `code.gs`에서 `_testHeaderMap()` 함수를 Apps Script 편집기에서 수동 실행 → 실행 로그로 매핑이 올바른지 배포 전에 확인할 것.
 
 ## admin.html (제품 관리 페이지)
-- 별도 파일, `index.html`과 무관하게 독립 로드. URL 예: `https://maitreya202.github.io/coway-calc/admin.html`
+- 별도 파일, `index.html`과 무관하게 독립 로드. URL: `https://coway-calc.pages.dev/admin.html`
 - 진입 시 비밀번호 입력 → GAS `doPost(action:'adminAuth')`로 서버 검증. 비밀번호는 코드에 없고 Apps Script **스크립트 속성**(`ADMIN_PASSWORD`)에 저장 — Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에서 최초 1회 설정 필요. 속성이 없으면 항상 인증 실패(fail-closed).
 - 이 비밀번호 게이트는 "진짜 로그인"이 아니라 약한 잠금임 — URL을 아는 사람이 직접 API 요청을 만들면 우회 가능. 내부용 도구로만 사용할 것.
 - 검색은 모델명/제품명 기준, 같은 모델명이라도 관리방법·관리주기·약정년별로 행이 여러 개 나올 수 있어 목록에서 정확한 행을 선택해야 함(가격이 조합마다 다름).

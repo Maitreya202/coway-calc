@@ -58,10 +58,92 @@ function doPost(e) {
       clearCache();
       return _json({ok: true});
     }
+    if (action === 'adminAuth') {
+      return _json({ok: _checkAdminPassword(body.password)});
+    }
+    if (action === 'updateProduct') {
+      return _json(_updateProduct(body));
+    }
     return _json({error: 'unknown action'});
   } catch(err) {
     return _json({error: err.message});
   }
+}
+
+// ----------------------------------------------------------------
+// 관리자 페이지(admin.html) 전용 — 비밀번호 확인 + 제품DB 행 수정
+// ----------------------------------------------------------------
+
+// Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에
+// ADMIN_PASSWORD 키로 비밀번호를 미리 설정해두어야 함 (코드에 직접 적지 않음 — 이 파일은 공개 깃허브 저장소에 커밋됨)
+function _checkAdminPassword(pw) {
+  var expected = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
+  if (!expected) return false; // 속성 미설정 시 항상 거부 (fail-closed)
+  return String(pw || '') === String(expected);
+}
+
+// 수정 가능한 필드 = 컬럼 번호(1-based) 매핑. 식별용 필드(모델명/제품명/관리방법/관리주기/약정년/분류/s)는 이 도구로 바꿀 수 없음 —
+// 식별자를 바꾸면 다른 행과 헷갈릴 위험이 있어 시트에서 직접 수정하도록 의도적으로 제외함.
+var PRODUCT_EDITABLE_FIELDS = {
+  정상가:8, 프로모션:9, 재렌탈:10, 일시불:11,
+  타사보상렌탈:12, 타사보상지로:13, 타사보상일시불:14,
+  별매품명:15, 별매품가:16, 별매품가재렌탈:17, 별매품가일시불:18,
+  프로모션사용:19
+};
+var PRODUCT_NUMERIC_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상지로','타사보상일시불','별매품가','별매품가재렌탈','별매품가일시불'];
+
+function _updateProduct(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+
+  var key = body.key || {};
+  var fields = body.fields || {};
+  if (!key.모델명 || !key.제품명 || key.약정년 === undefined) {
+    return {error: '수정할 행을 식별할 수 없습니다 (모델명/제품명/약정년 누락)'};
+  }
+
+  // 필드 값 검증 — 숫자 필드는 유한하고 0 이상인지, 프로모션사용은 Y/N인지 확인
+  for (var f in fields) {
+    if (!PRODUCT_EDITABLE_FIELDS[f]) return {error: '수정할 수 없는 필드입니다: ' + f};
+    if (PRODUCT_NUMERIC_FIELDS.indexOf(f) >= 0) {
+      var n = Number(fields[f]);
+      if (!isFinite(n) || n < 0) return {error: f + ' 값이 올바르지 않습니다: ' + fields[f]};
+    }
+    if (f === '프로모션사용' && ['Y','N'].indexOf(String(fields[f]).toUpperCase()) < 0) {
+      return {error: '프로모션사용 값은 Y 또는 N 이어야 합니다'};
+    }
+  }
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return {error: '시트를 찾을 수 없음: "' + SHEET_NAME + '"'};
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < HEADER_ROW + 1) return {error: '제품 데이터가 없습니다'};
+
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, PRODUCT_COLS).getValues();
+  var matches = [];
+  raw.forEach(function(row, i) {
+    if (String(row[2]).trim() === String(key.모델명).trim() &&
+        String(row[3]).trim() === String(key.제품명).trim() &&
+        String(row[4]).trim() === String(key.관리방법 || '').trim() &&
+        String(row[5]).trim() === String(key.관리주기 || '').trim() &&
+        Number(row[6]) === Number(key.약정년)) {
+      matches.push(i);
+    }
+  });
+
+  if (matches.length === 0) return {error: '일치하는 행을 찾지 못했습니다 (다른 사람이 먼저 삭제/수정했을 수 있어요 — 새로고침 후 다시 시도해주세요)'};
+  if (matches.length > 1) return {error: '조건에 맞는 행이 ' + matches.length + '개 발견되어 안전하게 수정할 수 없습니다. 시트에서 직접 확인해주세요'};
+
+  var sheetRow = HEADER_ROW + 1 + matches[0];
+  for (var field in fields) {
+    var col = PRODUCT_EDITABLE_FIELDS[field];
+    var val = PRODUCT_NUMERIC_FIELDS.indexOf(field) >= 0 ? Number(fields[field]) : String(fields[field]);
+    sheet.getRange(sheetRow, col).setValue(val);
+  }
+
+  CacheService.getScriptCache().remove('appData');
+  return {ok: true, row: sheetRow};
 }
 
 // doGet에서도 clearCache 처리 추가
@@ -557,6 +639,10 @@ function getData() {
   return data;
 }
 
+// 제품DB 컬럼 순서 (1-based). 19번째 "프로모션사용" 컬럼이 없는 시트도
+// 하위 호환되도록 항상 비어있으면 'Y'(사용)로 취급한다.
+var PRODUCT_COLS = 19;
+
 function _fetchData() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
@@ -565,7 +651,7 @@ function _fetchData() {
   var lastRow = sheet.getLastRow();
   if (lastRow < HEADER_ROW + 1) return { products: [], conditions: getConditions() };
 
-  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, 18).getValues();
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, PRODUCT_COLS).getValues();
   var products = [];
 
   raw.forEach(function(row) {
@@ -578,6 +664,7 @@ function _fetchData() {
     if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(row[0] || '').trim();
     var bmpName = String(row[14] || '').trim();
     if (bmpName === '-' || bmpName === '–') bmpName = '';
+    var promoOn = String(row[18] || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
 
     products.push([
       String(row[0] || '').trim(), bunryu,
@@ -587,7 +674,8 @@ function _fetchData() {
       toNum(row[7]), toNum(row[8]), toNum(row[9]), toNum(row[10]),
       toNum(row[11]), toNum(row[12]), toNum(row[13]),
       bmpName,
-      toNum(row[15]), toNum(row[16]), toNum(row[17])
+      toNum(row[15]), toNum(row[16]), toNum(row[17]),
+      promoOn
     ]);
   });
 

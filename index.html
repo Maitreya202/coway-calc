@@ -493,7 +493,8 @@ fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors',
       return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
                타사보상렌탈:r[11]||0, 타사보상지로:r[12]||0, 타사보상일시불:r[13]||0,
-               별매품명:r[14]||'', 별매품가:r[15]||0, 별매품가재렌탈:r[16]||0, 별매품가일시불:r[17]||0 };
+               별매품명:r[14]||'', 별매품가:r[15]||0, 별매품가재렌탈:r[16]||0, 별매품가일시불:r[17]||0,
+               프로모션사용:(r[18]||'Y')!=='N' };
     });
     // 조건 데이터 로드
     var cond = resp.conditions || {};
@@ -637,7 +638,7 @@ function calcItem(item) {
     };
   }
 
-  var hasPromo=item.프로모션>0;
+  var hasPromo=item.프로모션>0&&item.프로모션사용!==false;
   var hasTasab=(item.타사보상렌탈>0||item.타사보상지로>0);
   var displayBase=(item.isRerental&&item.재렌탈>0)?item.재렌탈:(hasPromo?item.프로모션:item.정상가);
   var base;
@@ -1460,6 +1461,7 @@ function refreshCartItemRow(idx){
   ['정상가','프로모션','재렌탈','일시불',
    '타사보상렌탈','타사보상지로','타사보상일시불',
    '별매품가','별매품가재렌탈','별매품가일시불'].forEach(function(f){item[f]=row[f]||0;});
+  item.프로모션사용=row.프로모션사용;
 }
 function setCartRerental(idx,v){cart[idx].isRerental=v;renderCart();}
 function setPurchaseMethod(idx,v){cart[idx].구매방법=v;renderCart();}
@@ -1531,7 +1533,8 @@ function doUpdate(){
         return {s:r[0],분류:r[1],모델명:r[2],제품명:r[3],관리방법:r[4],관리주기:r[5],
           약정년:r[6],정상가:r[7],프로모션:r[8],재렌탈:r[9],일시불:r[10],
           타사보상렌탈:r[11]||0,타사보상지로:r[12]||0,타사보상일시불:r[13]||0,
-          별매품명:r[14]||'',별매품가:r[15]||0,별매품가재렌탈:r[16]||0,별매품가일시불:r[17]||0};
+          별매품명:r[14]||'',별매품가:r[15]||0,별매품가재렌탈:r[16]||0,별매품가일시불:r[17]||0,
+          프로모션사용:(r[18]||'Y')!=='N'};
       });
       var cond=resp.conditions||{};
       if(cond.sunap2) SUNAP2=cond.sunap2;

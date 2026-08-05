@@ -138,11 +138,14 @@ function _updateProduct(body) {
   function cellAt(row, field) { var c = colMap[field]; return c ? row[c-1] : ''; }
   var matches = [];
   raw.forEach(function(row, i) {
+    // 약정(년) 셀이 비어있거나 "-"면(약정 없는 일시불 전용 제품) getData()가 0으로 내보내므로, 여기서도 NaN을 0으로 취급해 매칭
+    var rowYakjRaw = Number(cellAt(row,'약정년'));
+    var rowYakj = (!rowYakjRaw || isNaN(rowYakjRaw)) ? 0 : rowYakjRaw;
     if (String(cellAt(row,'모델명')).trim() === String(key.모델명).trim() &&
         String(cellAt(row,'제품명')).trim() === String(key.제품명).trim() &&
         String(cellAt(row,'관리방법')||'').trim() === String(key.관리방법 || '').trim() &&
         String(cellAt(row,'관리주기')||'').trim() === String(key.관리주기 || '').trim() &&
-        Number(cellAt(row,'약정년')) === Number(key.약정년)) {
+        rowYakj === Number(key.약정년)) {
       matches.push(i);
     }
   });
@@ -844,8 +847,13 @@ function _fetchData() {
   raw.forEach(function(row) {
     var prodName = String(cellAt(row, '제품명') || '').trim();
     if (!prodName) return;
-    var yakj = Number(cellAt(row, '약정년'));
-    if (!yakj || isNaN(yakj) || yakj <= 0) return;
+    var yakjRaw = Number(cellAt(row, '약정년'));
+    var hasYakj = yakjRaw && !isNaN(yakjRaw) && yakjRaw > 0;
+    // 약정(년)이 없는 행은 "약정 없이 일시불로만 구매하는 제품"(예: 수압펌프 등 부속품)으로 간주 —
+    // 일시불가가 있으면 약정년=0(termless 표식)으로 포함, 둘 다 없으면 가격 정보가 아예 없는 행이라 제외
+    var cashOnly = !hasYakj && toNum(cellAt(row, '일시불')) > 0;
+    if (!hasYakj && !cashOnly) return;
+    var yakj = hasYakj ? yakjRaw : 0;
 
     var bunryu = String(cellAt(row, '분류') || '').trim();
     if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(cellAt(row, 's') || '').trim();

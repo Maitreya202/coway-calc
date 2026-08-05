@@ -631,11 +631,20 @@ function itemBmpOptions(item) {
     var row = PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.약정년 === item.약정년; })
       || PRODUCTS.find(function(r) { return r.모델명 === p.모델명; });
     if (!row) return;
-    var hasPromoBmp = row.프로모션 > 0 && row.프로모션사용 !== false;
-    var priceNew = hasPromoBmp ? row.프로모션 : row.정상가;
+    // 약정 없이 일시불가만 있는 제품(예: 수압펌프)은 월렌탈료가 아니라 1회성 금액으로 취급
+    var isOneTime = row.정상가 <= 0 && row.프로모션 <= 0 && row.재렌탈 <= 0 && row.일시불 > 0;
+    var price;
+    if (isOneTime) {
+      price = row.일시불;
+    } else {
+      var hasPromoBmp = row.프로모션 > 0 && row.프로모션사용 !== false;
+      var priceNew = hasPromoBmp ? row.프로모션 : row.정상가;
+      price = (item.isRerental && row.재렌탈 > 0) ? row.재렌탈 : (priceNew || 0);
+    }
     opts.push({
       name: row.제품명,
-      price: (item.isRerental && row.재렌탈 > 0) ? row.재렌탈 : (priceNew || 0),
+      price: price,
+      oneTime: isOneTime,
       isPer: p.개당 || row.제품명.indexOf('1개당') >= 0
     });
   });
@@ -656,6 +665,7 @@ function calcItem(item) {
       isCash:true,base:cashBase,displayBase:cashBase,cashFinal:cashFinal,discLabel:cashLabel,
       monthly:0,halfMonthly:0,normalMonthly:0,months:0,total:cashFinal,sunap:null,hasPromo:false,
       hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,bmpLines:null,bmpBadgeLabel:'',
+      bmpOneTimeTotal:0,bmpOneTimeLines:null,
       hasTasab:false,tasabOn:false,tasabRental:0,jiroOn:false,jiroSurcharge:0,tasabIlsibl:0,
       tasab1년On:false,tasab1년Rate:0,tasab1년Disc:0
     };
@@ -669,22 +679,27 @@ function calcItem(item) {
     base=item.타사보상렌탈;
   } else { base=displayBase; }
 
-  var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null;
+  var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null, bmpOneTimeTotal=0, bmpOneTimeLines=null;
   // CFSS 프레임 헤드보드 처리 — 가격 출처였던 제품DB 레거시 별매품 필드가 2026-08-04에 제거됨.
   // 별매품페어링 시트 정리 전까지 기능 임시 비활성화(항상 0원) — UI도 renderDiscPanels()에서 "정리 중" 안내로 대체됨.
   var isCfssFrameCalc = item.s==='안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임')===0;
   if (isCfssFrameCalc) {
     bmpPrice = 0;
   } else {
-    // 여러 별매품(별매품페어링 시트) 중 선택된 것들을 합산
+    // 여러 별매품(별매품페어링 시트) 중 선택된 것들을 합산 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
     var bmpSel = item.별매품선택||{};
-    bmpLines=[];
+    bmpLines=[]; bmpOneTimeLines=[];
     itemBmpOptions(item).forEach(function(o) {
       var s = bmpSel[o.name];
       if (s && s.on && o.price>0) {
         var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
-        bmpPrice += o.price*cnt;
-        bmpLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+        if (o.oneTime) {
+          bmpOneTimeTotal += o.price*cnt;
+          bmpOneTimeLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+        } else {
+          bmpPrice += o.price*cnt;
+          bmpLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+        }
       }
     });
     if (bmpLines.length===1 && bmpLines[0].isPer) { isBmpPer=true; bmpCnt=bmpLines[0].cnt; }
@@ -808,6 +823,7 @@ if (item.tasabosangOn&&hasTasab) {
     bmpName:(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
     bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
     bmpBadgeLabel:bmpLines&&bmpLines.length>1?'별매품 '+bmpLines.length+'종':'별매품',
+    bmpOneTimeTotal:bmpOneTimeTotal,bmpOneTimeLines:bmpOneTimeLines,
     hasTasab:hasTasab,tasabOn:!!item.tasabosangOn,
     tasabRental:(item.tasabosangOn&&hasTasab&&d.동시구매)?f10((item.타사보상렌탈||0)*0.9):(item.tasabosangOn&&hasTasab&&d.결합)?f10((item.타사보상렌탈||0)*0.95):(item.타사보상렌탈||0),
     jiroOn:!!item.지로On,jiroSurcharge:item.지로On?JIRO_SURCHARGE:0,
@@ -1088,17 +1104,19 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       bmpOptsUI.forEach(function(o) {
         var sel = bmpSelUI[o.name] || {on:false, cnt:1};
         var keyJs = "'" + String(o.name).replace(/'/g, "\\'") + "'";
+        var priceLabel = o.oneTime ? ('+' + won(o.price) + ' (일시불)') : ('+' + won(o.price) + '/월');
         h += '<div class="check-row" style="margin-bottom:' + (o.isPer && sel.on ? '8' : '4') + 'px">'
           + '<input type="checkbox"' + (sel.on ? ' checked' : '') + ' onchange="setBmp(' + idx + ',' + keyJs + ',this.checked)">'
-          + '<span style="color:#15803d">별매품 ' + o.name + ' <em style="font-weight:400;font-size:11px">+' + won(o.price) + '/월</em></span></div>';
+          + '<span style="color:#15803d">별매품 ' + o.name + ' <em style="font-weight:400;font-size:11px">' + priceLabel + '</em></span></div>';
         if (o.isPer && sel.on) {
+          var lineLabel = o.oneTime ? '(일시불)' : '/월';
           h += '<div style="display:flex;align-items:center;gap:8px;padding-left:24px;margin-bottom:4px">'
             + '<span style="font-size:12px;color:#15803d;font-weight:700">수량</span>'
             + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
             + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
             + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt||1) + '</span>'
             + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
-            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(o.price) + ' = <strong>' + won(o.price*(sel.cnt||1)) + '/월</strong></span></div>';
+            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(o.price) + ' = <strong>' + won(o.price*(sel.cnt||1)) + ' ' + lineLabel + '</strong></span></div>';
         }
       });
       h += '</div>';
@@ -1244,6 +1262,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
   h += '<div class="result-box">';
   h += '<div class="res-row"><span>기준요금' + (!isSunap2 && c.discLabel ? '<span class="disc-badge">' + c.discLabel + '</span>' : '') + bmpBadge + '</span><span>' + won(c.displayBase) + '/월</span></div>';
   if (c.tasabOn && c.tasabRental > 0) h += '<div class="res-sub" style="color:#7c3aed;font-weight:700"><span>&#8627; 타사보상 렌탈가</span><span>' + won(c.tasabRental) + '/월</span></div>';
+  if (c.bmpOneTimeTotal > 0) h += '<div class="res-sub" style="color:#15803d;font-weight:700"><span>별매품(일시불)</span><span>' + won(c.bmpOneTimeTotal) + '</span></div>';
 
   if (ki && ki.isHanval) {
     var _st1 = item.선납 || 'none';
@@ -2046,10 +2065,11 @@ function calcTotals(items){
     }
   });
   // 월 렌탈료 합산은 buildTimeline()(itemPhases 기반)이 유일한 소스 — 여기서 별도로 재계산하지 않음
-  var agg={ilsibl:0,korNabM:0,hasKor:false,cashCnt:0,cashTotal:0,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0};
+  var agg={ilsibl:0,korNabM:0,hasKor:false,cashCnt:0,cashTotal:0,korPbk:0,korRefund:0,korNabTotal:0,korRenTotal:0,bmpOneTime:0};
   items.forEach(function(it){
     var c=it._calcSnap||calcItem(it),ki=itemKorCalc(it,c);
     if (c.sunap) agg.ilsibl+=c.sunap.amt;
+    if (c.bmpOneTimeTotal) agg.bmpOneTime+=c.bmpOneTimeTotal;
     if (it.구매방법==='cash'){agg.cashCnt++;agg.cashTotal+=c.cashFinal||0;}
     if (ki){
       agg.hasKor=true;agg.korNabM+=ki.totalNabM;
@@ -2081,6 +2101,7 @@ function buildQuoteParts(t){
   if (t.timeline.length>0 && a.cashCnt>0) rows.push({label:'렌탈료 총합', value:won(t.totT-a.cashTotal)});
   if (a.cashCnt>0)   rows.push({label:'일시불 결제'+(a.cashCnt>1?' '+a.cashCnt+'건':''), value:won(a.cashTotal)});
   if (a.ilsibl>0)    rows.push({label:'선납', value:won(a.ilsibl)});
+  if (a.bmpOneTime>0) rows.push({label:'별매품(일시불)', value:won(a.bmpOneTime)});
   if (a.korPbk>0)    rows.push({label:'페이백', value:'-'+won(a.korPbk)});
   if (a.korRefund>0) rows.push({label:'만기환급', value:won(a.korRefund)});
   return rows;

@@ -259,7 +259,7 @@ function renderTable(){
     COLS.forEach(function(c){
       var v = row[c.f];
       if (c.id) {
-        h += '<td class="id-col">' + esc(c.f==='약정년' ? v+'년' : (v||'-')) + '</td>';
+        h += '<td class="id-col">' + esc(c.f==='약정년' ? (v ? v+'년' : '약정없음') : (v||'-')) + '</td>';
       } else if (c.toggle) {
         h += '<td><label class="switch"><input type="checkbox" data-f="' + c.f + '"' + (v!==false?' checked':'') + '><span class="slider"></span></label></td>';
       } else if (c.num) {

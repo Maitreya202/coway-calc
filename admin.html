@@ -343,7 +343,7 @@ function renderBmpLinkedList(){
     var prod = BMP_PRODUCTS.find(function(p){ return p.모델명===link.모델명; });
     var label = prod ? (esc(prod.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(prod.모델명) + '</span>') : esc(link.모델명) + ' <span class="badge off">제품DB에 없음</span>';
     return '<div class="result-item" data-i="' + i + '">'
-      + '<div><div class="result-name">' + label + (link.개당 ? ' <span class="badge">1개당</span>' : '') + '</div></div>'
+      + '<div><div class="result-name">' + label + (link.개당 ? ' <span class="badge">다량 선택 가능</span>' : '') + '</div></div>'
       + '<button class="btn-secondary" data-unlink="' + i + '">연결 해제</button>'
       + '</div>';
   }).join('');
@@ -365,7 +365,7 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
     return '<div class="result-item" data-i="' + i + '">'
       + '<div><div class="result-name">' + esc(p.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(p.모델명) + '</span></div>'
       + '<div class="result-sub">' + esc(p.분류) + '</div></div>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><input type="checkbox" data-per="' + i + '">1개당</label>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><input type="checkbox" data-per="' + i + '">다량 선택 가능</label>'
       + '<button class="btn-secondary" data-link="' + i + '">연결</button>'
       + '</div>';
   }).join('');

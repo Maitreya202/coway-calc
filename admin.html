@@ -374,42 +374,48 @@ function renderBmpLinkedList(){
         + '<label class="switch"><input type="checkbox" data-toggle-rental="' + i + '"' + (link.렌탈허용?' checked':'') + '><span class="slider"></span></label></label>'
       + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;margin-right:14px">할인 적용'
         + '<label class="switch"><input type="checkbox" data-toggle-disc="' + i + '"' + (link.할인적용===true?' checked':'') + '><span class="slider"></span></label></label>'
+      + '<button class="btn-secondary" data-save-pairing="' + i + '" style="margin-right:8px">저장</button>'
       + '<button class="btn-secondary" data-unlink="' + i + '">연결 해제</button>'
       + '</div>';
   }).join('');
   Array.prototype.forEach.call(el.querySelectorAll('[data-unlink]'), function(btn){
     btn.onclick = function(){ unlinkBmp(links[Number(this.dataset.unlink)].모델명, this); };
   });
-  Array.prototype.forEach.call(el.querySelectorAll('[data-toggle-per]'), function(inp){
-    inp.onchange = function(){ toggleBmpFlag(links[Number(this.dataset.togglePer)].모델명, '개당', this.checked, this); };
-  });
-  Array.prototype.forEach.call(el.querySelectorAll('[data-toggle-rental]'), function(inp){
-    inp.onchange = function(){ toggleBmpFlag(links[Number(this.dataset.toggleRental)].모델명, '렌탈허용', this.checked, this); };
-  });
-  Array.prototype.forEach.call(el.querySelectorAll('[data-toggle-disc]'), function(inp){
-    inp.onchange = function(){ toggleBmpFlag(links[Number(this.dataset.toggleDisc)].모델명, '할인적용', this.checked, this); };
+  Array.prototype.forEach.call(el.querySelectorAll('[data-save-pairing]'), function(btn){
+    btn.onclick = function(){
+      var link = links[Number(this.dataset.savePairing)];
+      var row = this.closest('.result-item');
+      saveBmpPairing(link, {
+        개당: row.querySelector('[data-toggle-per]').checked,
+        렌탈허용: row.querySelector('[data-toggle-rental]').checked,
+        할인적용: row.querySelector('[data-toggle-disc]').checked
+      }, this);
+    };
   });
 }
 
-function toggleBmpFlag(bmpModel, field, value, inp){
-  inp.disabled = true;
-  var fields = {};
-  fields[field] = value;
-  var body = { action:'updateBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel };
-  body[field] = value;
+function saveBmpPairing(link, fields, btn){
+  btn.disabled = true;
+  var origText = btn.textContent;
+  btn.textContent = '저장 중...';
+  var body = { action:'updateBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:link.모델명 };
+  body.개당 = fields.개당;
+  body.렌탈허용 = fields.렌탈허용;
+  body.할인적용 = fields.할인적용;
   fetch(GAS_URL, {method:'POST', body: JSON.stringify(body)})
     .then(function(r){ return r.json(); })
     .then(function(resp){
-      inp.disabled = false;
+      btn.disabled = false;
+      btn.textContent = origText;
       if (resp.ok){
-        var link = (BMP_PAIRINGS[CUR_MODEL] || []).find(function(l){ return l.모델명===bmpModel; });
-        if (link) link[field] = value;
+        link.개당 = fields.개당;
+        link.렌탈허용 = fields.렌탈허용;
+        link.할인적용 = fields.할인적용;
       } else {
-        inp.checked = !value;
-        alert(resp.error || '변경 실패');
+        alert(resp.error || '저장 실패');
       }
     })
-    .catch(function(e){ inp.disabled = false; inp.checked = !value; alert('변경 실패: ' + e.message); });
+    .catch(function(e){ btn.disabled = false; btn.textContent = origText; alert('저장 실패: ' + e.message); });
 }
 
 document.getElementById('bmpSearchInput').addEventListener('input', function(){

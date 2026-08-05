@@ -674,11 +674,24 @@ function calcItem(item) {
     if (cd==='10'){ cashFinal=f10(cashBase*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%'; }
     else if (cd==='15'){ cashFinal=f10(cashBase*0.85); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -15%'; }
     else if (cd==='1010'){ cashFinal=f10(cashBase*0.9*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%+10%(복리)'; }
+
+    // 별매품 — 메인이 일시불이라 일시불로만 붙을 수 있는 옵션만 대상(itemBmpOptionsCashOnly)
+    var cashBmpSel = item.별매품선택||{};
+    var cashBmpSlots = (item.별매품슬롯||[]).filter(Boolean);
+    var cashBmpOneTimeTotal=0, cashBmpOneTimeLines=[];
+    itemBmpOptionsCashOnly(item).forEach(function(o) {
+      if (cashBmpSlots.indexOf(o.key) < 0) return;
+      var s = cashBmpSel[o.key] || {};
+      var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
+      cashBmpOneTimeTotal += o.cashPrice*cnt;
+      cashBmpOneTimeLines.push({name:o.name, unitPrice:o.cashPrice, cnt:cnt, isPer:o.isPer});
+    });
+
     return {
       isCash:true,base:cashBase,displayBase:cashBase,cashFinal:cashFinal,discLabel:cashLabel,
       monthly:0,halfMonthly:0,normalMonthly:0,months:0,total:cashFinal,sunap:null,hasPromo:false,
       hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,bmpLines:null,bmpBadgeLabel:'',
-      bmpOneTimeTotal:0,bmpOneTimeLines:null,
+      bmpOneTimeTotal:cashBmpOneTimeTotal,bmpOneTimeLines:cashBmpOneTimeLines.length?cashBmpOneTimeLines:null,
       hasTasab:hasTasabCash,tasabOn:!!item.tasabosangOn,tasabRental:0,jiroOn:false,jiroSurcharge:0,tasabIlsibl:0,
       tasab1년On:false,tasab1년Rate:0,tasab1년Disc:0
     };
@@ -1263,8 +1276,14 @@ function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
   }
   return h;
 }
-function renderBmpPanel(item, idx) {
-  var bmpOptsUI = itemBmpOptions(item);
+// 메인 제품이 일시불이면 그 별매품도 일시불로만 붙일 수 있음(렌탈 붙는 옵션은 메인에 약정 자체가 없어서 제외)
+function itemBmpOptionsCashOnly(item) {
+  return itemBmpOptions(item).filter(function(o) { return o.hasCash; }).map(function(o) {
+    return Object.assign({}, o, { hasRental: false });
+  });
+}
+function renderBmpPanel(item, idx, cashOnly) {
+  var bmpOptsUI = cashOnly ? itemBmpOptionsCashOnly(item) : itemBmpOptions(item);
   if (bmpOptsUI.length === 0) return '';
   if (!item.별매품슬롯) item.별매품슬롯 = ['', ''];
   var slots = item.별매품슬롯;
@@ -1514,9 +1533,11 @@ function renderCart() {
           html += '<button class="pill' + ((item.일시불할인 || 'none') === o[0] ? ' active' : '') + '" onclick="setCashDisc(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
         });
         html += '</div></div>';
+        html += renderBmpPanel(item, idx, true);
         html += '<div class="result-box"><div class="res-row"><span>일시불 정가</span><span>' + won(c.base) + '</span></div>';
         if (c.discLabel) html += '<div class="res-sub" style="color:#2563eb"><span>&#8627; ' + c.discLabel + '</span><span></span></div>';
-        html += '<div class="res-main"><span>최종 결제금액</span><span>' + won(c.cashFinal) + '</span></div></div>';
+        if (c.bmpOneTimeTotal > 0) html += '<div class="res-sub" style="color:#15803d;font-weight:700"><span>별매품(일시불)</span><span>' + won(c.bmpOneTimeTotal) + '</span></div>';
+        html += '<div class="res-main"><span>최종 결제금액</span><span>' + won(c.cashFinal + c.bmpOneTimeTotal) + '</span></div></div>';
       } else {
         html += renderOptionPanels(item, idx, c, false, isSunap2);
         html += renderDiscPanels(item, idx, c, d, isSunap2);

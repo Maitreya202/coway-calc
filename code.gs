@@ -94,9 +94,9 @@ function _checkAdminPassword(pw) {
 
 // 수정 가능한 필드 목록. 식별용 필드(모델명/제품명/관리방법/관리주기/약정년/분류/제품군)는 이 도구로 바꿀 수 없음 —
 // 식별자를 바꾸면 다른 행과 혼동될 위험이 있어 시트에서 직접 수정하도록 의도적으로 제외함.
-var PRODUCT_EDITABLE_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','프로모션사용','타사보상사용','재렌탈사용'];
+var PRODUCT_EDITABLE_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','프로모션사용','타사보상사용','재렌탈사용','타사보상일시불사용'];
 var PRODUCT_NUMERIC_FIELDS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'];
-var PRODUCT_YN_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용'];
+var PRODUCT_YN_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용','타사보상일시불사용'];
 
 function _updateProduct(body) {
   if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
@@ -837,7 +837,8 @@ var FIELD_HEADERS = {
   관리방법: '관리방법', 관리주기: '관리주기', 약정년: '약정(년)',
   정상가: '월렌탈료(정상)', 프로모션: '월렌탈료(프로모션)', 재렌탈: '재렌탈료(프로모션)', 일시불: '일시불가',
   타사보상렌탈: '타사보상_렌탈', 타사보상일시불: '타사보상_일시불',
-  프로모션사용: '프로모션사용', 타사보상사용: '타사보상사용', 재렌탈사용: '재렌탈사용'
+  프로모션사용: '프로모션사용', 타사보상사용: '타사보상사용', 재렌탈사용: '재렌탈사용',
+  타사보상일시불사용: '타사보상일시불사용'
 };
 
 function _norm(s) { return String(s || '').replace(/\s+/g, '').trim(); }
@@ -909,6 +910,7 @@ function _fetchData() {
     var promoOn = String(cellAt(row, '프로모션사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
     var tasabOn = String(cellAt(row, '타사보상사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
     var rerentalOn = String(cellAt(row, '재렌탈사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var tasabCashOn = String(cellAt(row, '타사보상일시불사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
 
     products.push([
       String(cellAt(row, 's') || '').trim(), bunryu,
@@ -917,7 +919,7 @@ function _fetchData() {
       yakj,
       toNum(cellAt(row, '정상가')), toNum(cellAt(row, '프로모션')), toNum(cellAt(row, '재렌탈')), toNum(cellAt(row, '일시불')),
       toNum(cellAt(row, '타사보상렌탈')), toNum(cellAt(row, '타사보상일시불')),
-      promoOn, tasabOn, rerentalOn
+      promoOn, tasabOn, rerentalOn, tasabCashOn
     ]);
   });
 

@@ -495,7 +495,7 @@ fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors',
       return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
                타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
-               프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N' };
+               프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N', 타사보상일시불사용:(r[16]||'Y')!=='N' };
     });
     // 조건 데이터 로드
     var cond = resp.conditions || {};
@@ -666,19 +666,20 @@ function itemBmpOptions(item) {
 function calcItem(item) {
   // ── 일시불 구매 ── 약정/관리방법/반값/코라솔 없음. 정가에서 할인만 적용.
   if (item.구매방법==='cash') {
-    var cashBase=item.일시불||0;
+    var hasTasabCash=item.타사보상일시불>0&&item.타사보상일시불사용!==false;
+    var cashBase=(item.tasabosangOn&&hasTasabCash)?item.타사보상일시불:(item.일시불||0);
     var cd=item.일시불할인||'none';
     var cashFinal=cashBase;
-    var cashLabel='';
-    if (cd==='10'){ cashFinal=f10(cashBase*0.9); cashLabel='일시불 -10%'; }
-    else if (cd==='15'){ cashFinal=f10(cashBase*0.85); cashLabel='일시불 -15%'; }
-    else if (cd==='1010'){ cashFinal=f10(cashBase*0.9*0.9); cashLabel='일시불 -10%+10%(복리)'; }
+    var cashLabel=(item.tasabosangOn&&hasTasabCash)?'타사보상':'';
+    if (cd==='10'){ cashFinal=f10(cashBase*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%'; }
+    else if (cd==='15'){ cashFinal=f10(cashBase*0.85); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -15%'; }
+    else if (cd==='1010'){ cashFinal=f10(cashBase*0.9*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%+10%(복리)'; }
     return {
       isCash:true,base:cashBase,displayBase:cashBase,cashFinal:cashFinal,discLabel:cashLabel,
       monthly:0,halfMonthly:0,normalMonthly:0,months:0,total:cashFinal,sunap:null,hasPromo:false,
       hvMonths:0,isHanval:false,hasBmp:false,bmpName:'',bmpAmt:0,bmpCnt:1,isBmpPer:false,bmpLines:null,bmpBadgeLabel:'',
       bmpOneTimeTotal:0,bmpOneTimeLines:null,
-      hasTasab:false,tasabOn:false,tasabRental:0,jiroOn:false,jiroSurcharge:0,tasabIlsibl:0,
+      hasTasab:hasTasabCash,tasabOn:!!item.tasabosangOn,tasabRental:0,jiroOn:false,jiroSurcharge:0,tasabIlsibl:0,
       tasab1년On:false,tasab1년Rate:0,tasab1년Disc:0
     };
   }
@@ -1503,6 +1504,11 @@ function renderCart() {
       if (isCashMode) {
         html += '<div style="background:#f8fafc;border-radius:10px;padding:9px 12px;margin-bottom:10px;border:1px solid #e2e8f0;font-size:12px;color:#64748b">A/S: 1년 무상 A/S &middot; 관리방법: 1년 무상관리 후 고객 자율</div>';
         html += renderOptionPanels(item, idx, c, true, isSunap2);
+        if (item.타사보상일시불 > 0 && item.타사보상일시불사용 !== false) {
+          html += '<div class="check-row" style="margin:0 2px 8px">'
+            + '<input type="checkbox"' + (item.tasabosangOn ? ' checked' : '') + ' onchange="setTasab(' + idx + ',this.checked)">'
+            + '<span>타사보상 <em style="font-weight:400;font-size:11px;color:#94a3b8">(경쟁사 반납 시 일시불 ' + won(item.타사보상일시불) + ')</em></span></div>';
+        }
         html += '<div class="box-panel"><span class="sec-label" style="margin-top:0">일시불 할인 선택</span><div class="pill-group">';
         [['none','없음'],['10','-10%'],['15','-15%'],['1010','-10%+10%(복리)']].forEach(function(o) {
           html += '<button class="pill' + ((item.일시불할인 || 'none') === o[0] ? ' active' : '') + '" onclick="setCashDisc(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
@@ -1579,6 +1585,7 @@ function refreshCartItemRow(idx){
   item.프로모션사용=row.프로모션사용;
   item.타사보상사용=row.타사보상사용;
   item.재렌탈사용=row.재렌탈사용;
+  item.타사보상일시불사용=row.타사보상일시불사용;
 }
 function setCartRerental(idx,v){cart[idx].isRerental=v;renderCart();}
 function setPurchaseMethod(idx,v){cart[idx].구매방법=v;renderCart();}
@@ -1650,7 +1657,7 @@ function doUpdate(){
         return {s:r[0],분류:r[1],모델명:r[2],제품명:r[3],관리방법:r[4],관리주기:r[5],
           약정년:r[6],정상가:r[7],프로모션:r[8],재렌탈:r[9],일시불:r[10],
           타사보상렌탈:r[11]||0,타사보상일시불:r[12]||0,
-          프로모션사용:(r[13]||'Y')!=='N',타사보상사용:(r[14]||'Y')!=='N',재렌탈사용:(r[15]||'Y')!=='N'};
+          프로모션사용:(r[13]||'Y')!=='N',타사보상사용:(r[14]||'Y')!=='N',재렌탈사용:(r[15]||'Y')!=='N',타사보상일시불사용:(r[16]||'Y')!=='N'};
       });
       var cond=resp.conditions||{};
       if(cond.sunap2) SUNAP2=cond.sunap2;

@@ -115,7 +115,7 @@ var BMP_PAIRINGS = {}; // {대상모델명: [{모델명:별매품모델명, 개�
 var BMP_PRODUCTS = []; // 제품군(s)="별매품"으로 등록된 제품 목록 (모델명+제품명 단위로 중복 제거)
 
 var EDITABLE_NUM = ['정상가','프로모션','재렌탈','타사보상렌탈','일시불','타사보상일시불'];
-var TOGGLE_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용'];
+var TOGGLE_FIELDS = ['프로모션사용','타사보상사용','재렌탈사용','타사보상일시불사용'];
 var COLS = [
   {f:'관리방법', label:'관리방법', id:true},
   {f:'관리주기', label:'관리주기', id:true},
@@ -128,7 +128,8 @@ var COLS = [
   {f:'타사보상일시불', label:'타사보상 일시불', num:true},
   {f:'프로모션사용', label:'프로모션 사용', toggle:true},
   {f:'타사보상사용', label:'타사보상 사용', toggle:true},
-  {f:'재렌탈사용', label:'재렌탈 사용', toggle:true}
+  {f:'재렌탈사용', label:'재렌탈 사용', toggle:true},
+  {f:'타사보상일시불사용', label:'타사보상 일시불 사용', toggle:true}
 ];
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -193,7 +194,7 @@ function loadProducts(){
         return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                  약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
                  타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
-                 프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N' };
+                 프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N', 타사보상일시불사용:(r[16]||'Y')!=='N' };
       });
       BMP_PAIRINGS = (resp.conditions && resp.conditions.bmpPairings) || {};
       var seenBmp = {};

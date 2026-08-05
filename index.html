@@ -657,7 +657,11 @@ function itemBmpOptions(item) {
       hasCash: cashPrice > 0,
       rentalPrice: rentalPrice,
       cashPrice: cashPrice,
-      isPer: p.개당 || name.indexOf('1개당') >= 0
+      isPer: p.개당 || name.indexOf('1개당') >= 0,
+      // 할인적용은 페어링별 설정(p.할인적용: true/false/null=미설정) — 렌탈은 미설정 시 기존처럼 항상 할인대상(true),
+      // 일시불은 미설정 시 기존처럼 할인 미적용(false)이 되도록 문맥별 기본값을 다르게 적용
+      discountableRental: p.할인적용 !== false,
+      discountableCash: p.할인적용 === true
     });
   });
   return opts.filter(function(o) { return o.hasRental || o.hasCash; });
@@ -669,13 +673,20 @@ function calcItem(item) {
     var hasTasabCash=item.타사보상일시불>0&&item.타사보상일시불사용!==false;
     var cashBase=(item.tasabosangOn&&hasTasabCash)?item.타사보상일시불:(item.일시불||0);
     var cd=item.일시불할인||'none';
-    var cashFinal=cashBase;
+    function cashDiscApply(amt){
+      if (cd==='10') return f10(amt*0.9);
+      if (cd==='15') return f10(amt*0.85);
+      if (cd==='1010') return f10(amt*0.9*0.9);
+      return amt;
+    }
+    var cashFinal=cashDiscApply(cashBase);
     var cashLabel=(item.tasabosangOn&&hasTasabCash)?'타사보상':'';
-    if (cd==='10'){ cashFinal=f10(cashBase*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%'; }
-    else if (cd==='15'){ cashFinal=f10(cashBase*0.85); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -15%'; }
-    else if (cd==='1010'){ cashFinal=f10(cashBase*0.9*0.9); cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%+10%(복리)'; }
+    if (cd==='10'){ cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%'; }
+    else if (cd==='15'){ cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -15%'; }
+    else if (cd==='1010'){ cashLabel=(cashLabel?cashLabel+' + ':'')+'일시불 -10%+10%(복리)'; }
 
     // 별매품 — 메인이 일시불이라 일시불로만 붙을 수 있는 옵션만 대상(itemBmpOptionsCashOnly)
+    // 페어링별 할인적용 설정에 따라, 할인대상인 별매품은 메인과 같은 % 할인을 그 줄에도 개별 적용함
     var cashBmpSel = item.별매품선택||{};
     var cashBmpSlots = (item.별매품슬롯||[]).filter(Boolean);
     var cashBmpOneTimeTotal=0, cashBmpOneTimeLines=[];
@@ -683,8 +694,10 @@ function calcItem(item) {
       if (cashBmpSlots.indexOf(o.key) < 0) return;
       var s = cashBmpSel[o.key] || {};
       var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
-      cashBmpOneTimeTotal += o.cashPrice*cnt;
-      cashBmpOneTimeLines.push({name:o.name, unitPrice:o.cashPrice, cnt:cnt, isPer:o.isPer});
+      var lineTotal = o.cashPrice*cnt;
+      if (o.discountableCash) lineTotal = cashDiscApply(lineTotal);
+      cashBmpOneTimeTotal += lineTotal;
+      cashBmpOneTimeLines.push({name:o.name, unitPrice:o.cashPrice, cnt:cnt, isPer:o.isPer, discounted:!!o.discountableCash});
     });
 
     return {

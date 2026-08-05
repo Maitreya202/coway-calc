@@ -650,7 +650,9 @@ function itemBmpOptions(item) {
     var name = (rentalRow || cashRow).제품명;
 
     opts.push({
+      key: p.모델명, // 제품명이 서로 다른 별매품끼리 겹칠 수 있어(예: "조리수기"가 모델명 다르게 2개) 식별은 항상 모델명으로
       name: name,
+      model: p.모델명,
       hasRental: rentalPrice > 0,
       hasCash: cashPrice > 0,
       rentalPrice: rentalPrice,
@@ -697,13 +699,14 @@ function calcItem(item) {
     bmpPrice = 0;
   } else {
     // 최대 2개(item.별매품슬롯)까지 서로 다른 별매품을 드롭다운으로 선택 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
-    // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[이름].mode('rental'|'cash')로 고객이 고른 걸 따름
+    // 슬롯/선택 상태는 항상 별매품 모델명(o.key)로 식별 — 제품명은 서로 다른 모델끼리 겹칠 수 있어서(예: "조리수기" 2종)
+    // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[모델명].mode('rental'|'cash')로 고객이 고른 걸 따름
     var bmpSel = item.별매품선택||{};
     var bmpSlots = (item.별매품슬롯||[]).filter(Boolean);
     bmpLines=[]; bmpOneTimeLines=[];
     itemBmpOptions(item).forEach(function(o) {
-      if (bmpSlots.indexOf(o.name) < 0) return;
-      var s = bmpSel[o.name] || {};
+      if (bmpSlots.indexOf(o.key) < 0) return;
+      var s = bmpSel[o.key] || {};
       var mode = (s.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
       var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
       if (price>0) {
@@ -1215,24 +1218,24 @@ function bmpOptPreviewLabel(o) {
 }
 function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
   var slots = item.별매품슬롯 || ['', ''];
-  var otherName = slots[1 - slotIdx];
-  var curName = slots[slotIdx] || '';
-  var availOpts = bmpOptsUI.filter(function(o) { return o.name === curName || o.name !== otherName; });
+  var otherKey = slots[1 - slotIdx];
+  var curKey = slots[slotIdx] || '';
+  var availOpts = bmpOptsUI.filter(function(o) { return o.key === curKey || o.key !== otherKey; });
   var h = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
   h += '<select onchange="setBmpSlot(' + idx + ',' + slotIdx + ',this.value)" style="flex:1;font-size:12px;padding:7px 8px;border:1.5px solid #86efac;border-radius:8px;color:#15803d;background:white;font-weight:600">';
   h += '<option value="">별매품 선택 안함</option>';
   availOpts.forEach(function(o) {
-    h += '<option value="' + esc(o.name) + '"' + (curName === o.name ? ' selected' : '') + '>' + esc(o.name) + ' (' + bmpOptPreviewLabel(o) + ')</option>';
+    h += '<option value="' + esc(o.key) + '"' + (curKey === o.key ? ' selected' : '') + '>' + esc(o.name) + ' ' + esc(o.model) + ' (' + bmpOptPreviewLabel(o) + ')</option>';
   });
   h += '</select>';
   if (slotIdx === 1) h += '<button onclick="removeBmpSlot(' + idx + ')" style="background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:0 4px">&times;</button>';
   h += '</div>';
 
-  if (curName) {
-    var o = bmpOptsUI.find(function(x) { return x.name === curName; });
+  if (curKey) {
+    var o = bmpOptsUI.find(function(x) { return x.key === curKey; });
     if (o) {
-      var sel = (item.별매품선택 || {})[curName] || { cnt: 1 };
-      var keyJs = "'" + String(curName).replace(/'/g, "\\'") + "'";
+      var sel = (item.별매품선택 || {})[curKey] || { cnt: 1 };
+      var keyJs = "'" + String(curKey).replace(/'/g, "\\'") + "'";
       var bothModes = o.hasRental && o.hasCash;
       var mode = (sel.mode === 'cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
       var price = mode === 'cash' ? o.cashPrice : o.rentalPrice;
@@ -1938,13 +1941,13 @@ function setS2Combo(idx,opt){
 function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;renderCart();}
 function setHanvalPeriod(idx,p){cart[idx].반값개월=p;renderCart();}
 function setSunap(idx,v){cart[idx].선납=v;renderCart();}
-function setBmpSlot(idx,slotIdx,name){
+function setBmpSlot(idx,slotIdx,key){
   var it=cart[idx];
   if(!it.별매품슬롯)it.별매품슬롯=['',''];
-  it.별매품슬롯[slotIdx]=name;
-  if (name){
+  it.별매품슬롯[slotIdx]=key;
+  if (key){
     if(!it.별매품선택)it.별매품선택={};
-    if(!it.별매품선택[name])it.별매품선택[name]={cnt:1};
+    if(!it.별매품선택[key])it.별매품선택[key]={cnt:1};
   } else if (slotIdx===1){
     it._bmpSlot2Open=false;
   }

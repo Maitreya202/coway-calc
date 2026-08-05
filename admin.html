@@ -133,6 +133,29 @@ var COLS = [
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
+// index.html의 검색 로직과 동일 — 토큰 단위 단어-시작 매칭 + 제품명/모델명/기타 우선순위 정렬
+function searchTokens(q){ return q.trim().toLowerCase().split(/[\s\-\.]+/).filter(Boolean); }
+function searchMatchAll(str, tokens){
+  var words = str.split(/[\s\-\.]+/);
+  return tokens.every(function(t){ return words.some(function(w){ return w.indexOf(t)===0; }); });
+}
+// candidates: 배열, getFields(item) -> {name, model, extra} (extra는 검색 대상에 포함되지만 우선순위엔 안 씀)
+function searchRank(candidates, q, getFields){
+  var tokens = searchTokens(q);
+  var exactName=[], exactModel=[], others=[];
+  candidates.forEach(function(c){
+    var f = getFields(c);
+    var nm=(f.name||'').toLowerCase(), mdl=(f.model||'').toLowerCase(), extra=(f.extra||'').toLowerCase();
+    var combined = nm+' '+mdl+' '+extra;
+    if (searchMatchAll(combined, tokens)){
+      if (searchMatchAll(nm, tokens)) exactName.push(c);
+      else if (searchMatchAll(mdl, tokens)) exactModel.push(c);
+      else others.push(c);
+    }
+  });
+  return exactName.concat(exactModel).concat(others);
+}
+
 function showMsg(elId, text, ok){
   var el = document.getElementById(elId);
   el.innerHTML = text ? '<div class="msg ' + (ok?'ok':'err') + '">' + esc(text) + '</div>' : '';
@@ -207,11 +230,11 @@ function groupedProducts(){
 }
 
 document.getElementById('searchInput').addEventListener('input', function(){
-  var q = this.value.trim().toLowerCase();
+  var q = this.value.trim();
   var el = document.getElementById('searchResults');
   if (!q){ el.innerHTML=''; return; }
-  var matched = groupedProducts().filter(function(p){
-    return p.모델명.toLowerCase().indexOf(q)>=0 || p.제품명.toLowerCase().indexOf(q)>=0;
+  var matched = searchRank(groupedProducts(), q, function(p){
+    return { name:p.제품명, model:p.모델명, extra:p.분류 };
   }).slice(0, 40);
   if (matched.length===0){ el.innerHTML = '<p style="font-size:12px;color:#94a3b8;padding:8px 0">검색 결과가 없습니다</p>'; return; }
   el.innerHTML = matched.map(function(g, i){
@@ -384,12 +407,13 @@ function toggleBmpFlag(bmpModel, field, value, inp){
 }
 
 document.getElementById('bmpSearchInput').addEventListener('input', function(){
-  var q = this.value.trim().toLowerCase();
+  var q = this.value.trim();
   var el = document.getElementById('bmpSearchResults');
   if (!q){ el.innerHTML=''; return; }
   var linkedModels = (BMP_PAIRINGS[CUR_MODEL] || []).map(function(l){ return l.모델명; });
-  var matched = BMP_PRODUCTS.filter(function(p){
-    return (p.모델명.toLowerCase().indexOf(q)>=0 || p.제품명.toLowerCase().indexOf(q)>=0) && linkedModels.indexOf(p.모델명)<0;
+  var candidates = BMP_PRODUCTS.filter(function(p){ return linkedModels.indexOf(p.모델명)<0; });
+  var matched = searchRank(candidates, q, function(p){
+    return { name:p.제품명, model:p.모델명, extra:p.분류 };
   }).slice(0, 20);
   if (!matched.length){ el.innerHTML = '<p style="font-size:12px;color:#94a3b8;padding:8px 0">검색 결과 없음 (제품군=별매품 대상만 검색됨)</p>'; return; }
   el.innerHTML = matched.map(function(p, i){

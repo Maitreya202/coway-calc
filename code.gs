@@ -621,7 +621,9 @@ function getConditions() {
 // 2026-08-04부터 가격 컬럼은 시트에 없음 — 별매품은 제품DB에 제품군(s)="별매품"으로 정식 등록된 행이고,
 // 이 시트는 "메인 모델 ↔ 별매품 모델" 연결 관계만 저장함. 가격은 index.html에서 PRODUCTS를 그 별매품 모델명 +
 // 카트 아이템의 약정년으로 조회해서 매번 최신값을 가져옴(정상가/프로모션가/재렌탈가 등 중복 저장 방지).
-var BMP_PAIR_HEADERS = { 모델명: '대상모델명', 별매품모델명: '별매품모델명', 개당여부: '1개당여부' };
+// 렌탈허용여부: 별매품 자신은 렌탈가격표가 있어도, "이 메인제품과의 연결"에서 렌탈로 팔지는 페어링별로 다를 수 있어서
+// (예: 같은 P-3150C도 아이콘3에선 렌탈 가능, 아이콘 얼음정수기에선 일시불만) 페어링 단위 플래그로 따로 둠.
+var BMP_PAIR_HEADERS = { 모델명: '대상모델명', 별매품모델명: '별매품모델명', 개당여부: '1개당여부', 렌탈허용: '렌탈허용여부' };
 
 function _bmpColMap(sheet) {
   var lastCol = sheet.getLastColumn();
@@ -652,7 +654,8 @@ function _parseBmpPairings(sheet) {
     if (!map[model]) map[model] = [];
     map[model].push({
       모델명: bmpModel,
-      개당: colMap.개당여부 !== undefined ? (String(row[colMap.개당여부] || 'N').trim().toUpperCase() === 'Y') : false
+      개당: colMap.개당여부 !== undefined ? (String(row[colMap.개당여부] || 'N').trim().toUpperCase() === 'Y') : false,
+      렌탈허용: colMap.렌탈허용 !== undefined ? (String(row[colMap.렌탈허용] || 'N').trim().toUpperCase() === 'Y') : false
     });
   });
   return map;
@@ -666,6 +669,7 @@ function _addBmpPairing(body) {
   var 모델명 = String(body.모델명 || '').trim();
   var 별매품모델명 = String(body.별매품모델명 || '').trim();
   var 개당 = body.개당 ? 'Y' : 'N';
+  var 렌탈허용 = body.렌탈허용 ? 'Y' : 'N';
   if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
 
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -690,11 +694,16 @@ function _addBmpPairing(body) {
   }
 
   var newRow = [];
-  var lastCol2 = Math.max(sheet.getLastColumn(), colMap.모델명 + 1, colMap.별매품모델명 + 1, (colMap.개당여부 !== undefined ? colMap.개당여부 + 1 : 0));
+  var lastCol2 = Math.max(
+    sheet.getLastColumn(), colMap.모델명 + 1, colMap.별매품모델명 + 1,
+    (colMap.개당여부 !== undefined ? colMap.개당여부 + 1 : 0),
+    (colMap.렌탈허용 !== undefined ? colMap.렌탈허용 + 1 : 0)
+  );
   for (var c = 0; c < lastCol2; c++) newRow.push('');
   newRow[colMap.모델명] = 모델명;
   newRow[colMap.별매품모델명] = 별매품모델명;
   if (colMap.개당여부 !== undefined) newRow[colMap.개당여부] = 개당;
+  if (colMap.렌탈허용 !== undefined) newRow[colMap.렌탈허용] = 렌탈허용;
 
   sheet.appendRow(newRow);
   CacheService.getScriptCache().remove('appData');

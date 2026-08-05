@@ -624,31 +624,41 @@ function getMembershipTotal(item) {
 // 제품에 붙을 수 있는 별매품 옵션 목록 — 별매품페어링 시트는 "메인모델↔별매품모델" 연결 관계만 갖고 있고,
 // 가격은 그 별매품 자신의 제품DB 행(PRODUCTS)에서 item의 약정년/재렌탈여부에 맞춰 그때그때 조회함
 // (별매품 가격을 페어링 시트에 따로 저장하면 제품DB 쪽 가격을 고쳤을 때 어긋날 수 있어서, 원천을 하나로 통일함)
+// 별매품 하나가 "약정 맞춰 월렌탈로 붙는 행"과 "약정 없이 일시불로만 사는 행"을 동시에 가질 수 있음
+// (예: P-3150C가 렌탈표도 있고 일시불 전용 행도 있는 경우) — 이때는 구매방법을 고객이 직접 고르게 함
 function itemBmpOptions(item) {
   var opts = [];
   var pairs = BMP_PAIRINGS[item.모델명] || [];
   pairs.forEach(function(p) {
-    var row = PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.약정년 === item.약정년; })
-      || PRODUCTS.find(function(r) { return r.모델명 === p.모델명; });
-    if (!row) return;
-    // 약정 없이 일시불가만 있는 제품(예: 수압펌프)은 월렌탈료가 아니라 1회성 금액으로 취급
-    var isOneTime = row.정상가 <= 0 && row.프로모션 <= 0 && row.재렌탈 <= 0 && row.일시불 > 0;
-    var price;
-    if (isOneTime) {
-      price = row.일시불;
-    } else {
-      var hasPromoBmp = row.프로모션 > 0 && row.프로모션사용 !== false;
-      var priceNew = hasPromoBmp ? row.프로모션 : row.정상가;
-      price = (item.isRerental && row.재렌탈 > 0) ? row.재렌탈 : (priceNew || 0);
+    // 렌탈허용은 별매품 자신이 아니라 "이 메인제품과의 연결"별로 다를 수 있음
+    // (같은 별매품도 어떤 메인제품에선 렌탈 가능, 어떤 메인제품에선 일시불만 가능할 수 있어서)
+    var rentalRow = p.렌탈허용 ? PRODUCTS.find(function(r) {
+      return r.모델명 === p.모델명 && r.약정년 === item.약정년 && (r.정상가 > 0 || r.프로모션 > 0 || r.재렌탈 > 0);
+    }) : null;
+    var cashRow = PRODUCTS.find(function(r) {
+      return r.모델명 === p.모델명 && r.정상가 <= 0 && r.프로모션 <= 0 && r.재렌탈 <= 0 && r.일시불 > 0;
+    });
+    if (!rentalRow && !cashRow) return;
+
+    var rentalPrice = 0;
+    if (rentalRow) {
+      var hasPromoBmp = rentalRow.프로모션 > 0 && rentalRow.프로모션사용 !== false;
+      var priceNew = hasPromoBmp ? rentalRow.프로모션 : rentalRow.정상가;
+      rentalPrice = (item.isRerental && rentalRow.재렌탈 > 0) ? rentalRow.재렌탈 : (priceNew || 0);
     }
+    var cashPrice = cashRow ? (cashRow.일시불 || 0) : 0;
+    var name = (rentalRow || cashRow).제품명;
+
     opts.push({
-      name: row.제품명,
-      price: price,
-      oneTime: isOneTime,
-      isPer: p.개당 || row.제품명.indexOf('1개당') >= 0
+      name: name,
+      hasRental: rentalPrice > 0,
+      hasCash: cashPrice > 0,
+      rentalPrice: rentalPrice,
+      cashPrice: cashPrice,
+      isPer: p.개당 || name.indexOf('1개당') >= 0
     });
   });
-  return opts;
+  return opts.filter(function(o) { return o.hasRental || o.hasCash; });
 }
 
 function calcItem(item) {
@@ -687,18 +697,22 @@ function calcItem(item) {
     bmpPrice = 0;
   } else {
     // 여러 별매품(별매품페어링 시트) 중 선택된 것들을 합산 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
+    // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[이름].mode('rental'|'cash')로 고객이 고른 걸 따름
     var bmpSel = item.별매품선택||{};
     bmpLines=[]; bmpOneTimeLines=[];
     itemBmpOptions(item).forEach(function(o) {
       var s = bmpSel[o.name];
-      if (s && s.on && o.price>0) {
+      if (!(s && s.on)) return;
+      var mode = (s.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
+      var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
+      if (price>0) {
         var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
-        if (o.oneTime) {
-          bmpOneTimeTotal += o.price*cnt;
-          bmpOneTimeLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+        if (mode==='cash') {
+          bmpOneTimeTotal += price*cnt;
+          bmpOneTimeLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
         } else {
-          bmpPrice += o.price*cnt;
-          bmpLines.push({name:o.name, unitPrice:o.price, cnt:cnt, isPer:o.isPer});
+          bmpPrice += price*cnt;
+          bmpLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
         }
       }
     });
@@ -1104,19 +1118,31 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
       bmpOptsUI.forEach(function(o) {
         var sel = bmpSelUI[o.name] || {on:false, cnt:1};
         var keyJs = "'" + String(o.name).replace(/'/g, "\\'") + "'";
-        var priceLabel = o.oneTime ? ('+' + won(o.price) + ' (일시불)') : ('+' + won(o.price) + '/월');
-        h += '<div class="check-row" style="margin-bottom:' + (o.isPer && sel.on ? '8' : '4') + 'px">'
+        var bothModes = o.hasRental && o.hasCash;
+        var mode = (sel.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
+        var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
+        var priceLabel = mode==='cash' ? ('+' + won(price) + ' (일시불)') : ('+' + won(price) + '/월');
+        h += '<div class="check-row" style="margin-bottom:' + ((o.isPer || bothModes) && sel.on ? '8' : '4') + 'px">'
           + '<input type="checkbox"' + (sel.on ? ' checked' : '') + ' onchange="setBmp(' + idx + ',' + keyJs + ',this.checked)">'
           + '<span style="color:#15803d">별매품 ' + o.name + ' <em style="font-weight:400;font-size:11px">' + priceLabel + '</em></span></div>';
+        if (bothModes && sel.on) {
+          var pillStyle = 'font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600;';
+          var onStyle = pillStyle + 'border:2px solid #15803d;background:#15803d;color:white';
+          var offStyle = pillStyle + 'border:2px solid #86efac;background:white;color:#15803d';
+          h += '<div style="display:flex;gap:6px;padding-left:24px;margin-bottom:4px">'
+            + '<button style="' + (mode==='rental' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'rental\')">렌탈 +' + won(o.rentalPrice) + '/월</button>'
+            + '<button style="' + (mode==='cash' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'cash\')">일시불 +' + won(o.cashPrice) + '</button>'
+            + '</div>';
+        }
         if (o.isPer && sel.on) {
-          var lineLabel = o.oneTime ? '(일시불)' : '/월';
+          var lineLabel = mode==='cash' ? '(일시불)' : '/월';
           h += '<div style="display:flex;align-items:center;gap:8px;padding-left:24px;margin-bottom:4px">'
             + '<span style="font-size:12px;color:#15803d;font-weight:700">수량</span>'
             + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
             + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
             + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt||1) + '</span>'
             + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
-            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(o.price) + ' = <strong>' + won(o.price*(sel.cnt||1)) + ' ' + lineLabel + '</strong></span></div>';
+            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(price) + ' = <strong>' + won(price*(sel.cnt||1)) + ' ' + lineLabel + '</strong></span></div>';
         }
       });
       h += '</div>';
@@ -1889,6 +1915,13 @@ function setBmpCnt(idx,key,v){
   if(!it.별매품선택)it.별매품선택={};
   if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
   it.별매품선택[key].cnt=Math.max(1,parseInt(v)||1);
+  renderCart();
+}
+function setBmpMode(idx,key,mode){
+  var it=cart[idx];
+  if(!it.별매품선택)it.별매품선택={};
+  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
+  it.별매품선택[key].mode=mode;
   renderCart();
 }
 function setHeadType(idx,v){cart[idx].headType=v;renderCart();}

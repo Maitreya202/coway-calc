@@ -343,7 +343,7 @@ function renderBmpLinkedList(){
     var prod = BMP_PRODUCTS.find(function(p){ return p.모델명===link.모델명; });
     var label = prod ? (esc(prod.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(prod.모델명) + '</span>') : esc(link.모델명) + ' <span class="badge off">제품DB에 없음</span>';
     return '<div class="result-item" data-i="' + i + '">'
-      + '<div><div class="result-name">' + label + (link.개당 ? ' <span class="badge">다량 선택 가능</span>' : '') + '</div></div>'
+      + '<div><div class="result-name">' + label + (link.개당 ? ' <span class="badge">다량 선택 가능</span>' : '') + (link.렌탈허용 ? ' <span class="badge">렌탈 허용</span>' : '') + '</div></div>'
       + '<button class="btn-secondary" data-unlink="' + i + '">연결 해제</button>'
       + '</div>';
   }).join('');
@@ -366,6 +366,7 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
       + '<div><div class="result-name">' + esc(p.제품명) + ' <span style="color:#94a3b8;font-weight:400">' + esc(p.모델명) + '</span></div>'
       + '<div class="result-sub">' + esc(p.분류) + '</div></div>'
       + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><input type="checkbox" data-per="' + i + '">다량 선택 가능</label>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><input type="checkbox" data-rental="' + i + '">렌탈 허용</label>'
       + '<button class="btn-secondary" data-link="' + i + '">연결</button>'
       + '</div>';
   }).join('');
@@ -373,20 +374,21 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
     btn.onclick = function(){
       var i = Number(this.dataset.link);
       var per = el.querySelector('input[data-per="' + i + '"]').checked;
-      linkBmp(matched[i].모델명, per, this);
+      var rentalOk = el.querySelector('input[data-rental="' + i + '"]').checked;
+      linkBmp(matched[i].모델명, per, rentalOk, this);
     };
   });
 });
 
-function linkBmp(bmpModel, isPer, btn){
+function linkBmp(bmpModel, isPer, rentalOk, btn){
   btn.disabled = true;
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer})})
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk})})
     .then(function(r){ return r.json(); })
     .then(function(resp){
       btn.disabled = false;
       if (resp.ok){
         if (!BMP_PAIRINGS[CUR_MODEL]) BMP_PAIRINGS[CUR_MODEL] = [];
-        BMP_PAIRINGS[CUR_MODEL].push({ 모델명:bmpModel, 개당:isPer });
+        BMP_PAIRINGS[CUR_MODEL].push({ 모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk });
         document.getElementById('bmpSearchInput').value = '';
         document.getElementById('bmpSearchResults').innerHTML = '';
         renderBmpLinkedList();

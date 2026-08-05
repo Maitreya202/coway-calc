@@ -696,13 +696,14 @@ function calcItem(item) {
   if (isCfssFrameCalc) {
     bmpPrice = 0;
   } else {
-    // 여러 별매품(별매품페어링 시트) 중 선택된 것들을 합산 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
+    // 최대 2개(item.별매품슬롯)까지 서로 다른 별매품을 드롭다운으로 선택 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
     // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[이름].mode('rental'|'cash')로 고객이 고른 걸 따름
     var bmpSel = item.별매품선택||{};
+    var bmpSlots = (item.별매품슬롯||[]).filter(Boolean);
     bmpLines=[]; bmpOneTimeLines=[];
     itemBmpOptions(item).forEach(function(o) {
-      var s = bmpSel[o.name];
-      if (!(s && s.on)) return;
+      if (bmpSlots.indexOf(o.name) < 0) return;
+      var s = bmpSel[o.name] || {};
       var mode = (s.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
       var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
       if (price>0) {
@@ -932,7 +933,7 @@ function openConfig(idx){
   item.재렌탈할인='none';item.재렌탈1년on=false;
   item.discounts={};item.반값개월=0;item.선납='none';
   item.s2={grade:'A',oi:0,반값월:0};
-  item.kors=[];item.별매품선택={};item.지로On=false;
+  item.kors=[];item.별매품선택={};item.별매품슬롯=['',''];item.지로On=false;
   item.headType='none';item.ilsiblOn=false;
   item.tasabosangOn=false;item.tasab1년on=false;
   item._detailOpen=true;
@@ -1104,51 +1105,6 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
   var curDisc = d.동시결합 ? '동시결합' : d.동시구매 ? '동시구매' : d.결합 ? '결합' : d.페스타 ? '페스타' : '없음';
   var isCfssFrame = item.s === '안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임') === 0;
 
-  // 별매품/헤드보드 패널
-  if (isCfssFrame) {
-    // 헤드보드 가격 출처였던 레거시 별매품 필드 제거(2026-08-04)로 인해 별매품페어링 시트 정리 전까지 선택 기능 임시 비활성화
-    h += '<div style="margin-bottom:10px;background:#fef3c7;border-radius:8px;padding:8px 10px">';
-    h += '<p style="font-size:12px;color:#92400e;font-weight:700">헤드보드 옵션 정리 중 — 잠시 선택 불가</p>';
-    h += '</div>';
-  } else {
-    var bmpOptsUI = itemBmpOptions(item);
-    if (bmpOptsUI.length > 0) {
-      var bmpSelUI = item.별매품선택 || {};
-      h += '<div style="margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 10px">';
-      bmpOptsUI.forEach(function(o) {
-        var sel = bmpSelUI[o.name] || {on:false, cnt:1};
-        var keyJs = "'" + String(o.name).replace(/'/g, "\\'") + "'";
-        var bothModes = o.hasRental && o.hasCash;
-        var mode = (sel.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
-        var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
-        var priceLabel = mode==='cash' ? ('+' + won(price) + ' (일시불)') : ('+' + won(price) + '/월');
-        h += '<div class="check-row" style="margin-bottom:' + ((o.isPer || bothModes) && sel.on ? '8' : '4') + 'px">'
-          + '<input type="checkbox"' + (sel.on ? ' checked' : '') + ' onchange="setBmp(' + idx + ',' + keyJs + ',this.checked)">'
-          + '<span style="color:#15803d">별매품 ' + o.name + ' <em style="font-weight:400;font-size:11px">' + priceLabel + '</em></span></div>';
-        if (bothModes && sel.on) {
-          var pillStyle = 'font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600;';
-          var onStyle = pillStyle + 'border:2px solid #15803d;background:#15803d;color:white';
-          var offStyle = pillStyle + 'border:2px solid #86efac;background:white;color:#15803d';
-          h += '<div style="display:flex;gap:6px;padding-left:24px;margin-bottom:4px">'
-            + '<button style="' + (mode==='rental' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'rental\')">렌탈 +' + won(o.rentalPrice) + '/월</button>'
-            + '<button style="' + (mode==='cash' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'cash\')">일시불 +' + won(o.cashPrice) + '</button>'
-            + '</div>';
-        }
-        if (o.isPer && sel.on) {
-          var lineLabel = mode==='cash' ? '(일시불)' : '/월';
-          h += '<div style="display:flex;align-items:center;gap:8px;padding-left:24px;margin-bottom:4px">'
-            + '<span style="font-size:12px;color:#15803d;font-weight:700">수량</span>'
-            + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
-            + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
-            + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt||1) + '</span>'
-            + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt||1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
-            + '<span style="font-size:11px;color:#15803d">' + (sel.cnt||1) + '개 &times; ' + won(price) + ' = <strong>' + won(price*(sel.cnt||1)) + ' ' + lineLabel + '</strong></span></div>';
-        }
-      });
-      h += '</div>';
-    }
-  }
-
   // 할인 패널
   h += '<div class="box-panel">';
   if (item.isRerental) {
@@ -1238,6 +1194,85 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     + '<input type="checkbox"' + (item.지로On ? ' checked' : '') + ' onchange="setJiro(' + idx + ',this.checked)">'
     + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
 
+  // 별매품/헤드보드 패널 — 자주 쓰는 옵션이 아니라 맨 아래 배치
+  if (isCfssFrame) {
+    // 헤드보드 가격 출처였던 레거시 별매품 필드 제거(2026-08-04)로 인해 별매품페어링 시트 정리 전까지 선택 기능 임시 비활성화
+    h += '<div style="margin-top:10px;background:#fef3c7;border-radius:8px;padding:8px 10px">';
+    h += '<p style="font-size:12px;color:#92400e;font-weight:700">헤드보드 옵션 정리 중 — 잠시 선택 불가</p>';
+    h += '</div>';
+  } else {
+    h += renderBmpPanel(item, idx);
+  }
+
+  return h;
+}
+
+// 별매품 선택 패널 — 드롭다운 1개(+ 필요시 "별매품 추가"로 2번째 슬롯) 방식, 서로 다른 항목만 선택 가능
+function bmpOptPreviewLabel(o) {
+  if (o.hasRental && o.hasCash) return '렌탈/일시불 선택 가능';
+  if (o.hasRental) return '+' + won(o.rentalPrice) + '/월';
+  return '+' + won(o.cashPrice) + ' 일시불';
+}
+function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
+  var slots = item.별매품슬롯 || ['', ''];
+  var otherName = slots[1 - slotIdx];
+  var curName = slots[slotIdx] || '';
+  var availOpts = bmpOptsUI.filter(function(o) { return o.name === curName || o.name !== otherName; });
+  var h = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+  h += '<select onchange="setBmpSlot(' + idx + ',' + slotIdx + ',this.value)" style="flex:1;font-size:12px;padding:7px 8px;border:1.5px solid #86efac;border-radius:8px;color:#15803d;background:white;font-weight:600">';
+  h += '<option value="">별매품 선택 안함</option>';
+  availOpts.forEach(function(o) {
+    h += '<option value="' + esc(o.name) + '"' + (curName === o.name ? ' selected' : '') + '>' + esc(o.name) + ' (' + bmpOptPreviewLabel(o) + ')</option>';
+  });
+  h += '</select>';
+  if (slotIdx === 1) h += '<button onclick="removeBmpSlot(' + idx + ')" style="background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:0 4px">&times;</button>';
+  h += '</div>';
+
+  if (curName) {
+    var o = bmpOptsUI.find(function(x) { return x.name === curName; });
+    if (o) {
+      var sel = (item.별매품선택 || {})[curName] || { cnt: 1 };
+      var keyJs = "'" + String(curName).replace(/'/g, "\\'") + "'";
+      var bothModes = o.hasRental && o.hasCash;
+      var mode = (sel.mode === 'cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
+      var price = mode === 'cash' ? o.cashPrice : o.rentalPrice;
+      if (bothModes) {
+        var pillStyle = 'font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600;';
+        var onStyle = pillStyle + 'border:2px solid #15803d;background:#15803d;color:white';
+        var offStyle = pillStyle + 'border:2px solid #86efac;background:white;color:#15803d';
+        h += '<div style="display:flex;gap:6px;padding-left:4px;margin-bottom:4px">'
+          + '<button style="' + (mode === 'rental' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'rental\')">렌탈 +' + won(o.rentalPrice) + '/월</button>'
+          + '<button style="' + (mode === 'cash' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'cash\')">일시불 +' + won(o.cashPrice) + '</button>'
+          + '</div>';
+      }
+      if (o.isPer) {
+        var lineLabel = mode === 'cash' ? '(일시불)' : '/월';
+        h += '<div style="display:flex;align-items:center;gap:8px;padding-left:4px;margin-bottom:6px">'
+          + '<span style="font-size:12px;color:#15803d;font-weight:700">수량</span>'
+          + '<div style="display:flex;align-items:center;border:1.5px solid #86efac;border-radius:8px;overflow:hidden;background:white">'
+          + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt || 1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
+          + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt || 1) + '</span>'
+          + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt || 1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
+          + '<span style="font-size:11px;color:#15803d">' + (sel.cnt || 1) + '개 &times; ' + won(price) + ' = <strong>' + won(price * (sel.cnt || 1)) + ' ' + lineLabel + '</strong></span></div>';
+      }
+    }
+  }
+  return h;
+}
+function renderBmpPanel(item, idx) {
+  var bmpOptsUI = itemBmpOptions(item);
+  if (bmpOptsUI.length === 0) return '';
+  if (!item.별매품슬롯) item.별매품슬롯 = ['', ''];
+  var slots = item.별매품슬롯;
+  var showSlot2 = !!slots[1] || !!item._bmpSlot2Open;
+  var h = '<div style="margin-top:10px;background:#f0fdf4;border-radius:8px;padding:8px 10px">';
+  h += '<p style="font-size:11px;font-weight:800;color:#15803d;margin-bottom:6px">별매품</p>';
+  h += renderBmpSlot(item, idx, bmpOptsUI, 0);
+  if (showSlot2) h += renderBmpSlot(item, idx, bmpOptsUI, 1);
+  else if (bmpOptsUI.length > 1 && slots[0]) {
+    h += '<button onclick="addBmpSlot(' + idx + ')" style="font-size:11px;font-weight:700;color:#15803d;background:none;border:none;cursor:pointer;padding:2px 0">+ 별매품 추가</button>';
+  }
+  h += '</div>';
   return h;
 }
 
@@ -1903,24 +1938,40 @@ function setS2Combo(idx,opt){
 function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;renderCart();}
 function setHanvalPeriod(idx,p){cart[idx].반값개월=p;renderCart();}
 function setSunap(idx,v){cart[idx].선납=v;renderCart();}
-function setBmp(idx,key,v){
+function setBmpSlot(idx,slotIdx,name){
   var it=cart[idx];
-  if(!it.별매품선택)it.별매품선택={};
-  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
-  it.별매품선택[key].on=v;
+  if(!it.별매품슬롯)it.별매품슬롯=['',''];
+  it.별매품슬롯[slotIdx]=name;
+  if (name){
+    if(!it.별매품선택)it.별매품선택={};
+    if(!it.별매품선택[name])it.별매품선택[name]={cnt:1};
+  } else if (slotIdx===1){
+    it._bmpSlot2Open=false;
+  }
+  renderCart();
+}
+function addBmpSlot(idx){
+  cart[idx]._bmpSlot2Open=true;
+  renderCart();
+}
+function removeBmpSlot(idx){
+  var it=cart[idx];
+  if(!it.별매품슬롯)it.별매품슬롯=['',''];
+  it.별매품슬롯[1]='';
+  it._bmpSlot2Open=false;
   renderCart();
 }
 function setBmpCnt(idx,key,v){
   var it=cart[idx];
   if(!it.별매품선택)it.별매품선택={};
-  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
+  if(!it.별매품선택[key])it.별매품선택[key]={cnt:1};
   it.별매품선택[key].cnt=Math.max(1,parseInt(v)||1);
   renderCart();
 }
 function setBmpMode(idx,key,mode){
   var it=cart[idx];
   if(!it.별매품선택)it.별매품선택={};
-  if(!it.별매품선택[key])it.별매품선택[key]={on:false,cnt:1};
+  if(!it.별매품선택[key])it.별매품선택[key]={cnt:1};
   it.별매품선택[key].mode=mode;
   renderCart();
 }

@@ -74,6 +74,9 @@ function doPost(e) {
     if (action === 'removeBmpPairing') {
       return _json(_removeBmpPairing(body));
     }
+    if (action === 'bulkUpsertProducts') {
+      return _json(_bulkUpsertProducts(body));
+    }
     return _json({error: 'unknown action'});
   } catch(err) {
     return _json({error: err.message});
@@ -165,6 +168,122 @@ function _updateProduct(body) {
 
   CacheService.getScriptCache().remove('appData');
   return {ok: true, row: sheetRow};
+}
+
+// 가격표(엑셀) 일괄 등록/업데이트 — admin.html "일괄 등록/업데이트" 화면에서 호출.
+// 모델명+관리방법+관리주기+약정년 조합으로 기존 행을 찾아 가격 필드만 덮어쓰고,
+// 못 찾으면 새 행을 만든다(제품명/분류/제품군은 입력값이 없으면 같은 모델명의 기존 행에서 복사).
+function _bulkUpsertProducts(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var rows = body.rows;
+  if (!rows || !rows.length) return {error: '등록할 행이 없습니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return {error: '시트를 찾을 수 없음: "' + SHEET_NAME + '"'};
+
+  var colMap = _headerColMap(sheet);
+  if (!colMap.모델명 || !colMap.약정년) {
+    return {error: '"' + FIELD_HEADERS.모델명 + '"/"' + FIELD_HEADERS.약정년 + '" 헤더 컬럼을 시트에서 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  var raw = (lastRow >= HEADER_ROW + 1) ? sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues() : [];
+  function cellAt(row, field) { var c = colMap[field]; return c ? row[c-1] : ''; }
+  function normYakj(row) { var n = Number(cellAt(row,'약정년')); return (!n || isNaN(n)) ? 0 : n; }
+  function normYakjInput(v) { if (v === undefined || v === null || String(v).trim() === '' || String(v).trim() === '-') return 0; var n = Number(v); return isNaN(n) ? null : n; }
+
+  // 모델명 → 첫 번째로 발견된 행의 제품명/분류/제품군 (신규 행 만들 때 identity 복사용, 이번 배치에서 새로 만든 행도 반영)
+  var identityByModel = {};
+  raw.forEach(function(row) {
+    var m = String(cellAt(row,'모델명')||'').trim();
+    if (m && !identityByModel[m]) {
+      identityByModel[m] = { 제품명: cellAt(row,'제품명'), 분류: cellAt(row,'분류'), s: cellAt(row,'s') };
+    }
+  });
+
+  var results = [];
+  rows.forEach(function(input, idx) {
+    var 모델명 = String(input.모델명 || '').trim();
+    if (!모델명) { results.push({index: idx, status: 'error', message: '모델명이 없습니다'}); return; }
+    var 관리방법 = String(input.관리방법 || '').trim();
+    var 관리주기 = String(input.관리주기 || '').trim();
+    var 약정년 = normYakjInput(input.약정년);
+    if (약정년 === null) { results.push({index: idx, status: 'error', message: '약정(년) 값이 올바르지 않습니다: ' + input.약정년}); return; }
+
+    // 가격 필드 검증 (입력된 것만)
+    var priceFields = {};
+    var badField = null;
+    PRODUCT_NUMERIC_FIELDS.forEach(function(f) {
+      if (input[f] === undefined || input[f] === null || String(input[f]).trim() === '') return;
+      var n = Number(input[f]);
+      if (!isFinite(n) || n < 0) { badField = f; return; }
+      priceFields[f] = n;
+    });
+    if (badField) { results.push({index: idx, status: 'error', message: badField + ' 값이 올바르지 않습니다: ' + input[badField]}); return; }
+
+    var matches = [];
+    raw.forEach(function(row, i) {
+      if (String(cellAt(row,'모델명')||'').trim() === 모델명 &&
+          String(cellAt(row,'관리방법')||'').trim() === 관리방법 &&
+          String(cellAt(row,'관리주기')||'').trim() === 관리주기 &&
+          normYakj(row) === 약정년) {
+        matches.push(i);
+      }
+    });
+
+    if (matches.length > 1) {
+      results.push({index: idx, status: 'error', message: '조건에 맞는 행이 ' + matches.length + '개 있어 자동으로 수정할 수 없습니다'});
+      return;
+    }
+
+    if (matches.length === 1) {
+      var sheetRow = HEADER_ROW + 1 + matches[0];
+      Object.keys(priceFields).forEach(function(f) {
+        if (colMap[f]) sheet.getRange(sheetRow, colMap[f]).setValue(priceFields[f]);
+      });
+      results.push({index: idx, status: 'updated', sheetRow: sheetRow});
+      return;
+    }
+
+    // 신규 행 — 제품명/분류/제품군 결정 (입력값 우선, 없으면 같은 모델명의 기존 행에서 복사)
+    var sibling = identityByModel[모델명] || {};
+    var 제품명 = String(input.제품명 || sibling.제품명 || '').trim();
+    var 분류 = String(input.분류 || sibling.분류 || '').trim();
+    var s = String(input.제품군 || input.s || sibling.s || '').trim();
+    if (!제품명 || !분류 || !s) {
+      results.push({index: idx, status: 'error', message: '완전 신규 모델은 제품명/분류/제품군을 함께 입력해야 합니다'});
+      return;
+    }
+    if (!colMap.제품명 || !colMap.분류 || !colMap.s) {
+      results.push({index: idx, status: 'error', message: '"제품명"/"분류"/"제품군" 헤더 컬럼을 시트에서 찾지 못했습니다'});
+      return;
+    }
+
+    var newRow = [];
+    for (var c = 0; c < lastCol; c++) newRow.push('');
+    newRow[colMap.모델명 - 1] = 모델명;
+    newRow[colMap.제품명 - 1] = 제품명;
+    newRow[colMap.분류 - 1] = 분류;
+    newRow[colMap.s - 1] = s;
+    if (colMap.관리방법) newRow[colMap.관리방법 - 1] = 관리방법;
+    if (colMap.관리주기) newRow[colMap.관리주기 - 1] = 관리주기;
+    newRow[colMap.약정년 - 1] = 약정년 || '';
+    Object.keys(priceFields).forEach(function(f) {
+      if (colMap[f]) newRow[colMap[f] - 1] = priceFields[f];
+    });
+
+    sheet.appendRow(newRow);
+    var newSheetRow = sheet.getLastRow();
+    // 이번 배치의 다음 행들이 같은 모델명을 참조할 때 identity/matches에 반영되도록 raw에도 추가
+    raw.push(newRow);
+    if (!identityByModel[모델명]) identityByModel[모델명] = { 제품명: 제품명, 분류: 분류, s: s };
+    results.push({index: idx, status: 'created', sheetRow: newSheetRow});
+  });
+
+  CacheService.getScriptCache().remove('appData');
+  return {ok: true, results: results};
 }
 
 // doGet에서도 clearCache 처리 추가

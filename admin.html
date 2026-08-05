@@ -83,6 +83,25 @@ tr.row-saved td { background:#f0fdf4; }
       <input type="text" id="searchInput" placeholder="예: CHP-7211N">
     </label>
     <div id="searchResults"></div>
+    <button class="btn-secondary" id="showBulkBtn" style="margin-top:14px">📥 엑셀로 일괄 등록/업데이트</button>
+  </div>
+
+  <!-- 엑셀 일괄 등록/업데이트 -->
+  <div id="bulkView" class="card hidden">
+    <button class="back-link" id="bulkBackBtn">&larr; 검색으로</button>
+    <p style="font-size:13px;font-weight:800;margin-bottom:8px">엑셀로 일괄 등록/업데이트</p>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.7">
+      첫 행은 헤더로, 아래 컬럼명을 정확히 사용하세요(순서 상관없음, 모르는 컬럼은 무시됩니다).<br>
+      <b>모델명</b>은 필수, 나머지는 있는 것만 반영됩니다.<br>
+      컬럼: 모델명, 관리방법, 관리주기, 약정년, 정상가, 프로모션, 재렌탈, 일시불, 타사보상렌탈, 타사보상일시불, 제품명, 분류, 제품군<br>
+      기존 모델명+관리방법+관리주기+약정년 조합이 있으면 가격만 덮어쓰고, 없으면 새 행을 만듭니다(제품명/분류/제품군은 같은 모델명의 기존 행에서 자동으로 채워짐 — 완전 신규 모델이면 제품명/분류/제품군을 직접 입력해야 함).
+    </p>
+    <input type="file" id="bulkFileInput" accept=".xlsx,.xls">
+    <div id="bulkMsg" style="margin-top:10px"></div>
+    <div class="tbl-wrap" style="margin-top:12px">
+      <table class="edit-tbl" id="bulkPreviewTable"></table>
+    </div>
+    <button class="btn-primary" id="bulkApplyBtn" style="margin-top:14px;display:none">적용</button>
   </div>
 
   <!-- 표 편집 -->
@@ -105,6 +124,7 @@ tr.row-saved td { background:#f0fdf4; }
   </div>
 </div>
 
+<script src="assets/xlsx.full.min.js"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
 var ADMIN_PW = null; // 메모리에만 보관, localStorage/sessionStorage 저장 안 함 — 새로고침하면 다시 입력 필요
@@ -483,6 +503,125 @@ function unlinkBmp(bmpModel, btn){
     })
     .catch(function(e){ btn.disabled = false; alert('연결 해제 실패: ' + e.message); });
 }
+
+// ── 엑셀 일괄 등록/업데이트 ──────────────────────────────────
+var BULK_COLS = ['모델명','관리방법','관리주기','약정년','정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','제품명','분류','제품군'];
+var BULK_PRICE_COLS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'];
+var BULK_ROWS = [];
+
+document.getElementById('showBulkBtn').onclick = function(){
+  document.getElementById('searchView').classList.add('hidden');
+  document.getElementById('bulkView').classList.remove('hidden');
+};
+document.getElementById('bulkBackBtn').onclick = function(){
+  document.getElementById('bulkView').classList.add('hidden');
+  document.getElementById('searchView').classList.remove('hidden');
+};
+
+document.getElementById('bulkFileInput').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  showMsg('bulkMsg', '', true);
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      var wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      BULK_ROWS = json.map(function(r){
+        var out = {};
+        BULK_COLS.forEach(function(c){
+          if (r[c] !== undefined && String(r[c]).trim() !== '') out[c] = r[c];
+        });
+        return out;
+      }).filter(function(r){ return r.모델명; });
+      if (!BULK_ROWS.length) { showMsg('bulkMsg', '읽을 수 있는 행이 없습니다 (모델명 컬럼을 확인해주세요)', false); }
+      renderBulkPreview();
+    } catch(err) {
+      showMsg('bulkMsg', '파일을 읽지 못했습니다: ' + err.message, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// 서버(_bulkUpsertProducts)와 동일한 판정 로직의 미리보기용 버전 — 실제 반영 여부는 서버가 최종 판단함
+function classifyBulkRow(input, identityExtra){
+  var 모델명 = String(input.모델명 || '').trim();
+  var 관리방법 = String(input.관리방법 || '').trim();
+  var 관리주기 = String(input.관리주기 || '').trim();
+  var yRaw = input.약정년;
+  var 약정년 = (yRaw===undefined || String(yRaw).trim()==='' || String(yRaw).trim()==='-') ? 0 : Number(yRaw);
+  if (isNaN(약정년)) return {status:'error', message:'약정(년) 값이 올바르지 않습니다'};
+
+  var matches = PRODUCTS.filter(function(p){
+    return p.모델명===모델명 && (p.관리방법||'')===관리방법 && (p.관리주기||'')===관리주기 && (p.약정년||0)===약정년;
+  });
+  if (matches.length > 1) return {status:'error', message:'조건에 맞는 행이 ' + matches.length + '개 있어 자동 반영 불가'};
+  if (matches.length === 1) return {status:'updated', message:'기존 행 가격 업데이트'};
+
+  var sibling = PRODUCTS.find(function(p){ return p.모델명===모델명; }) || identityExtra[모델명];
+  var 제품명 = String(input.제품명 || (sibling && sibling.제품명) || '').trim();
+  var 분류 = String(input.분류 || (sibling && sibling.분류) || '').trim();
+  var s = String(input.제품군 || (sibling && sibling.s) || '').trim();
+  if (!제품명 || !분류 || !s) return {status:'error', message:'완전 신규 모델 — 제품명/분류/제품군을 함께 입력해야 합니다'};
+  return {status:'created', message: (PRODUCTS.some(function(p){return p.모델명===모델명;}) ? '신규 조합(기존 모델)' : '완전 신규 모델'), identity:{제품명:제품명, 분류:분류, s:s}};
+}
+
+function renderBulkPreview(){
+  var identityExtra = {};
+  var classified = BULK_ROWS.map(function(input){
+    var r = classifyBulkRow(input, identityExtra);
+    if (r.status === 'created' && !identityExtra[input.모델명]) identityExtra[String(input.모델명).trim()] = r.identity;
+    return r;
+  });
+
+  var cols = ['모델명','관리방법','관리주기','약정년','정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','제품명','분류','제품군'];
+  var h = '<thead><tr>';
+  cols.forEach(function(c){ h += '<th>' + esc(c) + '</th>'; });
+  h += '<th>상태</th></tr></thead><tbody>';
+  BULK_ROWS.forEach(function(input, i){
+    var r = classified[i];
+    h += '<tr data-idx="' + i + '">';
+    cols.forEach(function(c){ h += '<td>' + esc(input[c] || '') + '</td>'; });
+    var cls = r.status === 'error' ? 'err' : 'ok';
+    h += '<td class="bulk-status row-msg ' + cls + '">' + esc(r.message) + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody>';
+  document.getElementById('bulkPreviewTable').innerHTML = h;
+
+  var applyBtn = document.getElementById('bulkApplyBtn');
+  applyBtn.style.display = BULK_ROWS.length ? '' : 'none';
+  applyBtn.disabled = false;
+  applyBtn.textContent = '적용 (' + BULK_ROWS.length + '행)';
+}
+
+document.getElementById('bulkApplyBtn').onclick = function(){
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = '적용 중...';
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'bulkUpsertProducts', password:ADMIN_PW, rows:BULK_ROWS})})
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      btn.disabled = false;
+      if (!resp.ok) { btn.textContent = '적용 (' + BULK_ROWS.length + '행)'; showMsg('bulkMsg', resp.error || '적용 실패', false); return; }
+      btn.textContent = '적용 완료';
+      resp.results.forEach(function(res){
+        var row = document.querySelector('#bulkPreviewTable tr[data-idx="' + res.index + '"]');
+        if (!row) return;
+        var cell = row.querySelector('.bulk-status');
+        if (res.status === 'error') { cell.textContent = '오류: ' + res.message; cell.className = 'bulk-status row-msg err'; }
+        else { cell.textContent = res.status === 'updated' ? '업데이트 완료' : '신규 등록 완료'; cell.className = 'bulk-status row-msg ok'; }
+      });
+      showMsg('bulkMsg', '적용 완료 — 목록 새로고침 중...', true);
+      loadProducts();
+    })
+    .catch(function(e){
+      btn.disabled = false;
+      btn.textContent = '적용 (' + BULK_ROWS.length + '행)';
+      showMsg('bulkMsg', '적용 실패: ' + e.message, false);
+    });
+};
 </script>
 </body>
 </html>

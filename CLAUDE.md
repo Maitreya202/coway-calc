@@ -100,5 +100,6 @@ Cloudflare Pages (index.html)
   - `index.html`의 `itemBmpOptions(item)`이 페어링의 `렌탈허용`이 true일 때만 렌탈 행(item의 약정년과 정확히 일치 + 정상가/프로모션/재렌탈 중 하나라도 >0)을 찾고, 일시불 전용 행(약정년=0 + 일시불가>0)은 항상 찾아서 `{hasRental, hasCash, rentalPrice, cashPrice}`로 반환.
   - `item.별매품선택[별매품제품명] = {on, cnt, mode}` — `mode`가 `'rental'`이면 월렌탈료(`bmpPrice`)에, `'cash'`면 1회성 금액(`bmpOneTimeTotal`)에 더해짐. 렌탈/일시불 둘 다 가능한 옵션만 `renderDiscPanels()`에 선택 버튼(렌탈/일시불 pill)이 뜸 — 한쪽만 있으면 자동으로 그쪽으로 처리(선택 UI 안 뜸).
   - admin.html "별매품 연결" UI에 "렌탈 허용" 체크박스 추가 — 연결 시점에 페어링별로 설정. `doPost(action:'addBmpPairing')`가 `렌탈허용` 파라미터를 받아 시트에 씀.
+  - 이미 연결된 항목도 "다량 선택"/"렌탈 허용" 토글 스위치가 목록에 항상 표시되고, 껐다 켰다 하면 `doPost(action:'updateBmpPairing')`가 재연결 없이 해당 컬럼만 바로 수정함(연결 해제 후 재연결할 필요 없음).
   - `calcItem()`에서 선택된 별매품 옵션을 월렌탈 추가형(`bmpPrice`, 기존)과 일시불 전용형(`bmpOneTimeTotal`, 신규)으로 분리 — 일시불 전용형은 `base`(월렌탈료)에 안 더해지고 별도 1회성 금액으로만 반환됨.
   - `calcTotals()`가 `agg.bmpOneTime`으로 전체 아이템의 일시불 전용 별매품 총액을 집계(선납금 `agg.ilsibl`과 같은 패턴 — **월 렌탈료 합산(buildTimeline)은 안 건드림**), `buildQuoteParts()`가 "별매품(일시불)" 한 줄로 견적 요약에 표시함.

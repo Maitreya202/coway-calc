@@ -68,6 +68,9 @@ function doPost(e) {
     if (action === 'addBmpPairing') {
       return _json(_addBmpPairing(body));
     }
+    if (action === 'updateBmpPairing') {
+      return _json(_updateBmpPairing(body));
+    }
     if (action === 'removeBmpPairing') {
       return _json(_removeBmpPairing(body));
     }
@@ -708,6 +711,43 @@ function _addBmpPairing(body) {
   sheet.appendRow(newRow);
   CacheService.getScriptCache().remove('appData');
   return {ok: true};
+}
+
+// 기존 연결의 1개당여부/렌탈허용여부만 바꿀 때(재연결 없이 in-place로 수정) — admin.html 목록의 토글 스위치에서 호출
+function _updateBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {error: '연결된 행이 없습니다'};
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  for (var i = 0; i < raw.length; i++) {
+    if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+        String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+      var sheetRow = i + 2;
+      if (body.개당 !== undefined && colMap.개당여부 !== undefined) {
+        sheet.getRange(sheetRow, colMap.개당여부 + 1).setValue(body.개당 ? 'Y' : 'N');
+      }
+      if (body.렌탈허용 !== undefined && colMap.렌탈허용 !== undefined) {
+        sheet.getRange(sheetRow, colMap.렌탈허용 + 1).setValue(body.렌탈허용 ? 'Y' : 'N');
+      }
+      CacheService.getScriptCache().remove('appData');
+      return {ok: true};
+    }
+  }
+  return {error: '일치하는 연결을 찾지 못했습니다'};
 }
 
 function _removeBmpPairing(body) {

@@ -540,6 +540,10 @@ document.getElementById('bulkFileInput').addEventListener('change', function(e){
         return out;
       }).filter(function(r){ return r.모델명; });
       if (!BULK_ROWS.length) { showMsg('bulkMsg', '읽을 수 있는 행이 없습니다 (모델명 컬럼을 확인해주세요)', false); }
+      else if (!PRODUCTS.length) {
+        // 제품 목록이 아직(또는 못) 불러와진 상태 — 이 상태로 미리보기를 하면 기존 제품도 전부 "완전 신규"로 잘못 표시됨
+        showMsg('bulkMsg', '⚠ 제품 목록을 아직 못 불러왔습니다 — 이 상태로는 기존 제품도 전부 "신규"로 잘못 표시됩니다. 페이지를 새로고침하고 다시 로그인한 뒤 업로드해주세요.', false);
+      }
       renderBulkPreview();
     } catch(err) {
       showMsg('bulkMsg', '파일을 읽지 못했습니다: ' + err.message, false);

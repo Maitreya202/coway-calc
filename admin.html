@@ -594,10 +594,16 @@ function classifyBulkRow(input, identityExtra){
   }
 
   if (matched) {
+    var hasPriceChange = false;
     BULK_PRICE_COLS.forEach(function(f){
       var v = input[f];
       effective[f] = (v!==undefined && String(v).trim()!=='') ? v : (matched[f] || '');
+      if (v !== undefined && String(v).trim() !== '' && Number(v) !== Number(matched[f] || 0)) hasPriceChange = true;
     });
+    // 관리주기가 바뀐 경우(cycleChanged)는 그 자체가 변경이니 그대로 두고, 완전 일치일 때만 가격도 그대로면 "동일"로 표시
+    if (resultMsg === '기존 행 가격 업데이트' && !hasPriceChange) {
+      resultMsg = '기존과 동일(변경사항 없음)';
+    }
     effective.제품명 = input.제품명 || matched.제품명 || '';
     effective.분류 = input.분류 || matched.분류 || '';
     effective.제품군 = input.제품군 || matched.s || '';

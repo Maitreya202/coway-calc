@@ -233,6 +233,27 @@ function _bulkUpsertProducts(body) {
       }
     });
 
+    // 완전 일치가 없으면 관리주기만 빼고 재검색 — 관리방법/약정년은 그대로인데 관리주기만 바뀐 흔한 케이스를
+    // 신규 행으로 잘못 만들지 않기 위함(예: CHPI-7430N 방문관리 3년의 관리주기가 2개월→3개월로 바뀐 경우).
+    var cycleChanged = false;
+    if (matches.length === 0) {
+      var relaxed = [];
+      raw.forEach(function(row, i) {
+        if (String(cellAt(row,'모델명')||'').trim() === 모델명 &&
+            String(cellAt(row,'관리방법')||'').trim() === 관리방법 &&
+            normYakj(row) === 약정년) {
+          relaxed.push(i);
+        }
+      });
+      if (relaxed.length === 1) {
+        matches = relaxed;
+        cycleChanged = true;
+      } else if (relaxed.length > 1) {
+        results.push({index: idx, status: 'error', message: '관리주기가 다른 기존 행이 ' + relaxed.length + '개 있어 어떤 행을 바꿀지 자동으로 판단할 수 없습니다(관리주기를 정확히 입력해주세요)'});
+        return;
+      }
+    }
+
     if (matches.length > 1) {
       results.push({index: idx, status: 'error', message: '조건에 맞는 행이 ' + matches.length + '개 있어 자동으로 수정할 수 없습니다'});
       return;
@@ -240,10 +261,14 @@ function _bulkUpsertProducts(body) {
 
     if (matches.length === 1) {
       var sheetRow = HEADER_ROW + 1 + matches[0];
+      if (cycleChanged && colMap.관리주기) {
+        sheet.getRange(sheetRow, colMap.관리주기).setValue(관리주기);
+        raw[matches[0]][colMap.관리주기 - 1] = 관리주기; // 같은 배치 내 이후 행이 최신 상태를 보도록 반영
+      }
       Object.keys(priceFields).forEach(function(f) {
         if (colMap[f]) sheet.getRange(sheetRow, colMap[f]).setValue(priceFields[f]);
       });
-      results.push({index: idx, status: 'updated', sheetRow: sheetRow});
+      results.push({index: idx, status: 'updated', sheetRow: sheetRow, cycleChanged: cycleChanged});
       return;
     }
 

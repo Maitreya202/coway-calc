@@ -559,6 +559,14 @@ function classifyBulkRow(input, identityExtra){
   if (matches.length > 1) return {status:'error', message:'조건에 맞는 행이 ' + matches.length + '개 있어 자동 반영 불가'};
   if (matches.length === 1) return {status:'updated', message:'기존 행 가격 업데이트'};
 
+  // 완전 일치가 없으면 관리주기만 빼고 재검색 — 관리방법/약정년은 그대로인데 관리주기만 바뀐 경우를
+  // 신규 행으로 잘못 만들지 않기 위함(서버 _bulkUpsertProducts와 동일 로직)
+  var relaxed = PRODUCTS.filter(function(p){
+    return p.모델명===모델명 && (p.관리방법||'')===관리방법 && (p.약정년||0)===약정년;
+  });
+  if (relaxed.length === 1) return {status:'updated', message:'관리주기 변경 반영(' + (relaxed[0].관리주기||'없음') + ' → ' + (관리주기||'없음') + ')'};
+  if (relaxed.length > 1) return {status:'error', message:'관리주기가 다른 기존 행이 ' + relaxed.length + '개 있어 자동 반영 불가 — 관리주기를 정확히 입력해주세요'};
+
   var sibling = PRODUCTS.find(function(p){ return p.모델명===모델명; }) || identityExtra[모델명];
   var 제품명 = String(input.제품명 || (sibling && sibling.제품명) || '').trim();
   var 분류 = String(input.분류 || (sibling && sibling.분류) || '').trim();

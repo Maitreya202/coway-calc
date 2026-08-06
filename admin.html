@@ -40,7 +40,9 @@ table.edit-tbl { border-collapse:collapse; width:100%; font-size:12px; white-spa
 table.edit-tbl th, table.edit-tbl td { border:1px solid #eef1f5; padding:4px 5px; text-align:left; }
 table.edit-tbl th { background:#f8fafc; color:#64748b; font-weight:700; font-size:10px; position:sticky; top:0; }
 table.edit-tbl td.id-col { color:#334155; font-weight:600; background:#fafbfc; }
-table.edit-tbl input[type=number] { width:62px; padding:4px 5px; font-size:12px; border-radius:6px; }
+table.edit-tbl input[type=number] { width:82px; padding:4px 5px; font-size:12px; border-radius:6px; -moz-appearance:textfield; }
+table.edit-tbl input[type=number]::-webkit-outer-spin-button,
+table.edit-tbl input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 table.edit-tbl input[type=text] { width:80px; padding:4px 5px; font-size:12px; border-radius:6px; }
 table.edit-tbl td .switch { width:30px; height:17px; }
 table.edit-tbl td .slider:before { width:11px; height:11px; }
@@ -641,7 +643,7 @@ function renderBulkPreview(){
     BULK_TABLE_COLS.forEach(function(c){
       var v = eff[c] !== undefined ? eff[c] : (input[c] || '');
       var type = (BULK_PRICE_COLS.indexOf(c) >= 0 || c === '약정년') ? 'number' : 'text';
-      h += '<td><input type="' + type + '" data-f="' + c + '"' + (type==='number'?' style="width:62px"':' style="width:80px"') + ' value="' + esc(v) + '"></td>';
+      h += '<td><input type="' + type + '" data-f="' + c + '"' + (type==='number'?' style="width:82px"':' style="width:80px"') + ' value="' + esc(v) + '"></td>';
     });
     var cls = r.status === 'error' ? 'err' : 'ok';
     h += '<td class="bulk-status row-msg ' + cls + '">' + esc(r.message) + '</td>';

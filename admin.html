@@ -544,53 +544,91 @@ document.getElementById('bulkFileInput').addEventListener('change', function(e){
   reader.readAsArrayBuffer(file);
 });
 
-// 서버(_bulkUpsertProducts)와 동일한 판정 로직의 미리보기용 버전 — 실제 반영 여부는 서버가 최종 판단함
+var BULK_PRICE_COLS = ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'];
+// 일시불/타사보상일시불은 약정(관리방법/관리주기)에 안 걸리는 값이라, 같은 모델명의 다른 행에 이미
+// 입력돼 있으면 그 값을 그대로 참고해서 채워줌(신규 조합 만들 때 매번 다시 입력할 필요 없게)
+function findModelPriceHint(모델명, field){
+  var row = PRODUCTS.find(function(p){ return p.모델명===모델명 && p[field]; });
+  return row ? row[field] : '';
+}
+
+// 서버(_bulkUpsertProducts)와 동일한 판정 로직의 미리보기용 버전 — 실제 반영 여부는 서버가 최종 판단함.
+// effective: 표에 채워서 보여줄(그리고 수정 가능한) 값 — 업로드값이 있으면 그걸, 없으면 기존행/형제행 값을 참고해서 미리 채워둠.
 function classifyBulkRow(input, identityExtra){
   var 모델명 = String(input.모델명 || '').trim();
   var 관리방법 = String(input.관리방법 || '').trim();
   var 관리주기 = String(input.관리주기 || '').trim();
   var yRaw = input.약정년;
   var 약정년 = (yRaw===undefined || String(yRaw).trim()==='' || String(yRaw).trim()==='-') ? 0 : Number(yRaw);
-  if (isNaN(약정년)) return {status:'error', message:'약정(년) 값이 올바르지 않습니다'};
+  if (isNaN(약정년)) return {status:'error', message:'약정(년) 값이 올바르지 않습니다', effective:input};
 
-  var matches = PRODUCTS.filter(function(p){
+  var effective = {모델명:모델명, 관리방법:관리방법, 관리주기:관리주기, 약정년:(약정년||'')};
+
+  var exact = PRODUCTS.filter(function(p){
     return p.모델명===모델명 && (p.관리방법||'')===관리방법 && (p.관리주기||'')===관리주기 && (p.약정년||0)===약정년;
   });
-  if (matches.length > 1) return {status:'error', message:'조건에 맞는 행이 ' + matches.length + '개 있어 자동 반영 불가'};
-  if (matches.length === 1) return {status:'updated', message:'기존 행 가격 업데이트'};
+  if (exact.length > 1) return {status:'error', message:'조건에 맞는 행이 ' + exact.length + '개 있어 자동 반영 불가', effective:input};
 
-  // 완전 일치가 없으면 관리주기만 빼고 재검색 — 관리방법/약정년은 그대로인데 관리주기만 바뀐 경우를
-  // 신규 행으로 잘못 만들지 않기 위함(서버 _bulkUpsertProducts와 동일 로직)
-  var relaxed = PRODUCTS.filter(function(p){
-    return p.모델명===모델명 && (p.관리방법||'')===관리방법 && (p.약정년||0)===약정년;
-  });
-  if (relaxed.length === 1) return {status:'updated', message:'관리주기 변경 반영(' + (relaxed[0].관리주기||'없음') + ' → ' + (관리주기||'없음') + ')'};
-  if (relaxed.length > 1) return {status:'error', message:'관리주기가 다른 기존 행이 ' + relaxed.length + '개 있어 자동 반영 불가 — 관리주기를 정확히 입력해주세요'};
+  var matched = exact.length === 1 ? exact[0] : null;
+  var resultStatus, resultMsg;
+  if (matched) {
+    resultStatus = 'updated'; resultMsg = '기존 행 가격 업데이트';
+  } else {
+    var relaxed = PRODUCTS.filter(function(p){
+      return p.모델명===모델명 && (p.관리방법||'')===관리방법 && (p.약정년||0)===약정년;
+    });
+    if (relaxed.length === 1) {
+      matched = relaxed[0];
+      resultStatus = 'updated'; resultMsg = '관리주기 변경 반영(' + (relaxed[0].관리주기||'없음') + ' → ' + (관리주기||'없음') + ')';
+    } else if (relaxed.length > 1) {
+      return {status:'error', message:'관리주기가 다른 기존 행이 ' + relaxed.length + '개 있어 자동 반영 불가 — 관리주기를 정확히 입력해주세요', effective:input};
+    }
+  }
 
+  if (matched) {
+    BULK_PRICE_COLS.forEach(function(f){
+      var v = input[f];
+      effective[f] = (v!==undefined && String(v).trim()!=='') ? v : (matched[f] || '');
+    });
+    effective.제품명 = input.제품명 || matched.제품명 || '';
+    effective.분류 = input.분류 || matched.분류 || '';
+    effective.제품군 = input.제품군 || matched.s || '';
+    return {status: resultStatus, message: resultMsg, effective: effective};
+  }
+
+  // 신규 — 제품명/분류/제품군은 같은 모델명의 기존 행에서 자동 복사, 일시불/타사보상일시불도 참고해서 채움
   var sibling = PRODUCTS.find(function(p){ return p.모델명===모델명; }) || identityExtra[모델명];
   var 제품명 = String(input.제품명 || (sibling && sibling.제품명) || '').trim();
   var 분류 = String(input.분류 || (sibling && sibling.분류) || '').trim();
   var s = String(input.제품군 || (sibling && sibling.s) || '').trim();
-  if (!제품명 || !분류 || !s) return {status:'error', message:'완전 신규 모델 — 제품명/분류/제품군을 함께 입력해야 합니다'};
-  return {status:'created', message: (PRODUCTS.some(function(p){return p.모델명===모델명;}) ? '신규 조합(기존 모델)' : '완전 신규 모델'), identity:{제품명:제품명, 분류:분류, s:s}};
+  BULK_PRICE_COLS.forEach(function(f){
+    var v = input[f];
+    if (v !== undefined && String(v).trim() !== '') { effective[f] = v; return; }
+    if (f === '일시불' || f === '타사보상일시불') { effective[f] = findModelPriceHint(모델명, f); return; }
+    effective[f] = '';
+  });
+  effective.제품명 = 제품명; effective.분류 = 분류; effective.제품군 = s;
+  if (!제품명 || !분류 || !s) return {status:'error', message:'완전 신규 모델 — 제품명/분류/제품군을 함께 입력해야 합니다', effective:effective};
+  return {status:'created', message: (sibling ? '신규 조합(기존 모델)' : '완전 신규 모델'), effective: effective, identity:{제품명:제품명, 분류:분류, s:s}};
 }
+
+var BULK_TABLE_COLS = ['모델명','관리방법','관리주기','약정년','정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','제품명','분류','제품군'];
 
 function renderBulkPreview(){
   var identityExtra = {};
-  var classified = BULK_ROWS.map(function(input){
-    var r = classifyBulkRow(input, identityExtra);
-    if (r.status === 'created' && !identityExtra[input.모델명]) identityExtra[String(input.모델명).trim()] = r.identity;
-    return r;
-  });
-
-  var cols = ['모델명','관리방법','관리주기','약정년','정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','제품명','분류','제품군'];
   var h = '<thead><tr>';
-  cols.forEach(function(c){ h += '<th>' + esc(c) + '</th>'; });
+  BULK_TABLE_COLS.forEach(function(c){ h += '<th>' + esc(c) + '</th>'; });
   h += '<th>상태</th></tr></thead><tbody>';
   BULK_ROWS.forEach(function(input, i){
-    var r = classified[i];
+    var r = classifyBulkRow(input, identityExtra);
+    if (r.status === 'created' && r.identity && !identityExtra[String(input.모델명||'').trim()]) identityExtra[String(input.모델명||'').trim()] = r.identity;
+    var eff = r.effective || input;
     h += '<tr data-idx="' + i + '">';
-    cols.forEach(function(c){ h += '<td>' + esc(input[c] || '') + '</td>'; });
+    BULK_TABLE_COLS.forEach(function(c){
+      var v = eff[c] !== undefined ? eff[c] : (input[c] || '');
+      var type = (BULK_PRICE_COLS.indexOf(c) >= 0 || c === '약정년') ? 'number' : 'text';
+      h += '<td><input type="' + type + '" data-f="' + c + '" value="' + esc(v) + '" style="width:100px"></td>';
+    });
     var cls = r.status === 'error' ? 'err' : 'ok';
     h += '<td class="bulk-status row-msg ' + cls + '">' + esc(r.message) + '</td>';
     h += '</tr>';
@@ -606,9 +644,18 @@ function renderBulkPreview(){
 
 document.getElementById('bulkApplyBtn').onclick = function(){
   var btn = this;
+  // 표에 표시된(수정했을 수도 있는) 현재 값을 그대로 읽어서 전송 — 미리보기가 곧 실제 반영될 값
+  var rowsToSend = [];
+  Array.prototype.forEach.call(document.querySelectorAll('#bulkPreviewTable tbody tr'), function(tr){
+    var obj = {};
+    Array.prototype.forEach.call(tr.querySelectorAll('input[data-f]'), function(inp){
+      if (String(inp.value).trim() !== '') obj[inp.dataset.f] = inp.value;
+    });
+    rowsToSend.push(obj);
+  });
   btn.disabled = true;
   btn.textContent = '적용 중...';
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'bulkUpsertProducts', password:ADMIN_PW, rows:BULK_ROWS})})
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'bulkUpsertProducts', password:ADMIN_PW, rows:rowsToSend})})
     .then(function(r){ return r.json(); })
     .then(function(resp){
       btn.disabled = false;

@@ -62,6 +62,8 @@ table.edit-tbl input.dirty { border-color:#f59e0b; background:#fffbeb; }
 .row-msg.ok { color:#15803d; }
 .row-msg.err { color:#b91c1c; }
 tr.row-saved td { background:#f0fdf4; }
+.mini-spinner { width:13px; height:13px; border:2px solid #bfdbfe; border-top:2px solid #1d4ed8; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -84,9 +86,12 @@ tr.row-saved td { background:#f0fdf4; }
 
   <!-- 검색 -->
   <div id="searchView" class="card">
+    <div id="productsLoadingMsg" class="msg" style="background:#eff6ff;color:#1e40af;display:flex;align-items:center;gap:8px">
+      <span class="mini-spinner"></span> 제품 목록 불러오는 중...
+    </div>
     <label class="field">
       <span class="lbl">모델명 또는 제품명 검색</span>
-      <input type="text" id="searchInput" placeholder="예: CHP-7211N">
+      <input type="text" id="searchInput" placeholder="예: CHP-7211N" disabled>
     </label>
     <div id="searchResults"></div>
     <button class="btn-secondary" id="showBulkBtn" style="margin-top:14px">📥 엑셀로 일괄 등록/업데이트</button>
@@ -211,7 +216,37 @@ document.getElementById('loginBtn').onclick = function(){
     });
 };
 
+var PRODUCTS_LOADED = false;
+
+function setProductsLoading(state, errMsg){
+  var msgEl = document.getElementById('productsLoadingMsg');
+  var input = document.getElementById('searchInput');
+  if (state === 'loading') {
+    msgEl.className = 'msg';
+    msgEl.style.background = '#eff6ff'; msgEl.style.color = '#1e40af';
+    msgEl.innerHTML = '<span class="mini-spinner"></span> 제품 목록 불러오는 중...';
+    msgEl.style.display = 'flex';
+    input.disabled = true;
+    input.placeholder = '제품 목록 불러오는 중...';
+  } else if (state === 'error') {
+    msgEl.className = 'msg';
+    msgEl.style.background = '#fef2f2'; msgEl.style.color = '#b91c1c';
+    msgEl.innerHTML = '⚠ 제품 데이터 로딩 실패: ' + esc(errMsg || '') + ' — <a href="#" id="retryLoadBtn" style="color:#b91c1c;text-decoration:underline">다시 시도</a>';
+    msgEl.style.display = 'flex';
+    input.disabled = true;
+    input.placeholder = '제품 목록을 불러오지 못했습니다';
+    var retryBtn = document.getElementById('retryLoadBtn');
+    if (retryBtn) retryBtn.onclick = function(e){ e.preventDefault(); loadProducts(); };
+  } else {
+    msgEl.style.display = 'none';
+    input.disabled = false;
+    input.placeholder = '예: CHP-7211N';
+  }
+}
+
 function loadProducts(){
+  PRODUCTS_LOADED = false;
+  setProductsLoading('loading');
   fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', cache:'no-store'})
     .then(function(r){ return r.json(); })
     .then(function(resp){
@@ -232,8 +267,10 @@ function loadProducts(){
         seenBmp[key] = true;
         BMP_PRODUCTS.push({ 모델명:p.모델명, 제품명:p.제품명, 분류:p.분류 });
       });
+      PRODUCTS_LOADED = true;
+      setProductsLoading('done');
     })
-    .catch(function(e){ alert('제품 데이터 로딩 실패: ' + e.message); });
+    .catch(function(e){ setProductsLoading('error', e.message); });
 }
 
 // 검색 결과는 제품명+모델명 기준으로 묶어서 보여줌 (약정/관리방법별로 안 쪼개짐)

@@ -658,9 +658,7 @@ function itemBmpOptions(item) {
       rentalPrice: rentalPrice,
       cashPrice: cashPrice,
       isPer: p.개당 || name.indexOf('1개당') >= 0,
-      // 할인적용은 페어링별 설정(p.할인적용: true/false/null=미설정) — 렌탈은 미설정 시 기존처럼 항상 할인대상(true),
-      // 일시불은 미설정 시 기존처럼 할인 미적용(false)이 되도록 문맥별 기본값을 다르게 적용
-      discountableRental: p.할인적용 !== false,
+      // 할인적용(페어링별 설정)은 일시불 구매에만 영향을 줌 — 렌탈 별매품은 항상 동시구매/결합 등 %할인 스택에 포함됨(calcItem() 참고).
       discountableCash: p.할인적용 === true
     });
   });

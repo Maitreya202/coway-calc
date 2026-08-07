@@ -435,7 +435,7 @@ function renderBmpLinkedList(){
         + '<label class="switch"><input type="checkbox" data-toggle-per="' + i + '"' + (link.개당?' checked':'') + '><span class="slider"></span></label></label>'
       + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;margin-right:14px">렌탈 허용'
         + '<label class="switch"><input type="checkbox" data-toggle-rental="' + i + '"' + (link.렌탈허용?' checked':'') + '><span class="slider"></span></label></label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;margin-right:14px">할인 적용'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;margin-right:14px" title="일시불 구매 시에만 적용됩니다. 렌탈은 항상 할인 스택에 포함됩니다.">일시불 할인 적용'
         + '<label class="switch"><input type="checkbox" data-toggle-disc="' + i + '"' + (link.할인적용===true?' checked':'') + '><span class="slider"></span></label></label>'
       + '<button class="btn-secondary" data-save-pairing="' + i + '" style="margin-right:8px">저장</button>'
       + '<button class="btn-secondary" data-unlink="' + i + '">연결 해제</button>'

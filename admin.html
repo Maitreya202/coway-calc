@@ -122,6 +122,10 @@ tr.row-saved td { background:#f0fdf4; }
     <div class="tbl-wrap">
       <table class="edit-tbl" id="editTable"></table>
     </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+      <button class="btn-secondary" id="saveAllBtn">변경된 행 전체 저장</button>
+      <span id="saveAllMsg" style="font-size:12px;color:#64748b"></span>
+    </div>
 
     <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid #f1f5f9">
       <p style="font-size:13px;font-weight:800;margin-bottom:8px">별매품 연결</p>
@@ -370,7 +374,44 @@ function renderTable(){
   });
 }
 
-function saveRow(ri, btn){
+document.getElementById('saveAllBtn').onclick = function(){
+  var t = document.getElementById('editTable');
+  var dirtyRis = [];
+  Array.prototype.forEach.call(t.querySelectorAll('tr[data-ri]'), function(tr){
+    if (tr.querySelector('input.dirty')) dirtyRis.push(Number(tr.dataset.ri));
+  });
+  var msgEl = document.getElementById('saveAllMsg');
+  if (!dirtyRis.length){ msgEl.textContent = '변경된 행이 없습니다'; msgEl.style.color = '#94a3b8'; return; }
+
+  var bulkBtn = this;
+  bulkBtn.disabled = true;
+  var done = 0, failed = [];
+  function next(){
+    if (done >= dirtyRis.length){
+      bulkBtn.disabled = false;
+      if (failed.length){
+        msgEl.textContent = (dirtyRis.length - failed.length) + '/' + dirtyRis.length + '개 저장, ' + failed.length + '개 실패';
+        msgEl.style.color = '#b91c1c';
+      } else {
+        msgEl.textContent = dirtyRis.length + '개 행 전체 저장 완료';
+        msgEl.style.color = '#15803d';
+      }
+      return;
+    }
+    var ri = dirtyRis[done];
+    msgEl.textContent = '저장 중... (' + (done + 1) + '/' + dirtyRis.length + ')';
+    msgEl.style.color = '#64748b';
+    var btn = t.querySelector('.row-save-btn[data-ri="' + ri + '"]');
+    saveRow(ri, btn, function(ok){
+      if (!ok) failed.push(ri);
+      done++;
+      next();
+    });
+  }
+  next();
+};
+
+function saveRow(ri, btn, onDone){
   var row = CUR_ROWS[ri];
   var tr = document.querySelector('tr[data-ri="' + ri + '"]');
   var fields = {};
@@ -392,7 +433,11 @@ function saveRow(ri, btn){
   });
 
   var msgEl = document.querySelector('.row-msg[data-ri="' + ri + '"]');
-  if (invalidField) { msgEl.textContent = invalidField + ' 값 오류'; msgEl.className = 'row-msg err'; return; }
+  if (invalidField) {
+    msgEl.textContent = invalidField + ' 값 오류'; msgEl.className = 'row-msg err';
+    if (onDone) onDone(false);
+    return;
+  }
 
   var key = { 모델명:row.모델명, 제품명:row.제품명, 관리방법:row.관리방법, 관리주기:row.관리주기, 약정년:row.약정년 };
   btn.disabled = true;
@@ -410,12 +455,15 @@ function saveRow(ri, btn){
           return p.모델명===key.모델명 && p.제품명===key.제품명 && p.관리방법===key.관리방법 && p.관리주기===key.관리주기 && p.약정년===key.약정년;
         });
         if (idx>=0) Object.assign(PRODUCTS[idx], fields, toggleFields);
+        if (onDone) onDone(true);
       } else {
         msgEl.textContent = resp.error || '저장 실패'; msgEl.className = 'row-msg err';
+        if (onDone) onDone(false);
       }
     })
     .catch(function(e){
       btn.disabled = false;
+      if (onDone) onDone(false);
       msgEl.textContent = '연결 실패: ' + e.message; msgEl.className = 'row-msg err';
     });
 }

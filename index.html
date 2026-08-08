@@ -1263,7 +1263,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
 function bmpOptPreviewLabel(o) {
   if (o.hasRental && o.hasCash) return '렌탈/일시불 선택 가능';
   if (o.hasRental) return '+' + won(o.rentalPrice) + '/월';
-  return o.isFreeCash ? '무료 증정' : '+' + won(o.cashPrice) + ' 일시불';
+  return o.isFreeCash ? '무료' : '+' + won(o.cashPrice) + ' 일시불';
 }
 function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
   var slots = item.별매품슬롯 || ['', ''];

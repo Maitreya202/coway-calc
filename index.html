@@ -635,9 +635,10 @@ function itemBmpOptions(item) {
     var rentalRow = p.렌탈허용 ? PRODUCTS.find(function(r) {
       return r.모델명 === p.모델명 && r.약정년 === item.약정년 && (r.정상가 > 0 || r.프로모션 > 0 || r.재렌탈 > 0);
     }) : null;
-    var cashRow = PRODUCTS.find(function(r) {
-      return r.모델명 === p.모델명 && r.정상가 <= 0 && r.프로모션 <= 0 && r.재렌탈 <= 0 && r.일시불 > 0;
-    });
+    // 렌탈허용=N인 페어링은 렌탈가 필드 값과 무관하게(같은 행에 렌탈가가 남아있어도) 일시불가만 보면 됨
+    var cashRow = p.렌탈허용
+      ? PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.정상가 <= 0 && r.프로모션 <= 0 && r.재렌탈 <= 0 && r.일시불 > 0; })
+      : PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.일시불 > 0; });
     if (!rentalRow && !cashRow) return;
 
     var rentalPrice = 0;
@@ -647,6 +648,8 @@ function itemBmpOptions(item) {
       rentalPrice = (item.isRerental && rentalRow.재렌탈 > 0) ? rentalRow.재렌탈 : (priceNew || 0);
     }
     var cashPrice = cashRow ? (cashRow.일시불 || 0) : 0;
+    // 렌탈 행 자체에 일시불가가 같이 채워진 경우(약정년별로 렌탈+일시불을 동시에 파는 케이스)도 일시불 옵션으로 인정
+    if (!cashPrice && rentalRow && rentalRow.일시불 > 0) cashPrice = rentalRow.일시불;
     var name = (rentalRow || cashRow).제품명;
 
     opts.push({

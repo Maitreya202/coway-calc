@@ -636,9 +636,10 @@ function itemBmpOptions(item) {
       return r.모델명 === p.모델명 && r.약정년 === item.약정년 && (r.정상가 > 0 || r.프로모션 > 0 || r.재렌탈 > 0);
     }) : null;
     // 렌탈허용=N인 페어링은 렌탈가 필드 값과 무관하게(같은 행에 렌탈가가 남아있어도) 일시불가만 보면 됨
+    // 일시불가 0원은 "값 없음"이 아니라 "무료 사은품"일 수 있으므로(예: 배수물통, 받침대) >0이 아니라 존재 여부로 매칭
     var cashRow = p.렌탈허용
-      ? PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.정상가 <= 0 && r.프로모션 <= 0 && r.재렌탈 <= 0 && r.일시불 > 0; })
-      : PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.일시불 > 0; });
+      ? PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.정상가 <= 0 && r.프로모션 <= 0 && r.재렌탈 <= 0 && r.일시불 >= 0; })
+      : PRODUCTS.find(function(r) { return r.모델명 === p.모델명 && r.일시불 >= 0; });
     if (!rentalRow && !cashRow) return;
 
     var rentalPrice = 0;
@@ -647,9 +648,10 @@ function itemBmpOptions(item) {
       var priceNew = hasPromoBmp ? rentalRow.프로모션 : rentalRow.정상가;
       rentalPrice = (item.isRerental && rentalRow.재렌탈 > 0) ? rentalRow.재렌탈 : (priceNew || 0);
     }
-    var cashPrice = cashRow ? (cashRow.일시불 || 0) : 0;
+    var cashPrice = 0, hasCash = false;
+    if (cashRow) { cashPrice = cashRow.일시불 || 0; hasCash = true; }
     // 렌탈 행 자체에 일시불가가 같이 채워진 경우(약정년별로 렌탈+일시불을 동시에 파는 케이스)도 일시불 옵션으로 인정
-    if (!cashPrice && rentalRow && rentalRow.일시불 > 0) cashPrice = rentalRow.일시불;
+    else if (rentalRow && rentalRow.일시불 > 0) { cashPrice = rentalRow.일시불; hasCash = true; }
     var name = (rentalRow || cashRow).제품명;
 
     opts.push({
@@ -657,9 +659,10 @@ function itemBmpOptions(item) {
       name: name,
       model: p.모델명,
       hasRental: rentalPrice > 0,
-      hasCash: cashPrice > 0,
+      hasCash: hasCash,
       rentalPrice: rentalPrice,
       cashPrice: cashPrice,
+      isFreeCash: hasCash && cashPrice === 0,
       isPer: p.개당 || name.indexOf('1개당') >= 0,
       // 할인적용(페어링별 설정)은 일시불 구매에만 영향을 줌 — 렌탈 별매품은 항상 동시구매/결합 등 %할인 스택에 포함됨(calcItem() 참고).
       discountableCash: p.할인적용 === true
@@ -1260,7 +1263,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
 function bmpOptPreviewLabel(o) {
   if (o.hasRental && o.hasCash) return '렌탈/일시불 선택 가능';
   if (o.hasRental) return '+' + won(o.rentalPrice) + '/월';
-  return '+' + won(o.cashPrice) + ' 일시불';
+  return o.isFreeCash ? '무료 증정' : '+' + won(o.cashPrice) + ' 일시불';
 }
 function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
   var slots = item.별매품슬롯 || ['', ''];
@@ -1291,7 +1294,7 @@ function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
         var offStyle = pillStyle + 'border:2px solid #86efac;background:white;color:#15803d';
         h += '<div style="display:flex;gap:6px;padding-left:4px;margin-bottom:4px">'
           + '<button style="' + (mode === 'rental' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'rental\')">렌탈 +' + won(o.rentalPrice) + '/월</button>'
-          + '<button style="' + (mode === 'cash' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'cash\')">일시불 +' + won(o.cashPrice) + '</button>'
+          + '<button style="' + (mode === 'cash' ? onStyle : offStyle) + '" onclick="setBmpMode(' + idx + ',' + keyJs + ',\'cash\')">' + (o.isFreeCash ? '일시불 무료' : '일시불 +' + won(o.cashPrice)) + '</button>'
           + '</div>';
       }
       if (o.isPer) {
@@ -1302,7 +1305,7 @@ function renderBmpSlot(item, idx, bmpOptsUI, slotIdx) {
           + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt || 1) - 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">&#8722;</button>'
           + '<span style="font-size:13px;font-weight:800;color:#15803d;min-width:24px;text-align:center">' + (sel.cnt || 1) + '</span>'
           + '<button onclick="setBmpCnt(' + idx + ',' + keyJs + ',' + ((sel.cnt || 1) + 1) + ')" style="background:none;border:none;width:28px;height:28px;font-size:16px;cursor:pointer;color:#15803d;font-weight:700">＋</button></div>'
-          + '<span style="font-size:11px;color:#15803d">' + (sel.cnt || 1) + '개 &times; ' + won(price) + ' = <strong>' + won(price * (sel.cnt || 1)) + ' ' + lineLabel + '</strong></span></div>';
+          + '<span style="font-size:11px;color:#15803d">' + (mode === 'cash' && o.isFreeCash ? (sel.cnt || 1) + '개 &times; 무료 = <strong>0원 ' + lineLabel + '</strong>' : (sel.cnt || 1) + '개 &times; ' + won(price) + ' = <strong>' + won(price * (sel.cnt || 1)) + ' ' + lineLabel + '</strong>') + '</span></div>';
       }
     }
   }

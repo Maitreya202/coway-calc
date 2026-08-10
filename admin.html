@@ -95,6 +95,8 @@ tr.row-saved td { background:#f0fdf4; }
     </label>
     <div id="searchResults"></div>
     <button class="btn-secondary" id="showBulkBtn" style="margin-top:14px">📥 엑셀로 일괄 등록/업데이트</button>
+    <button class="btn-secondary" id="cleanupTasabBtn" style="margin-top:8px">🧹 타사보상 0원 토글 정리</button>
+    <div id="cleanupTasabMsg"></div>
   </div>
 
   <!-- 엑셀 일괄 등록/업데이트 -->
@@ -658,6 +660,21 @@ var BULK_ROWS = [];
 document.getElementById('showBulkBtn').onclick = function(){
   document.getElementById('searchView').classList.add('hidden');
   document.getElementById('bulkView').classList.remove('hidden');
+};
+document.getElementById('cleanupTasabBtn').onclick = function(){
+  if (!confirm('타사보상렌탈/타사보상일시불이 둘 다 0원인 모든 행의 타사보상사용/타사보상일시불사용을 N으로 바꿉니다.\n시트에 바로 반영됩니다. 계속할까요?')) return;
+  var btn = this;
+  btn.disabled = true;
+  showMsg('cleanupTasabMsg', '', true);
+  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'cleanupZeroTasabToggles', password:ADMIN_PW})})
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      btn.disabled = false;
+      if (res.error) { showMsg('cleanupTasabMsg', '실패: ' + res.error, false); return; }
+      showMsg('cleanupTasabMsg', res.scanned + '개 행 중 ' + res.updated + '개 행의 토글을 N으로 정리했습니다.', true);
+      if (res.updated > 0) loadProducts();
+    })
+    .catch(function(e){ btn.disabled = false; showMsg('cleanupTasabMsg', '실패: ' + e.message, false); });
 };
 document.getElementById('bulkBackBtn').onclick = function(){
   document.getElementById('bulkView').classList.add('hidden');

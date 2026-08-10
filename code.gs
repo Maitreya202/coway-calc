@@ -77,6 +77,9 @@ function doPost(e) {
     if (action === 'bulkUpsertProducts') {
       return _json(_bulkUpsertProducts(body));
     }
+    if (action === 'cleanupZeroTasabToggles') {
+      return _json(_cleanupZeroTasabToggles(body));
+    }
     return _json({error: 'unknown action'});
   } catch(err) {
     return _json({error: err.message});
@@ -309,6 +312,57 @@ function _bulkUpsertProducts(body) {
 
   CacheService.getScriptCache().remove('appData');
   return {ok: true, results: results};
+}
+
+// 타사보상렌탈/타사보상일시불이 둘 다 0(또는 빈칸)인 행은 타사보상사용/타사보상일시불사용도 N으로 맞춰준다.
+// admin.html "타사보상 0원 토글 정리" 버튼에서 호출 — 이미 가격을 0으로 만들어둔 기존 행들을 한 번에 정리하는 용도.
+function _cleanupZeroTasabToggles(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return {error: '시트를 찾을 수 없음: "' + SHEET_NAME + '"'};
+
+  var colMap = _headerColMap(sheet);
+  var required = ['타사보상렌탈', '타사보상일시불', '타사보상사용', '타사보상일시불사용'];
+  for (var i = 0; i < required.length; i++) {
+    if (!colMap[required[i]]) return {error: '"' + FIELD_HEADERS[required[i]] + '" 헤더 컬럼을 시트에서 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < HEADER_ROW + 1) return {ok: true, updated: 0, scanned: 0};
+
+  var lastCol = sheet.getLastColumn();
+  var numRows = lastRow - HEADER_ROW;
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, numRows, lastCol).getValues();
+
+  var rentalCol = colMap.타사보상렌탈, cashCol = colMap.타사보상일시불;
+  var onCol = colMap.타사보상사용, cashOnCol = colMap.타사보상일시불사용;
+
+  var onColVals = [], cashOnColVals = [];
+  var changed = 0;
+  raw.forEach(function(row) {
+    var rental = toNum(row[rentalCol - 1]);
+    var cash = toNum(row[cashCol - 1]);
+    var curOn = String(row[onCol - 1] || '').trim().toUpperCase();
+    var curCashOn = String(row[cashOnCol - 1] || '').trim().toUpperCase();
+    if (rental === 0 && cash === 0) {
+      if (curOn !== 'N' || curCashOn !== 'N') changed++;
+      onColVals.push(['N']);
+      cashOnColVals.push(['N']);
+    } else {
+      onColVals.push([row[onCol - 1]]);
+      cashOnColVals.push([row[cashOnCol - 1]]);
+    }
+  });
+
+  if (changed > 0) {
+    sheet.getRange(HEADER_ROW + 1, onCol, numRows, 1).setValues(onColVals);
+    sheet.getRange(HEADER_ROW + 1, cashOnCol, numRows, 1).setValues(cashOnColVals);
+    CacheService.getScriptCache().remove('appData');
+  }
+
+  return {ok: true, updated: changed, scanned: numRows};
 }
 
 // doGet에서도 clearCache 처리 추가

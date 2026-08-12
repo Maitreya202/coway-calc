@@ -139,7 +139,10 @@ tr.row-saved td { background:#f0fdf4; }
 
   <!-- 표 편집 -->
   <div id="tableView" class="card hidden">
-    <button class="back-link" id="backBtn">&larr; 검색으로</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+      <button class="back-link" id="backBtn" style="margin-bottom:0">&larr; 검색으로</button>
+      <button class="btn-secondary" id="tableRefreshBtn">🔄 새로고침</button>
+    </div>
     <div class="identity" id="identityBox"></div>
     <div class="tbl-wrap">
       <table class="edit-tbl" id="editTable"></table>
@@ -181,6 +184,7 @@ var ADMIN_PW = null; // 메모리에만 보관, localStorage/sessionStorage 저�
 var PRODUCTS = [];
 var CUR_ROWS = []; // 현재 표에 펼쳐진 행들(제품명+모델명 일치)
 var CUR_MODEL = ''; // 현재 표가 열려있는 메인 제품의 모델명 (별매품 연결 대상)
+var CUR_GROUP = null; // 현재 표가 열려있는 그룹({제품명,모델명,분류}) — 새로고침 시 openTable() 재호출용
 var BMP_PAIRINGS = {}; // {대상모델명: [{모델명:별매품모델명, 개당:bool}]}
 var BMP_PRODUCTS = []; // 제품군(s)="별매품"으로 등록된 제품 목록 (모델명+제품명 단위로 중복 제거)
 
@@ -283,7 +287,8 @@ function setProductsLoading(state, errMsg){
 }
 
 var LOAD_PRODUCTS_MAX_RETRIES = 2;
-function loadProducts(attempt){
+// onDone(ok, errMsg) — 검색 화면 외부(예: 표 화면 새로고침)에서 로딩 완료 시점을 알아야 할 때 사용
+function loadProducts(attempt, onDone){
   attempt = attempt || 0;
   PRODUCTS_LOADED = false;
   setProductsLoading('loading');
@@ -309,13 +314,15 @@ function loadProducts(attempt){
       });
       PRODUCTS_LOADED = true;
       setProductsLoading('done');
+      if (onDone) onDone(true);
     })
     .catch(function(e){
       if (attempt < LOAD_PRODUCTS_MAX_RETRIES) {
-        setTimeout(function(){ loadProducts(attempt + 1); }, 700 * (attempt + 1));
+        setTimeout(function(){ loadProducts(attempt + 1, onDone); }, 700 * (attempt + 1));
         return;
       }
       setProductsLoading('error', e.message);
+      if (onDone) onDone(false, e.message);
     });
 }
 
@@ -368,6 +375,7 @@ function openTable(g){
       return (a.관리방법||'').localeCompare(b.관리방법||'') || (a.관리주기||'').localeCompare(b.관리주기||'') || (a.약정년-b.약정년);
     });
   CUR_MODEL = g.모델명;
+  CUR_GROUP = g;
   document.getElementById('identityBox').innerHTML = '<b>' + esc(g.제품명) + '</b> · ' + esc(g.모델명) + ' · ' + esc(g.분류) + ' · 총 ' + CUR_ROWS.length + '개 행';
   renderTable();
   document.getElementById('bmpSearchInput').value = '';
@@ -380,6 +388,26 @@ function openTable(g){
 document.getElementById('backBtn').onclick = function(){
   document.getElementById('tableView').classList.add('hidden');
   document.getElementById('searchView').classList.remove('hidden');
+};
+
+// 다른 탭/이전 요청 등으로 시트가 바뀌었는데 이 화면은 로그인 시점 데이터를 그대로 들고 있어서
+// "이미 연결되어 있습니다" 같은 어긋남이 날 때 수동으로 최신 데이터를 다시 받아 같은 표를 다시 그림
+document.getElementById('tableRefreshBtn').onclick = function(){
+  if (document.querySelectorAll('#editTable input.dirty').length &&
+      !confirm('저장하지 않은 변경 사항이 있습니다. 새로고침하면 사라집니다. 계속할까요?')) return;
+  var btn = this;
+  var group = CUR_GROUP;
+  btn.disabled = true;
+  btn.textContent = '새로고침 중...';
+  loadProducts(0, function(ok, errMsg){
+    btn.disabled = false;
+    btn.textContent = '🔄 새로고침';
+    if (ok) {
+      openTable(group);
+    } else {
+      alert('새로고침 실패: ' + (errMsg || ''));
+    }
+  });
 };
 
 function renderTable(){

@@ -164,6 +164,19 @@ tr.row-saved td { background:#f0fdf4; }
 <script src="assets/xlsx.full.min.js"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
+// GAS 웹앱은 콜드스타트/일시적 지연으로 가끔 응답이 씹히거나(net::ERR → "Failed to fetch") HTML 오류 페이지를
+// JSON 대신 돌려줄 때(→ "Unexpected token '<'")가 있음 — 서버(doPost)는 이미 실행/반영됐는데 클라이언트만 응답을
+// 못 받는 경우가 대부분이라, 저장류 POST는 여기서 최대 2회 자동 재시도 후에도 실패하면 에러로 표시함.
+function postGas(bodyObj, attempt){
+  attempt = attempt || 0;
+  return fetch(GAS_URL, {method:'POST', body: JSON.stringify(bodyObj)})
+    .then(function(r){ return r.json(); })
+    .catch(function(e){
+      if (attempt >= 2) throw e;
+      return new Promise(function(resolve){ setTimeout(resolve, 700 * (attempt + 1)); })
+        .then(function(){ return postGas(bodyObj, attempt + 1); });
+    });
+}
 var ADMIN_PW = null; // 메모리에만 보관, localStorage/sessionStorage 저장 안 함 — 새로고침하면 다시 입력 필요
 var PRODUCTS = [];
 var CUR_ROWS = []; // 현재 표에 펼쳐진 행들(제품명+모델명 일치)
@@ -223,8 +236,7 @@ document.getElementById('loginBtn').onclick = function(){
   var pw = document.getElementById('pwInput').value;
   if (!pw) return;
   this.disabled = true;
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'adminAuth', password:pw})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'adminAuth', password:pw})
     .then(function(resp){
       document.getElementById('loginBtn').disabled = false;
       if (resp.ok){
@@ -464,8 +476,7 @@ function saveRow(ri, btn, onDone){
   var key = { 모델명:row.모델명, 제품명:row.제품명, 관리방법:row.관리방법, 관리주기:row.관리주기, 약정년:row.약정년 };
   btn.disabled = true;
   msgEl.textContent = '저장 중...'; msgEl.className = 'row-msg';
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'updateProduct', password:ADMIN_PW, key:key, fields:fields})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'updateProduct', password:ADMIN_PW, key:key, fields:fields})
     .then(function(resp){
       btn.disabled = false;
       if (resp.ok){
@@ -612,8 +623,7 @@ function saveCashRow(ri, btn, onDone){
     var p = matches[i];
     var key = { 모델명:p.모델명, 제품명:p.제품명, 관리방법:p.관리방법, 관리주기:p.관리주기, 약정년:p.약정년 };
     msgEl.textContent = '저장 중... (' + (i+1) + '/' + matches.length + ')'; msgEl.className = 'row-msg';
-    fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'updateProduct', password:ADMIN_PW, key:key, fields:fields})})
-      .then(function(r){ return r.json(); })
+    postGas({action:'updateProduct', password:ADMIN_PW, key:key, fields:fields})
       .then(function(resp){
         if (resp.ok) Object.assign(p, fields);
         else failed++;
@@ -719,8 +729,7 @@ function saveBmpPairing(link, fields, btn){
   body.개당 = fields.개당;
   body.렌탈허용 = fields.렌탈허용;
   body.할인적용 = fields.할인적용;
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify(body)})
-    .then(function(r){ return r.json(); })
+  postGas(body)
     .then(function(resp){
       btn.disabled = false;
       btn.textContent = origText;
@@ -797,8 +806,7 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
       }
       var s = rowSettings(selIdx[done]);
       msgEl.textContent = '연결 중... (' + (done + 1) + '/' + selIdx.length + ')';
-      fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:s.model, 개당:s.per, 렌탈허용:s.rentalOk, 할인적용:s.discOk})})
-        .then(function(r){ return r.json(); })
+      postGas({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:s.model, 개당:s.per, 렌탈허용:s.rentalOk, 할인적용:s.discOk})
         .then(function(resp){
           if (resp.ok){
             if (!BMP_PAIRINGS[CUR_MODEL]) BMP_PAIRINGS[CUR_MODEL] = [];
@@ -821,8 +829,7 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
 
 function linkBmp(bmpModel, isPer, rentalOk, discOk, btn, clearAfter){
   btn.disabled = true;
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk, 할인적용:discOk})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk, 할인적용:discOk})
     .then(function(resp){
       btn.disabled = false;
       if (resp.ok){
@@ -842,8 +849,7 @@ function linkBmp(bmpModel, isPer, rentalOk, discOk, btn, clearAfter){
 
 function unlinkBmp(bmpModel, btn){
   btn.disabled = true;
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'removeBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'removeBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel})
     .then(function(resp){
       btn.disabled = false;
       if (resp.ok){
@@ -870,8 +876,7 @@ document.getElementById('cleanupTasabBtn').onclick = function(){
   var btn = this;
   btn.disabled = true;
   showMsg('cleanupTasabMsg', '', true);
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'cleanupZeroTasabToggles', password:ADMIN_PW})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'cleanupZeroTasabToggles', password:ADMIN_PW})
     .then(function(res){
       btn.disabled = false;
       if (res.error) { showMsg('cleanupTasabMsg', '실패: ' + res.error, false); return; }
@@ -1032,8 +1037,7 @@ document.getElementById('bulkApplyBtn').onclick = function(){
   });
   btn.disabled = true;
   btn.textContent = '적용 중...';
-  fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'bulkUpsertProducts', password:ADMIN_PW, rows:rowsToSend})})
-    .then(function(r){ return r.json(); })
+  postGas({action:'bulkUpsertProducts', password:ADMIN_PW, rows:rowsToSend})
     .then(function(resp){
       btn.disabled = false;
       if (!resp.ok) { btn.textContent = '적용 (' + BULK_ROWS.length + '행)'; showMsg('bulkMsg', resp.error || '적용 실패', false); return; }

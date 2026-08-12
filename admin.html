@@ -844,9 +844,10 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
       msgEl.textContent = '연결 중... (' + (done + 1) + '/' + selIdx.length + ')';
       postGas({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:s.model, 개당:s.per, 렌탈허용:s.rentalOk, 할인적용:s.discOk})
         .then(function(resp){
-          if (resp.ok){
+          if (resp.ok || resp.error === ALREADY_LINKED_ERR){
             if (!BMP_PAIRINGS[CUR_MODEL]) BMP_PAIRINGS[CUR_MODEL] = [];
-            BMP_PAIRINGS[CUR_MODEL].push({ 모델명:s.model, 개당:s.per, 렌탈허용:s.rentalOk, 할인적용:s.discOk });
+            var already = BMP_PAIRINGS[CUR_MODEL].some(function(l){ return l.모델명 === s.model; });
+            if (!already) BMP_PAIRINGS[CUR_MODEL].push({ 모델명:s.model, 개당:s.per, 렌탈허용:s.rentalOk, 할인적용:s.discOk });
           } else {
             failed.push(s.model + '(' + (resp.error || '실패') + ')');
           }
@@ -863,14 +864,19 @@ document.getElementById('bmpSearchInput').addEventListener('input', function(){
   };
 });
 
+// postGas의 자동 재시도가 "실제로는 성공했지만 응답을 못 받은" 요청을 한 번 더 보내면, 서버는 중복으로 보고
+// "이미 연결되어 있습니다" 에러를 정상 반환함 — 이건 실패가 아니라 원하는 상태(연결됨)에 이미 도달한 것이므로
+// 실패로 취급하지 않고 로컬 목록에도 반영해줌(안 그러면 새로고침 전까지 화면에서 누락되어 보임).
+var ALREADY_LINKED_ERR = '이미 연결되어 있습니다';
 function linkBmp(bmpModel, isPer, rentalOk, discOk, btn, clearAfter){
   btn.disabled = true;
   postGas({action:'addBmpPairing', password:ADMIN_PW, 모델명:CUR_MODEL, 별매품모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk, 할인적용:discOk})
     .then(function(resp){
       btn.disabled = false;
-      if (resp.ok){
+      if (resp.ok || resp.error === ALREADY_LINKED_ERR){
         if (!BMP_PAIRINGS[CUR_MODEL]) BMP_PAIRINGS[CUR_MODEL] = [];
-        BMP_PAIRINGS[CUR_MODEL].push({ 모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk, 할인적용:discOk });
+        var already = BMP_PAIRINGS[CUR_MODEL].some(function(l){ return l.모델명 === bmpModel; });
+        if (!already) BMP_PAIRINGS[CUR_MODEL].push({ 모델명:bmpModel, 개당:isPer, 렌탈허용:rentalOk, 할인적용:discOk });
         if (clearAfter){
           document.getElementById('bmpSearchInput').value = '';
           document.getElementById('bmpSearchResults').innerHTML = '';

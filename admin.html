@@ -282,7 +282,9 @@ function setProductsLoading(state, errMsg){
   }
 }
 
-function loadProducts(){
+var LOAD_PRODUCTS_MAX_RETRIES = 2;
+function loadProducts(attempt){
+  attempt = attempt || 0;
   PRODUCTS_LOADED = false;
   setProductsLoading('loading');
   fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', cache:'no-store'})
@@ -308,7 +310,13 @@ function loadProducts(){
       PRODUCTS_LOADED = true;
       setProductsLoading('done');
     })
-    .catch(function(e){ setProductsLoading('error', e.message); });
+    .catch(function(e){
+      if (attempt < LOAD_PRODUCTS_MAX_RETRIES) {
+        setTimeout(function(){ loadProducts(attempt + 1); }, 700 * (attempt + 1));
+        return;
+      }
+      setProductsLoading('error', e.message);
+    });
 }
 
 // 검색 결과는 제품명+모델명 기준으로 묶어서 보여줌 (약정/관리방법별로 안 쪼개짐)

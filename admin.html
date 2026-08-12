@@ -95,6 +95,7 @@ tr.row-saved td { background:#f0fdf4; }
     </label>
     <div id="searchResults"></div>
     <button class="btn-secondary" id="showBulkBtn" style="margin-top:14px">📥 엑셀로 일괄 등록/업데이트</button>
+    <button class="btn-secondary" id="showCashBtn" style="margin-top:8px">💰 일시불가 관리</button>
     <button class="btn-secondary" id="cleanupTasabBtn" style="margin-top:8px">🧹 타사보상 0원 토글 정리</button>
     <div id="cleanupTasabMsg"></div>
   </div>
@@ -115,6 +116,25 @@ tr.row-saved td { background:#f0fdf4; }
       <table class="edit-tbl" id="bulkPreviewTable"></table>
     </div>
     <button class="btn-primary" id="bulkApplyBtn" style="margin-top:14px;display:none">적용</button>
+  </div>
+
+  <!-- 일시불가 관리 -->
+  <div id="cashView" class="card hidden">
+    <button class="back-link" id="cashBackBtn">&larr; 검색으로</button>
+    <p style="font-size:13px;font-weight:800;margin-bottom:8px">일시불가 관리</p>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px">전체 제품의 일시불가/타사보상 일시불가를 한 화면에서 조회·수정하고 엑셀로 내보낼 수 있습니다.</p>
+    <label class="field" style="margin-bottom:10px">
+      <span class="lbl">모델명 또는 제품명 필터</span>
+      <input type="text" id="cashFilterInput" placeholder="비워두면 전체 표시">
+    </label>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn-secondary" id="cashExportBtn">📤 엑셀로 다운로드</button>
+      <button class="btn-secondary" id="cashSaveAllBtn">변경된 행 전체 저장</button>
+      <span id="cashSaveAllMsg" style="font-size:12px;color:#64748b"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="edit-tbl" id="cashTable"></table>
+    </div>
   </div>
 
   <!-- 표 편집 -->
@@ -469,6 +489,190 @@ function saveRow(ri, btn, onDone){
       msgEl.textContent = '연결 실패: ' + e.message; msgEl.className = 'row-msg err';
     });
 }
+
+// ── 일시불가 관리 ──────────────────────────────────────────────
+// 일시불/타사보상일시불은 약정(관리방법/관리주기/약정년)에 안 걸리는 값 — 모델당 하나만 보여주고 저장 시
+// 그 모델명+제품명에 해당하는 제품DB의 모든 행(관리방법×관리주기×약정년 조합 전부)에 동일하게 반영함.
+var CASH_COLS = [
+  {f:'제품명', label:'제품명', id:true},
+  {f:'모델명', label:'모델명', id:true},
+  {f:'일시불', label:'일시불가', num:true},
+  {f:'타사보상일시불', label:'타사보상 일시불', num:true}
+];
+var CASH_EDITABLE_NUM = ['일시불','타사보상일시불'];
+var CASH_ROWS = []; // 모델명+제품명 단위로 묶은 대표 행
+
+document.getElementById('showCashBtn').onclick = function(){
+  document.getElementById('searchView').classList.add('hidden');
+  document.getElementById('cashView').classList.remove('hidden');
+  document.getElementById('cashFilterInput').value = '';
+  renderCashTable();
+};
+document.getElementById('cashBackBtn').onclick = function(){
+  document.getElementById('cashView').classList.add('hidden');
+  document.getElementById('searchView').classList.remove('hidden');
+};
+document.getElementById('cashFilterInput').addEventListener('input', function(){ renderCashTable(); });
+
+function cashGroupedRows(){
+  var seen = {}, list = [];
+  PRODUCTS.forEach(function(p){
+    var key = p.모델명 + '|' + p.제품명;
+    if (seen[key]) return;
+    seen[key] = true;
+    list.push({ 제품명:p.제품명, 모델명:p.모델명, 분류:p.분류, 일시불:p.일시불||0, 타사보상일시불:p.타사보상일시불||0 });
+  });
+  list.sort(function(a,b){ return (a.제품명||'').localeCompare(b.제품명) || (a.모델명||'').localeCompare(b.모델명); });
+  return list;
+}
+
+function cashFilteredRows(){
+  var q = document.getElementById('cashFilterInput').value.trim();
+  var grouped = cashGroupedRows();
+  if (!q) return grouped;
+  return searchRank(grouped, q, function(p){ return { name:p.제품명, model:p.모델명, extra:p.분류 }; });
+}
+
+function renderCashTable(){
+  CASH_ROWS = cashFilteredRows();
+  var t = document.getElementById('cashTable');
+  var h = '<thead><tr>';
+  CASH_COLS.forEach(function(c){ h += '<th>' + esc(c.label) + '</th>'; });
+  h += '<th></th></tr></thead><tbody>';
+  CASH_ROWS.forEach(function(row, ri){
+    h += '<tr data-ri="' + ri + '">';
+    CASH_COLS.forEach(function(c){
+      var v = row[c.f];
+      if (c.id) {
+        h += '<td class="id-col">' + esc(v||'-') + '</td>';
+      } else {
+        h += '<td><input type="number" data-f="' + c.f + '" value="' + esc(v||0) + '"></td>';
+      }
+    });
+    h += '<td><button class="row-save-btn" data-ri="' + ri + '">저장</button><div class="row-msg" data-ri="' + ri + '"></div></td>';
+    h += '</tr>';
+  });
+  h += '</tbody>';
+  t.innerHTML = h;
+
+  Array.prototype.forEach.call(t.querySelectorAll('input[data-f]'), function(inp){
+    inp.addEventListener('input', function(){ inp.classList.add('dirty'); });
+    inp.addEventListener('change', function(){ inp.classList.add('dirty'); });
+  });
+  Array.prototype.forEach.call(t.querySelectorAll('.row-save-btn'), function(btn){
+    btn.onclick = function(){ saveCashRow(Number(this.dataset.ri), this); };
+  });
+}
+
+// 이 모델의 관리방법×관리주기×약정년 조합 행 전부에 동일한 일시불가를 반영(순차 저장)
+function saveCashRow(ri, btn, onDone){
+  var row = CASH_ROWS[ri];
+  var tr = document.querySelector('#cashTable tr[data-ri="' + ri + '"]');
+  var fields = {};
+  var invalidField = null;
+
+  CASH_EDITABLE_NUM.forEach(function(f){
+    var inp = tr.querySelector('input[data-f="' + f + '"]');
+    if (!inp) return;
+    var v = Number(inp.value);
+    if (!isFinite(v) || v < 0) { invalidField = f; return; }
+    fields[f] = v;
+  });
+
+  var msgEl = document.querySelector('#cashTable .row-msg[data-ri="' + ri + '"]');
+  if (invalidField) {
+    msgEl.textContent = invalidField + ' 값 오류'; msgEl.className = 'row-msg err';
+    if (onDone) onDone(false);
+    return;
+  }
+
+  var matches = PRODUCTS.filter(function(p){ return p.모델명===row.모델명 && p.제품명===row.제품명; });
+  if (!matches.length) {
+    msgEl.textContent = '해당 모델의 행을 찾을 수 없습니다'; msgEl.className = 'row-msg err';
+    if (onDone) onDone(false);
+    return;
+  }
+
+  btn.disabled = true;
+  var i = 0, failed = 0;
+  function next(){
+    if (i >= matches.length){
+      btn.disabled = false;
+      if (failed){
+        msgEl.textContent = (matches.length - failed) + '/' + matches.length + '개 행 저장, ' + failed + '개 실패'; msgEl.className = 'row-msg err';
+      } else {
+        msgEl.textContent = matches.length + '개 행 저장 완료(관리방법/관리주기/약정 조합 전체)'; msgEl.className = 'row-msg ok';
+        tr.classList.add('row-saved');
+        Array.prototype.forEach.call(tr.querySelectorAll('input.dirty'), function(inp){ inp.classList.remove('dirty'); });
+      }
+      Object.assign(row, fields);
+      if (onDone) onDone(failed===0);
+      return;
+    }
+    var p = matches[i];
+    var key = { 모델명:p.모델명, 제품명:p.제품명, 관리방법:p.관리방법, 관리주기:p.관리주기, 약정년:p.약정년 };
+    msgEl.textContent = '저장 중... (' + (i+1) + '/' + matches.length + ')'; msgEl.className = 'row-msg';
+    fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'updateProduct', password:ADMIN_PW, key:key, fields:fields})})
+      .then(function(r){ return r.json(); })
+      .then(function(resp){
+        if (resp.ok) Object.assign(p, fields);
+        else failed++;
+        i++; next();
+      })
+      .catch(function(){ failed++; i++; next(); });
+  }
+  next();
+}
+
+document.getElementById('cashSaveAllBtn').onclick = function(){
+  var t = document.getElementById('cashTable');
+  var dirtyRis = [];
+  Array.prototype.forEach.call(t.querySelectorAll('tr[data-ri]'), function(tr){
+    if (tr.querySelector('input.dirty')) dirtyRis.push(Number(tr.dataset.ri));
+  });
+  var msgEl = document.getElementById('cashSaveAllMsg');
+  if (!dirtyRis.length){ msgEl.textContent = '변경된 행이 없습니다'; msgEl.style.color = '#94a3b8'; return; }
+
+  var bulkBtn = this;
+  bulkBtn.disabled = true;
+  var done = 0, failed = [];
+  function next(){
+    if (done >= dirtyRis.length){
+      bulkBtn.disabled = false;
+      if (failed.length){
+        msgEl.textContent = (dirtyRis.length - failed.length) + '/' + dirtyRis.length + '개 저장, ' + failed.length + '개 실패';
+        msgEl.style.color = '#b91c1c';
+      } else {
+        msgEl.textContent = dirtyRis.length + '개 행 전체 저장 완료';
+        msgEl.style.color = '#15803d';
+      }
+      return;
+    }
+    var ri = dirtyRis[done];
+    msgEl.textContent = '저장 중... (' + (done + 1) + '/' + dirtyRis.length + ')';
+    msgEl.style.color = '#64748b';
+    var btn = t.querySelector('.row-save-btn[data-ri="' + ri + '"]');
+    saveCashRow(ri, btn, function(ok){
+      if (!ok) failed.push(ri);
+      done++;
+      next();
+    });
+  }
+  next();
+};
+
+document.getElementById('cashExportBtn').onclick = function(){
+  var rows = CASH_ROWS.map(function(p){
+    return { 제품명: p.제품명, 모델명: p.모델명, 일시불가: p.일시불 || 0, '타사보상 일시불가': p.타사보상일시불 || 0 };
+  });
+  if (!rows.length){ alert('내보낼 행이 없습니다'); return; }
+  var ws = XLSX.utils.json_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '일시불가');
+  var d = new Date();
+  var stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb, '일시불가_' + stamp + '.xlsx');
+};
 
 // ── 별매품 연결 ──────────────────────────────────────────────
 // 별매품페어링 시트는 "메인모델 ↔ 별매품모델" 연결 관계만 저장함(가격은 그 별매품 자신의 제품DB 행을 그대로 씀).

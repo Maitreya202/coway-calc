@@ -2,7 +2,9 @@
 
 ## 프로젝트 구조
 
-- **프론트엔드**: `index.html` (HTML/CSS/JS 단일 파일)
+- **프론트엔드**: `index.html` (HTML/CSS/JS 단일 파일, 모바일 전용 — 폭 480px 고정, `.wrap`/`.quote-inner`/`.main-tabbar`)
+- **PC 버전**: `pc.html` (2026-08-12~) — `index.html`을 통째로 복사한 파일. **CSS 폭 값 4곳만 다름**(`.wrap`/`.quote-inner`/`.main-tabbar`의 max-width 480px→760px, `<title>`에 "(PC)" 추가) — 그 외 JS 로직·마크업은 index.html과 100% 동일. 코웨이 갤러리가 자체 운영하는 다른 Apps Script 웹앱에서 이 URL(`https://coway-calc.pages.dev/pc.html`)로 링크 연결해서 씀.
+  **⚠️ 파일이 물리적으로 복제되어 있어 드리프트 위험이 있음** — index.html의 계산 로직(`calcItem`/`renderCart` 등)이나 마크업을 고칠 때는 pc.html에도 동일하게 반영해야 함(현재 두 파일을 자동 동기화하는 빌드 과정 없음). CSS 폭 값 4곳(위 목록)만은 절대 index.html 값으로 되돌리지 말 것 — 그 외 모든 변경은 두 파일에 동일하게 적용.
 - **관리자 페이지**: `admin.html` — 제품 로우 데이터 조회/수정 (비밀번호 게이트, 별도 탭)
 - **백엔드 API**: Google Apps Script (`code.gs`) → 개인 구글 계정
 - **호스팅**: Cloudflare Pages (`https://coway-calc.pages.dev`) — 이 GitHub 저장소(`main` 브랜치)와 연결되어 `git push` 시 자동 배포됨. GitHub Pages는 코드 노출 방지 목적으로 의도적으로 꺼둔 상태(계정 Settings → Pages에서 비활성화) — 다시 켜지 말 것.

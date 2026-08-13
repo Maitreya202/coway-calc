@@ -2035,7 +2035,7 @@ function setS2Combo(idx,opt){
   else if (opt==='결합'){d.결합=!d.결합;d.동시구매=false;}
   cart[idx].discounts=d;renderCart();
 }
-function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;renderCart();}
+function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;else{cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;}renderCart();}
 function setHanvalPeriod(idx,p){cart[idx].반값개월=p;renderCart();}
 function setSunap(idx,v){cart[idx].선납=v;renderCart();}
 function setBmpSlot(idx,slotIdx,key){

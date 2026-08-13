@@ -756,36 +756,29 @@ function calcItem(item) {
   } else { base=displayBase; }
 
   var isBmpPer=false, bmpCnt=1, bmpPrice=0, bmpLines=null, bmpOneTimeTotal=0, bmpOneTimeLines=null;
-  // CFSS 프레임 헤드보드 처리 — 가격 출처였던 제품DB 레거시 별매품 필드가 2026-08-04에 제거됨.
-  // 별매품페어링 시트 정리 전까지 기능 임시 비활성화(항상 0원) — UI도 renderDiscPanels()에서 "정리 중" 안내로 대체됨.
-  var isCfssFrameCalc = item.s==='안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임')===0;
-  if (isCfssFrameCalc) {
-    bmpPrice = 0;
-  } else {
-    // 최대 2개(item.별매품슬롯)까지 서로 다른 별매품을 드롭다운으로 선택 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
-    // 슬롯/선택 상태는 항상 별매품 모델명(o.key)로 식별 — 제품명은 서로 다른 모델끼리 겹칠 수 있어서(예: "조리수기" 2종)
-    // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[모델명].mode('rental'|'cash')로 고객이 고른 걸 따름
-    var bmpSel = item.별매품선택||{};
-    var bmpSlots = (item.별매품슬롯||[]).filter(Boolean);
-    bmpLines=[]; bmpOneTimeLines=[];
-    itemBmpOptions(item).forEach(function(o) {
-      if (bmpSlots.indexOf(o.key) < 0) return;
-      var s = bmpSel[o.key] || {};
-      var mode = (s.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
-      var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
-      if (price>0) {
-        var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
-        if (mode==='cash') {
-          bmpOneTimeTotal += price*cnt;
-          bmpOneTimeLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
-        } else {
-          bmpPrice += price*cnt;
-          bmpLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
-        }
+  // 최대 2개(item.별매품슬롯)까지 서로 다른 별매품을 드롭다운으로 선택 — 월렌탈 추가형과 일시불 전용형(약정 없는 부속품)을 분리
+  // 슬롯/선택 상태는 항상 별매품 모델명(o.key)로 식별 — 제품명은 서로 다른 모델끼리 겹칠 수 있어서(예: "조리수기" 2종)
+  // 렌탈/일시불 둘 다 가능한 별매품은 item.별매품선택[모델명].mode('rental'|'cash')로 고객이 고른 걸 따름
+  var bmpSel = item.별매품선택||{};
+  var bmpSlots = (item.별매품슬롯||[]).filter(Boolean);
+  bmpLines=[]; bmpOneTimeLines=[];
+  itemBmpOptions(item).forEach(function(o) {
+    if (bmpSlots.indexOf(o.key) < 0) return;
+    var s = bmpSel[o.key] || {};
+    var mode = (s.mode==='cash' && o.hasCash) ? 'cash' : (o.hasRental ? 'rental' : 'cash');
+    var price = mode==='cash' ? o.cashPrice : o.rentalPrice;
+    if (price>0) {
+      var cnt = o.isPer ? Math.max(1, s.cnt||1) : 1;
+      if (mode==='cash') {
+        bmpOneTimeTotal += price*cnt;
+        bmpOneTimeLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
+      } else {
+        bmpPrice += price*cnt;
+        bmpLines.push({name:o.name, unitPrice:price, cnt:cnt, isPer:o.isPer});
       }
-    });
-    if (bmpLines.length===1 && bmpLines[0].isPer) { isBmpPer=true; bmpCnt=bmpLines[0].cnt; }
-  }
+    }
+  });
+  if (bmpLines.length===1 && bmpLines[0].isPer) { isBmpPer=true; bmpCnt=bmpLines[0].cnt; }
   var hasBmp=bmpPrice>0;
   if (hasBmp) base=base+bmpPrice;
   if (item.지로On) base=base+JIRO_SURCHARGE;
@@ -1170,7 +1163,6 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
   var isTasab     = !!item.tasabosangOn;
   var hasTasabData = item.타사보상렌탈 > 0 && item.타사보상사용 !== false;
   var curDisc = d.동시결합 ? '동시결합' : d.동시구매 ? '동시구매' : d.결합 ? '결합' : d.페스타 ? '페스타' : '없음';
-  var isCfssFrame = item.s === '안마매트리스_R_M' && item.분류 && item.분류.indexOf('CFSS_프레임') === 0;
 
   // 할인 패널
   h += '<div class="box-panel">';
@@ -1262,14 +1254,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
 
   // 별매품/헤드보드 패널 — 자주 쓰는 옵션이 아니라 맨 아래 배치
-  if (isCfssFrame) {
-    // 헤드보드 가격 출처였던 레거시 별매품 필드 제거(2026-08-04)로 인해 별매품페어링 시트 정리 전까지 선택 기능 임시 비활성화
-    h += '<div style="margin-top:10px;background:#fef3c7;border-radius:8px;padding:8px 10px">';
-    h += '<p style="font-size:12px;color:#92400e;font-weight:700">헤드보드 옵션 정리 중 — 잠시 선택 불가</p>';
-    h += '</div>';
-  } else {
-    h += renderBmpPanel(item, idx);
-  }
+  h += renderBmpPanel(item, idx);
 
   return h;
 }

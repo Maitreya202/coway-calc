@@ -2895,11 +2895,20 @@ function computeQuoteRows(cart){
     var lp=item.정상가,dp=isCash?(c.cashFinal||0):c.monthly,sn=(c.sunap&&c.sunap.amt)?c.sunap.amt:0;
     var snPreM=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.인하후)?((c.isHanval&&c.hvMonths>0)?c.normalMonthly:c.monthly):0;
     var snExcused=(!isCash&&item.선납==='선납2'&&c.sunap&&c.sunap.월인하)?c.sunap.월인하*c.months:0;
+    // 적용가(dp)는 항상 렌탈 기간 중 가장 긴 구간의 금액을 기준으로 함 — 타사보상 1년특가/반값 등 일부 기간만 적용되는 할인가를
+    // 적용가로 노출하면 실제로는 더 긴 기간 동안 다른 금액을 낸다는 게 안 보이므로, itemPhases()로 구간을 나눠 최장 구간을 고른다.
+    // 그 외 구간은 phaseNote로 남겨 견적서 가격 셀에 서브텍스트로 표시.
+    var phaseNote='';
     if(!isCash){
-      if(ki){dp=ki.isHanval?ki.halfRenM:ki.renM;}
-      else if(c.isHanval&&c.hvMonths>0&&c.hvMonths<c.months){dp=c.normalMonthly;}
-      else if(item.선납==='선납2'&&c.sunap&&c.sunap.인하후){dp=c.sunap.인하후;}
-      else if(item.선납==='60'&&c.months<=60){dp=0;}
+      var _phases=itemPhases(item);
+      if(_phases.length){
+        var _maj=_phases.reduce(function(best,s){return (s.to-s.from)>(best.to-best.from)?s:best;},_phases[0]);
+        dp=_maj.rate;
+        var _others=_phases.filter(function(s){return s!==_maj&&s.rate!==_maj.rate;});
+        if(_others.length){
+          phaseNote=_others.map(function(s){return (s.to-s.from+1)+'개월간 '+s.rate.toLocaleString('ko-KR')+'원/월';}).join(' · ');
+        }
+      }
     }
     var bg;
     if(isCash){
@@ -2934,7 +2943,7 @@ function computeQuoteRows(cart){
     discLabel=discBadge; // 뱃지에 표시할 텍스트 (결합/동시구매/타사보상/코라솔 등 명명된 할인이 있을 때만 채워짐)
     var trueTotal=isCash?dp:(ki?ki.renTotal:getTrueTotal(item,c));
     var korM=ki?ki.totalNabM:0;
-    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,snExcused:snExcused,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving};
+    return {item:item,name:item.제품명,model:item.모델명,lp:lp,dp:dp,sn:sn,snPreM:snPreM,snExcused:snExcused,korM:korM,korInfo:korInfo,bg:bg,mgmt:ml,isCash:isCash,totalPay:isCash?dp:dp*c.months,trueTotal:trueTotal,discLabel:discLabel,discBadge:discBadge,hasDiscount:hasDiscount,regularPrice:regularPrice,totalSaving:totalSaving,phaseNote:phaseNote};
   });
   var totM=rows.reduce(function(s,r){return r.isCash?s:s+r.dp;},0);
   var totCash=rows.reduce(function(s,r){return r.isCash?s+r.dp:s;},0);
@@ -3049,6 +3058,8 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
       dpSub='선납 적용전 '+wM(r.snPreM);
     } else if(r.isCash&&r.hasDiscount){
       dpSub='-'+wW(r.totalSaving)+' 할인';
+    } else if(r.phaseNote){
+      dpSub=r.phaseNote;
     }
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500;font-size:11.5px;white-space:nowrap">'+wM(r.dp)+(dpSub?'<div style="font-size:9px;color:'+MUTE+';font-weight:400;margin-top:1px;white-space:nowrap">'+dpSub+'</div>':'')+'</td>';
     if(opts.showIlsibl){

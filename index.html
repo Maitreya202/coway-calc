@@ -3072,7 +3072,6 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   if(totKor>0) sumItems.push({label:'코라솔 납부금',val:wW(totKor),sub:totKorRefund>0?('만기환급 '+wW(totKorRefund)):''});
   if(totKorSup>0) sumItems.push({label:'코라솔 할인',val:'<span style="white-space:nowrap">'+wW(totKorSup)+'/월</span><br><span style="white-space:nowrap;font-size:10.5px;font-weight:600">'+wW(totKorSupTotal)+'/총합</span>'});
   if(cardAmount>0) sumItems.push({label:'제휴카드 청구할인',val:'-'+wW(cardAmount)+'/월',sub:'카드사 청구할인 · 렌탈료와 별도 적용'});
-  sumItems.push({label:'등록비 &middot; 설치비',val:'면제'});
   if(opts.showTotalPayment) sumItems.push({label:'렌탈 기간 총 납입금액',val:wW(totTrue),sub:(opts.showSaving&&totSaving>0)?('정상가 대비 '+wW(totSaving)+' 절감'):''});
   else if(opts.showSaving&&totSaving>0) sumItems.push({label:'정상가 대비 절감 금액',val:wW(totSaving)});
   h+='<div style="display:flex;align-items:stretch;border-top:2px solid '+LINED+'">';

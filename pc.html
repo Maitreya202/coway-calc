@@ -801,6 +801,7 @@ function calcItem(item) {
   var months=(item.약정년||5)*12;
   var normalMonthly=f10(discounted);
 var monthly,halfMonthly,hvMonths;
+var isSpecialRate=(d.반값||d.만원)&&!isRe;
 
 if (item.tasabosangOn&&hasTasab) {
   var tasabBase=item.타사보상렌탈;
@@ -812,9 +813,11 @@ if (item.tasabosangOn&&hasTasab) {
   monthly=tasabBase; halfMonthly=0; hvMonths=0;
 } else if (re1년On) {
   monthly=f10(discounted*0.8); halfMonthly=0; hvMonths=0;
-} else if (d.반값&&!isRe) {
-  halfMonthly=f10(discounted*0.5);
-  hvMonths=(item.반값개월===undefined||item.반값개월===null)?0:item.반값개월;
+} else if (isSpecialRate) {
+  halfMonthly=d.만원?10000:f10(discounted*0.5);
+  hvMonths=d.만원
+    ? ((item.만원개월===undefined||item.만원개월===null)?0:item.만원개월)
+    : ((item.반값개월===undefined||item.반값개월===null)?0:item.반값개월);
   monthly=halfMonthly;
 } else {
   monthly=normalMonthly; halfMonthly=0; hvMonths=0;
@@ -823,13 +826,13 @@ if (item.tasabosangOn&&hasTasab) {
   var total;
   if (re1년On) {
     total=monthly*Math.min(12,months)+normalMonthly*Math.max(0,months-12);
-  } else if (d.반값&&hvMonths>0&&hvMonths<months&&!isRe) {
+  } else if (isSpecialRate&&hvMonths>0&&hvMonths<months) {
     total=halfMonthly*hvMonths+normalMonthly*(months-hvMonths);
   } else { total=monthly*months; }
 
   var sunap=null;
   var st=item.선납||'none';
-  var isHv=!!d.반값&&!isRe;
+  var isHv=isSpecialRate;
 
   if (st==='36') {
     sunap={label:'36선납',amt:f10(sunapBase(36,0,isHv,halfMonthly,normalMonthly,hvMonths)*0.9)};
@@ -893,7 +896,7 @@ if (item.tasabosangOn&&hasTasab) {
     base:base,displayBase:displayBase,
     monthly:monthly,halfMonthly:halfMonthly,normalMonthly:normalMonthly,
     months:months,total:total,sunap:sunap,hasPromo:hasPromo,
-    hvMonths:hvMonths,isHanval:isHv,discLabel:discLabel,
+    hvMonths:hvMonths,isHanval:isHv,isManwon:!!d.만원,discLabel:discLabel,
     hasBmp:hasBmp,
     bmpName:(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
     bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
@@ -991,7 +994,7 @@ function openConfig(idx){
   item.isRerental=false;
   item.구매방법='rental';item.일시불할인='none';
   item.재렌탈할인='none';item.재렌탈1년on=false;
-  item.discounts={};item.반값개월=0;item.선납='none';
+  item.discounts={};item.반값개월=0;item.만원개월=0;item.선납='none';
   item.s2={grade:'A',oi:0,반값월:0};
   item.kors=[];item.별매품선택={};item.별매품슬롯=['',''];item.지로On=false;
   item.headType='none';item.ilsiblOn=false;
@@ -1041,6 +1044,7 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   if (!isCashMode) {
     if (item.isRerental && item.재렌탈1년on) tags.push('1년 -20%');
     else if (!item.isRerental && d.반값 && item.선납 !== '선납2') tags.push('반값' + (item.반값개월 ? ' ' + item.반값개월 + '개월' : ''));
+    else if (!item.isRerental && d.만원 && item.선납 !== '선납2') tags.push('1만원 청구' + (item.만원개월 ? ' ' + item.만원개월 + '개월' : ''));
     else if (!item.isRerental && item.선납 === '선납2' && c.sunap && c.sunap.s2HalfMo > 0) tags.push('반값 ' + c.sunap.s2HalfMo + '개월');
   }
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
@@ -1101,7 +1105,7 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   var _sumPrice=_baseP;
   if(!isCashMode){
     if(_ki&&_ki.isHanval&&_ki.hvInSup>0&&_ki.normalInSup>0){
-      _sumPrice=_baseP+' <span style="font-size:12px;color:#fbbf24">(반값 '+_ki.hvInSup+'개월 '+won(_ki.halfRenM)+')</span>';
+      _sumPrice=_baseP+' <span style="font-size:12px;color:#fbbf24">('+(c.isManwon?'1만원 청구':'반값')+' '+_ki.hvInSup+'개월 '+won(_ki.halfRenM)+')</span>';
     } else if(!_ki&&c.isHanval&&!_isSunap2){
       _sumPrice=_baseP+' <span style="font-size:12px;color:#86efac">→ '+won(c.halfMonthly)+'/월</span>';
     }
@@ -1224,26 +1228,33 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     var blocked = hasActiveKor && s[0] !== 'none';
     h += '<option value="' + s[0] + '"' + (item.선납 === s[0] ? ' selected' : '') + (blocked ? ' disabled' : '') + '>' + s[1] + (blocked ? ' (코라솔 결합 중 불가)' : '') + '</option>';
   });
+  h += '</select>';
   // 반값 (할인 패널 내 통합)
   if (!isSunap2) {
     h += '<div style="margin-top:10px;border-top:1px solid #f1f5f9;padding-top:10px">';
     if (item.isRerental) {
       h += '<div class="check-row"><input type="checkbox"' + (item.재렌탈1년on ? ' checked' : '') + ' onchange="setRerental1년(' + idx + ',this.checked)"><span style="font-size:12px">1년 추가 할인 (-20%)</span></div>';
     } else {
-      h += '<div style="display:flex;align-items:center;gap:10px">';
-      h += '<input type="checkbox" style="width:17px;height:17px;flex-shrink:0;accent-color:#2563eb;cursor:pointer"' + (d.반값 ? ' checked' : '') + ' onchange="setHanval(' + idx + ',this.checked)"> <span style="font-size:12px;font-weight:600">반값 (-50%)</span>';
-      if (d.반값) {
-        h += '<div style="display:flex;align-items:center;gap:4px;margin-left:auto">';
-        var hvMax = item.약정년 * 12;
-        h += '<input type="number" value="' + (item.반값개월 || 0) + '" min="0" max="' + hvMax + '" onchange="setHanvalPeriod(' + idx + ',Math.max(0,Math.min(+this.value,' + hvMax + ')))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
-        h += '<span style="font-size:11px;color:#94a3b8">' + (item.반값개월 === 0 ? '개월 (전기간)' : '개월') + '</span>';
+      var pdKind = d.반값 ? 'half' : d.만원 ? 'manwon' : 'none';
+      h += '<span style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:6px">특정 기간 할인</span>';
+      h += '<select onchange="setPeriodDisc(' + idx + ',this.value)" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;background:white">';
+      [['none', '없음'], ['half', '반값 (-50%)'], ['manwon', '1만원 청구']].forEach(function(o) {
+        h += '<option value="' + o[0] + '"' + (pdKind === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      });
+      h += '</select>';
+      if (pdKind !== 'none') {
+        var pdMax = item.약정년 * 12;
+        var pdVal = pdKind === 'half' ? (item.반값개월 || 0) : (item.만원개월 || 0);
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">';
+        h += '<span style="font-size:11px;color:#94a3b8">적용 기간</span>';
+        h += '<input type="number" value="' + pdVal + '" min="0" max="' + pdMax + '" onchange="setPeriodMonths(' + idx + ',\'' + pdKind + '\',Math.max(0,Math.min(+this.value,' + pdMax + ')))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
+        h += '<span style="font-size:11px;color:#94a3b8">' + (pdVal === 0 ? '개월 (전기간)' : '개월') + '</span>';
         h += '</div>';
       }
-      h += '</div>';
     }
     h += '</div>';
   }
-  h += '</select></div>'; // box-panel 닫기
+  h += '</div>'; // box-panel 닫기
 
   // 코라솔 패널
   h += '<div class="box-panel">' + renderKorItem(item, idx) + '</div>';
@@ -1385,13 +1396,14 @@ function renderResultBox(item, idx, c, d, isSunap2) {
 
   if (ki && ki.isHanval) {
     var _st1 = item.선납 || 'none';
-    var _periodLabel = c.tasab1년On ? '1년간' : (c.isRe && c.re1년On) ? '1년간' : '반값 기간';
+    var _periodLabel = c.tasab1년On ? '1년간' : (c.isRe && c.re1년On) ? '1년간' : c.isManwon ? '1만원 청구 기간' : '반값 기간';
     var _buildChain = function(useHalf) {
       var steps = _baseChainSteps(item, c, d);
       if (c.tasab1년On) steps.push({label:'타사보상 1년특가', val: useHalf?c.tasab1년Rate:c.normalMonthly});
       else if (c.isRe && c.re1년On) steps.push({label:'재렌탈 1년특가', val: useHalf?c.monthly:c.normalMonthly});
       else if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? '반값' : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
       else if (d.반값 && useHalf) steps.push({label:'반값', val:c.halfMonthly});
+      else if (d.만원 && useHalf) steps.push({label:'1만원 청구', val:c.halfMonthly});
       steps.push({label:'코라솔', val: useHalf?ki.halfRenM:(ki.normalRenM!=null?ki.normalRenM:ki.renM)});
       return steps;
     };
@@ -1427,12 +1439,12 @@ function renderResultBox(item, idx, c, d, isSunap2) {
   } else if (c.isHanval && c.hvMonths > 0 && c.hvMonths < c.months) {
     var _buildChainH = function(useHalf) {
       var steps = _baseChainSteps(item, c, d);
-      if (useHalf) steps.push({label:'반값', val:c.halfMonthly});
+      if (useHalf) steps.push({label: c.isManwon?'1만원 청구':'반값', val:c.halfMonthly});
       return steps;
     };
     h += '<div class="res-main"><span>월 납입액</span><span>' + won(c.normalMonthly) + '/월</span></div>';
     h += '<div style="font-size:11px;padding:2px 0 8px 14px;line-height:1.9">' + _chainHtml(_buildChainH(false)) + '</div>';
-    h += '<div class="res-sub" style="color:#15803D"><span>&#8627; 반값 기간 ' + c.hvMonths + '개월</span><span>' + won(c.halfMonthly) + '/월</span></div>';
+    h += '<div class="res-sub" style="color:#15803D"><span>&#8627; ' + (c.isManwon?'1만원 청구 기간':'반값 기간') + ' ' + c.hvMonths + '개월</span><span>' + won(c.halfMonthly) + '/월</span></div>';
     h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_buildChainH(true)) + '</div>';
     h += '<div class="res-sub" style="margin-top:4px"><span>&#8627; 이후 ' + (c.months - c.hvMonths) + '개월</span><span>' + won(c.normalMonthly) + '/월</span></div>';
   } else if (item.선납 === '60' && c.months <= 60) {
@@ -1451,7 +1463,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
     var _stF = item.선납 || 'none';
     var _chainF = _baseChainSteps(item, c, d);
     if (_stF==='선납2' && c.sunap) _chainF.push({label:'선납2', val:c.sunap.인하후});
-    if (c.isHanval && !isSunap2) _chainF.push({label:'반값', val:c.halfMonthly});
+    if (c.isHanval && !isSunap2) _chainF.push({label: c.isManwon?'1만원 청구':'반값', val:c.halfMonthly});
     if (_chainF.length > 1) {
       h += '<div style="font-size:11px;padding:2px 0 0 14px;line-height:1.9">' + _chainHtml(_chainF) + '</div>';
     }
@@ -1977,11 +1989,11 @@ function setDisc(idx,opt){
   var d=cart[idx].discounts||{};
   if (opt==='선납2'){
     cart[idx].선납='선납2';cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;
-    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;
+    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;
     cart[idx].discounts=d;
     if (!cart[idx].s2) cart[idx].s2={grade:'A',oi:0,반값월:0};
   } else {
-    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;
+    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;
     cart[idx].선납='none';cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;
     if (opt!=='없음') d[opt]=true;
     cart[idx].discounts=d;
@@ -1993,7 +2005,7 @@ function setTasab(idx,v){
   cart[idx].tasabosangOn=v;
   if (v){
     var d=cart[idx].discounts||{};
-    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;
+    d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;
     cart[idx].discounts=d;
     if (cart[idx].선납==='선납2') cart[idx].선납='none';
   } else {
@@ -2020,8 +2032,18 @@ function setS2Combo(idx,opt){
   else if (opt==='결합'){d.결합=!d.결합;d.동시구매=false;}
   cart[idx].discounts=d;renderCart();
 }
-function setHanval(idx,v){cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:v});if(!v)cart[idx].반값개월=0;else{cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;}renderCart();}
-function setHanvalPeriod(idx,p){cart[idx].반값개월=p;renderCart();}
+function setPeriodDisc(idx,kind){
+  var d=Object.assign({},cart[idx].discounts,{반값:kind==='half',만원:kind==='manwon'});
+  cart[idx].discounts=d;
+  if (kind!=='half') cart[idx].반값개월=0;
+  if (kind!=='manwon') cart[idx].만원개월=0;
+  if (kind!=='none'){cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;}
+  renderCart();
+}
+function setPeriodMonths(idx,kind,p){
+  if (kind==='half') cart[idx].반값개월=p; else cart[idx].만원개월=p;
+  renderCart();
+}
 function setSunap(idx,v){cart[idx].선납=v;renderCart();}
 function setBmpSlot(idx,slotIdx,key){
   var it=cart[idx];
@@ -2917,7 +2939,7 @@ function computeQuoteRows(cart){
       bg=[item.약정년+'년 약정 / '+ml+(ml==='방문관리'&&item.관리주기&&item.관리주기!=='-'?' ('+item.관리주기+')':'')];
       if(item.isRerental)bg[0]+=' / 재렌탈';
       if(item.tasabosangOn)bg[0]+=' / 타사보상';
-      if(c.isHanval&&c.hvMonths>0){bg[0]+= c.hvMonths<c.months ? (' / 반값 '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / 반값 '+c.hvMonths+'개월');}
+      if(c.isHanval&&c.hvMonths>0){var _hvLbl=c.isManwon?'1만원 청구':'반값';bg[0]+= c.hvMonths<c.months ? (' / '+_hvLbl+' '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / '+_hvLbl+' '+c.hvMonths+'개월');}
       else if(item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){bg[0]+=' / 반값 '+c.sunap.s2HalfMo+'개월 ('+c.sunap.s2HalfM.toLocaleString('ko-KR')+'원/월)';}
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
       if(item.선납&&item.선납!=='none'&&item.선납!=='선납2'){bg[0]+=' / '+item.선납+'개월 선납';}
@@ -2932,6 +2954,7 @@ function computeQuoteRows(cart){
       if(item.tasabosangOn) discParts.push('타사보상');
       if(c.discLabel) discParts.push(c.discLabel);
       if(!item.isRerental&&d.반값&&item.선납!=='선납2') discParts.push('반값'+(item.반값개월?' '+item.반값개월+'개월':''));
+      else if(!item.isRerental&&d.만원&&item.선납!=='선납2') discParts.push('1만원 청구'+(item.만원개월?' '+item.만원개월+'개월':''));
       else if(!item.isRerental&&item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0) discParts.push('반값 '+c.sunap.s2HalfMo+'개월');
       if(ki) discParts.push('코라솔');
       discBadge=discParts.join(' · ');

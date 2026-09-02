@@ -804,9 +804,10 @@ var monthly,halfMonthly,hvMonths;
 var isSpecialRate=(d.반값||d.만원)&&!isRe;
 
 if (item.tasabosangOn&&hasTasab) {
-  var tasabBase=item.타사보상렌탈;
-  if (hasBmp) tasabBase = tasabBase + bmpPrice;
-  if (item.지로On) tasabBase = tasabBase + JIRO_SURCHARGE;
+  var tasabBaseRaw=item.타사보상렌탈;
+  if (hasBmp) tasabBaseRaw = tasabBaseRaw + bmpPrice;
+  if (item.지로On) tasabBaseRaw = tasabBaseRaw + JIRO_SURCHARGE;
+  var tasabBase=tasabBaseRaw;
   if (d.동시구매) tasabBase = f10(tasabBase * 0.9);
   else if (d.결합) tasabBase = f10(tasabBase * 0.95);
   normalMonthly=tasabBase;
@@ -870,7 +871,10 @@ if (item.tasabosangOn&&hasTasab) {
   var tasab1년Rate=normalMonthly;
   if (tasab1년On) {
     tasab1년Disc=_disc1y;
-    tasab1년Rate=Math.max(0,normalMonthly-tasab1년Disc);
+    var _tasab1년Base=Math.max(0,tasabBaseRaw-tasab1년Disc);
+    if (d.동시구매) tasab1년Rate=f10(_tasab1년Base*0.9);
+    else if (d.결합) tasab1년Rate=f10(_tasab1년Base*0.95);
+    else tasab1년Rate=_tasab1년Base;
     total=tasab1년Rate*Math.min(12,months)+normalMonthly*Math.max(0,months-12);
     monthly=tasab1년Rate;
   }

@@ -193,6 +193,7 @@ function _bulkUpsertProducts(body) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
   var raw = (lastRow >= HEADER_ROW + 1) ? sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues() : [];
+  var rawOriginalLen = raw.length; // 이번 배치 시작 시점의 기존 행 수 — "관리주기 변경 감지" 폴백은 이 범위에서만 동작(아래 참고)
   function cellAt(row, field) { var c = colMap[field]; return c ? row[c-1] : ''; }
   function normYakj(row) { var n = Number(cellAt(row,'약정년')); return (!n || isNaN(n)) ? 0 : n; }
   function normYakjInput(v) { if (v === undefined || v === null || String(v).trim() === '' || String(v).trim() === '-') return 0; var n = Number(v); return isNaN(n) ? null : n; }
@@ -204,6 +205,15 @@ function _bulkUpsertProducts(body) {
     if (m && !identityByModel[m]) {
       identityByModel[m] = { 제품명: cellAt(row,'제품명'), 분류: cellAt(row,'분류'), s: cellAt(row,'s') };
     }
+  });
+
+  // 이번 배치 안에서 "모델명+관리방법+약정년" 조합이 몇 번 등장하는지 미리 집계 — 같은 조합이
+  // 관리주기만 다르게 2번 이상 나오면(예: 2개월/4개월을 병행 제공하는 모델) 아래 "관리주기 변경 감지"
+  // 폴백을 끄기 위함(그 조합은 "이름 변경"이 아니라 "여러 관리주기 병행 등록" 의도이므로).
+  var comboCounts = {};
+  rows.forEach(function(input) {
+    var key = String(input.모델명 || '').trim() + '|' + String(input.관리방법 || '').trim() + '|' + normYakjInput(input.약정년);
+    comboCounts[key] = (comboCounts[key] || 0) + 1;
   });
 
   var results = [];
@@ -238,10 +248,15 @@ function _bulkUpsertProducts(body) {
 
     // 완전 일치가 없으면 관리주기만 빼고 재검색 — 관리방법/약정년은 그대로인데 관리주기만 바뀐 흔한 케이스를
     // 신규 행으로 잘못 만들지 않기 위함(예: CHPI-7430N 방문관리 3년의 관리주기가 2개월→3개월로 바뀐 경우).
+    // 단, 이번 배치 안에서 방금 새로 만든 행(rawOriginalLen 이후)은 대상에서 제외 — 안 그러면 같은 모델이
+    // 같은 약정년에 관리주기가 다른 행을 "여러 개" 두는 경우(예: 2개월/4개월 둘 다 제공하는 신규 모델)
+    // 먼저 만든 행을 "관리주기 변경"으로 오인해 나중 행 값으로 덮어써버림.
     var cycleChanged = false;
-    if (matches.length === 0) {
+    var comboKey = 모델명 + '|' + 관리방법 + '|' + 약정년;
+    if (matches.length === 0 && comboCounts[comboKey] === 1) {
       var relaxed = [];
       raw.forEach(function(row, i) {
+        if (i >= rawOriginalLen) return;
         if (String(cellAt(row,'모델명')||'').trim() === 모델명 &&
             String(cellAt(row,'관리방법')||'').trim() === 관리방법 &&
             normYakj(row) === 약정년) {

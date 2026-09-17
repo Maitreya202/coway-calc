@@ -222,6 +222,7 @@
     <div class="dot" data-dot="2"></div>
     <div class="dot" data-dot="3"></div>
     <div class="dot" data-dot="4"></div>
+    <div class="dot" data-dot="5"></div>
   </div>
 
   <!-- Step 0: intro / coffee features -->
@@ -324,8 +325,25 @@
     <button type="button" class="back-link" onclick="cardBack()">← 이전으로</button>
   </div>
 
-  <!-- Step 5: result -->
+  <!-- Step 5: 결합할인 -->
   <div class="step" id="step5">
+    <div class="step-label">STEP 5</div>
+    <div class="step-q">다른 코웨이 제품을<br>사용하고 계신가요?</div>
+    <div class="choice-list">
+      <button type="button" class="choice" onclick="selectBundle(true)">
+        <div class="c-title">네, 사용하고 있어요</div>
+        <div class="c-desc">결합할인 5%가 적용돼요</div>
+      </button>
+      <button type="button" class="choice" onclick="selectBundle(false)">
+        <div class="c-title">아니요, 이 제품만 사용할게요</div>
+        <div class="c-desc">프로모션가 그대로 진행할게요</div>
+      </button>
+    </div>
+    <button type="button" class="back-link" onclick="goStep(4)">← 이전으로</button>
+  </div>
+
+  <!-- Step 6: result -->
+  <div class="step" id="step6">
     <div class="result-card">
       <div class="rc-body">
         <div class="rc-label">선택하신 조건의 프로모션 월 렌탈료</div>
@@ -336,12 +354,16 @@
       <div class="rc-photo" id="rcPhoto"></div>
     </div>
 
+    <div class="card-result" id="bundleResult" hidden>
+      <div class="cr-row"><span>다른 코웨이 제품 결합할인</span><span id="crBundleLine">-5%</span></div>
+    </div>
+
     <div class="card-result" id="cardResult" hidden>
       <div class="cr-row"><span>카드 청구할인</span><span id="crCardLine"></span></div>
       <div class="cr-final"><span>실 부담 예상액</span><span id="crFinal"></span></div>
     </div>
 
-    <div class="promo-callout">✦ 부가 프로모션은 매니저 상담 혹은 코웨이닷컴에서 확인하세요</div>
+    <div class="promo-callout">✦ 다른 제품과 동시구매, 부가 프로모션은 매니저 상담 혹은 코웨이닷컴에서 확인하세요</div>
 
     <div class="result-summary">
       <span>색상 <b id="sumColor"></b></span>
@@ -436,8 +458,8 @@
       tiers:[ {th:'50만원 이상', total:25000}, {th:'100만원 이상', total:30000} ] }
   ];
 
-  var state = { color:'black', cycle:null, term:null, cardId:null, cardName:null, cardDiscount:0 };
-  var steps = ['step0','step1','step2','step3','step4','step5'];
+  var state = { color:'black', cycle:null, term:null, cardId:null, cardName:null, cardDiscount:0, bundle:false };
+  var steps = ['step0','step1','step2','step3','step4','step5','step6'];
 
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
@@ -446,7 +468,7 @@
       document.getElementById(id).classList.toggle('active', i === idx);
     });
     document.querySelectorAll('.progress .dot').forEach(function(d){
-      d.classList.toggle('done', Number(d.getAttribute('data-dot')) <= (idx > 4 ? 4 : idx));
+      d.classList.toggle('done', Number(d.getAttribute('data-dot')) <= (idx > 5 ? 5 : idx));
     });
     window.scrollTo({top:0, behavior:'smooth'});
   };
@@ -493,7 +515,7 @@
 
   window.cardWantNo = function(){
     state.cardId = null; state.cardName = null; state.cardDiscount = 0;
-    showResult();
+    goStep(5);
   };
 
   window.cardWantYes = function(){
@@ -529,7 +551,7 @@
 
   window.pickTier = function(discount){
     state.cardDiscount = discount;
-    showResult();
+    goStep(5);
   };
 
   window.cardBack = function(){
@@ -544,26 +566,41 @@
     goStep(3);
   };
 
+  // ---- Step 5: 결합할인 ----
+  window.selectBundle = function(owns){
+    state.bundle = owns;
+    showResult();
+  };
+
+  var BUNDLE_RATE = 0.05;
+
   function showResult(){
     var row = PRICES[state.cycle].filter(function(r){ return r.term === state.term; })[0];
+    var promoPrice = row.promo;
+    if(state.bundle){
+      promoPrice = Math.round(promoPrice * (1 - BUNDLE_RATE) / 100) * 100;
+    }
+
     document.getElementById('rcNormal').textContent = won(row.normal);
-    document.getElementById('rcPromo').innerHTML = won(row.promo) + '<span>/월</span>';
-    document.getElementById('rcSave').textContent = '정상가보다 매달 ' + won(row.normal - row.promo) + ' 절약';
+    document.getElementById('rcPromo').innerHTML = won(promoPrice) + '<span>/월</span>';
+    document.getElementById('rcSave').textContent = '정상가보다 매달 ' + won(row.normal - promoPrice) + ' 절약';
     document.getElementById('rcPhoto').style.backgroundImage = "url('" + PHOTOS[state.color] + "')";
     document.getElementById('sumColor').textContent = COLOR_NAME[state.color];
     document.getElementById('sumCycle').textContent = state.cycle;
     document.getElementById('sumTerm').textContent = state.term + '년';
 
+    document.getElementById('bundleResult').hidden = !state.bundle;
+
     var cardResult = document.getElementById('cardResult');
     if(state.cardDiscount > 0){
       document.getElementById('crCardLine').textContent = state.cardName + ' -' + won(state.cardDiscount);
-      document.getElementById('crFinal').textContent = won(Math.max(row.promo - state.cardDiscount, 0)) + '/월';
+      document.getElementById('crFinal').textContent = won(Math.max(promoPrice - state.cardDiscount, 0)) + '/월';
       cardResult.hidden = false;
     } else {
       cardResult.hidden = true;
     }
 
-    goStep(5);
+    goStep(6);
   }
 
   var form = document.getElementById('leadForm');
@@ -593,7 +630,8 @@
         time: document.getElementById('f_time').value.trim(),
         memo: document.getElementById('f_memo').value.trim() +
               (state.cycle ? ('\n[선택 조건] 색상 ' + COLOR_NAME[state.color] + ' / 관리주기 ' + state.cycle + ' / 약정 ' + state.term + '년') : '') +
-              (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청'),
+              (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청') +
+              (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음'),
         page: location.href
       })
     })

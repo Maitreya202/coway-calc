@@ -52,6 +52,7 @@ Cloudflare Pages (index.html)
 - URL: `https://github.com/Maitreya202/coway-calc`
 - Branch: `main`
 - 배포: Cloudflare Pages(`coway-calc.pages.dev`)가 이 저장소 `main`과 연결되어 `git push` 시 자동 배포. GitHub Pages는 사용 안 함(의도적으로 꺼둠)
+- **`git push` 권한 부여됨(2026-09-17~)** — Claude는 `main`에 커밋 후 매번 승인을 묻지 말고 바로 `git push`까지 실행할 것. `code.gs`는 push해도 라이브 GAS_URL에는 반영 안 됨(위 "code.gs를 수정한 뒤에는..." 참고) — 사용자가 Apps Script 편집기에서 직접 재배포함.
 
 ## 제품 데이터 구조 (구글 시트 제품DB)
 ```

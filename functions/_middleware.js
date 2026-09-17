@@ -5,6 +5,12 @@ const USER = 'gallery';
 const PASS = 'gallerycalc01';
 
 export async function onRequest(context) {
+  const url = new URL(context.request.url);
+  if (url.pathname.startsWith('/promo/')) {
+    // 네이버 블로그 등 외부 유입용 고객 대상 견적 페이지 — 인증 없이 공개 접근 허용
+    return context.next();
+  }
+
   const auth = context.request.headers.get('Authorization');
   const expected = 'Basic ' + btoa(USER + ':' + PASS);
 

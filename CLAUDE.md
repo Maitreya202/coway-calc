@@ -8,7 +8,7 @@
 - **관리자 페이지**: `admin.html` — 제품 로우 데이터 조회/수정 (비밀번호 게이트, 별도 탭)
 - **백엔드 API**: Google Apps Script (`code.gs`) → 개인 구글 계정
 - **호스팅**: Cloudflare Pages (`https://coway-calc.pages.dev`) — 이 GitHub 저장소(`main` 브랜치)와 연결되어 `git push` 시 자동 배포됨. GitHub Pages는 코드 노출 방지 목적으로 의도적으로 꺼둔 상태(계정 Settings → Pages에서 비활성화) — 다시 켜지 말 것.
-  Cloudflare Access가 도메인 전체를 막고 있어 접속 시 로그인 필요(관리자 개인 인증 방식) — admin.html의 비밀번호 게이트와는 별개의, 그 앞단 보안 계층임.
+  `functions/_middleware.js`가 Cloudflare Pages Functions로 도메인 전체 요청에 HTTP Basic 인증(계정: `gallery`)을 강제함(Cloudflare Access/제로트러스트 아님, 저장소에 직접 코딩된 미들웨어) — admin.html의 비밀번호 게이트와는 별개의, 그 앞단 보안 계층임. **`/promo/*` 경로는 이 미들웨어에서 예외 처리되어 인증 없이 공개 접근 가능**(네이버 블로그 등 외부 고객 유입용 페이지, 2026-09-17~) — 새로운 공개용 페이지를 추가할 땐 이 미들웨어의 경로 예외 목록에 포함시킬 것.
 - **데이터**: 구글 시트 (`17wd6OMYMazzveTZ6LcnMSi8a84XYuHSyWESYdwWCN8s`)
 
 ## GAS API URL

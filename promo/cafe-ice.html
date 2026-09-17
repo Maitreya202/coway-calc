@@ -519,7 +519,7 @@
   };
 
   window.cardWantYes = function(){
-    document.getElementById('cardQPhase').textContent = '이용 중이거나 발급 예정인\n카드사를 선택해주세요';
+    document.getElementById('cardQPhase').textContent = '발급 예정인\n카드사를 선택해주세요';
     document.getElementById('cardYesNoPhase').hidden = true;
     var html = CARDS.map(function(c, i){
       return '<button type="button" class="choice" onclick="pickCard(' + i + ')">' +
@@ -536,11 +536,11 @@
     var card = CARDS[i];
     state.cardId = card.id;
     state.cardName = card.name;
-    document.getElementById('cardQPhase').textContent = '이번 달 카드 사용액 구간을\n선택해주세요';
+    document.getElementById('cardQPhase').textContent = '카드 예상 사용 금액\n구간을 선택해주세요';
     document.getElementById('cardListPhase').hidden = true;
     var html = card.tiers.map(function(t){
       return '<button type="button" class="choice term-choice" onclick="pickTier(' + t.total + ')">' +
-               '<span class="c-text"><span class="c-title">' + t.th + ' 사용</span></span>' +
+               '<span class="c-text"><span class="c-title">' + t.th + ' 사용 예정</span></span>' +
                '<span class="c-price">-' + won(t.total) + '<small>/월</small></span>' +
              '</button>';
     }).join('');

@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>카페 얼음 정수기 프로모션 견적 | 코웨이 갤러리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#c9a24a;
+    --gold-light:#e4c988;
+    --ink:#efe9dd;
+    --ink-dim:#a79f8f;
+    --bg:#15130f;
+    --card:#1e1b16;
+    --card-hi:#26221b;
+    --line:rgba(233,220,190,.14);
+    --kakao:#fee500;
+    --kakao-ink:#3c1e1e;
+    --green:#7cc98a;
+    --danger:#ef8b8b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:480px; margin:0 auto; background:var(--bg); min-height:100vh; padding-bottom:44px; overflow:hidden;}
+
+  .serif{font-family:"Noto Serif KR",serif;}
+
+  /* hero */
+  .hero{
+    position:relative; padding:130px 22px 26px; color:#fff;
+    background-size:cover; background-position:center 30%;
+    transition:background-image .4s ease;
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(10,9,7,.15) 0%, rgba(10,9,7,.55) 55%, rgba(10,9,7,.94) 100%);
+  }
+  .hero-inner{position:relative; z-index:1;}
+  .hero .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(201,162,74,.16); border:1px solid rgba(228,201,136,.55); color:var(--gold-light);
+    font-size:11.5px; letter-spacing:.06em; padding:5px 12px; border-radius:999px; margin-bottom:14px;
+  }
+  .hero .eyebrow{margin:0 0 6px; font-size:14.5px; font-weight:600; color:#f1ead9;}
+  .hero h1{margin:0 0 10px; font-size:27px; line-height:1.35; font-weight:800; letter-spacing:-.3px; font-family:"Noto Serif KR",serif;}
+  .hero .model{font-size:12px; color:var(--gold-light); letter-spacing:.06em; font-weight:600;}
+  .hero .hero-sub{margin:16px 0 0; font-size:13px; color:#c9c0ae; line-height:1.6;}
+
+  /* progress dots */
+  .progress{display:flex; gap:6px; padding:18px 22px 0; background:var(--bg);}
+  .progress .dot{flex:1; height:3px; border-radius:2px; background:rgba(233,220,190,.16);}
+  .progress .dot.done{background:var(--gold);}
+
+  .step{padding:26px 22px 0; display:none;}
+
+  .step0-bg{
+    position:relative; padding-top:34px; padding-bottom:6px;
+    background-image:
+      linear-gradient(180deg, rgba(21,19,15,.88) 0%, rgba(21,19,15,.94) 55%, var(--bg) 92%),
+      url('img/cafe-ice-feature.jpg');
+    background-size:cover; background-position:center 20%;
+  }
+  .step.active{display:block; animation:fadeUp .35s ease;}
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .story{font-size:15px; line-height:1.75; color:#dcd5c8; margin:0 0 22px;}
+  .story b{color:var(--gold-light); font-weight:700;}
+  .story .em{display:block; font-size:13px; color:var(--ink-dim); margin-top:12px;}
+
+  .feature-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;}
+  .feature-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 14px; text-align:center;
+  }
+  .feature-card .fc-icon{
+    width:36px; height:36px; margin:0 auto 10px; border-radius:50%; background:rgba(201,162,74,.14);
+    border:1px solid rgba(228,201,136,.4); color:var(--gold-light); font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .feature-card .fc-title{font-size:13.5px; font-weight:700; color:var(--ink); margin-bottom:6px;}
+  .feature-card .fc-desc{font-size:11.5px; color:var(--ink-dim); line-height:1.5;}
+  .feature-note{font-size:10.5px; color:#726c5c; line-height:1.6; margin:0 0 20px;}
+
+  .step-label{font-size:11.5px; font-weight:700; color:var(--gold); margin:0 0 8px; letter-spacing:.14em;}
+  .step-q{font-size:19px; font-weight:700; margin:0 0 18px; line-height:1.45; font-family:"Noto Serif KR",serif; white-space:pre-line;}
+
+  .choice-list{display:flex; flex-direction:column; gap:11px;}
+  .choice-list[hidden]{display:none;}
+  .choice{
+    display:block; width:100%; text-align:left; padding:16px; border:1px solid var(--line); border-radius:14px;
+    background:var(--card); cursor:pointer; transition:border-color .15s, background .15s; color:var(--ink);
+  }
+  .choice:active{background:var(--card-hi);}
+  .choice .c-title{display:block; font-size:15.5px; font-weight:700; margin-bottom:4px; color:var(--ink);}
+  .choice .c-desc{display:block; font-size:12.5px; color:var(--ink-dim); line-height:1.55;}
+  .choice.term-choice{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .choice.term-choice .c-text{flex:1; min-width:0;}
+  .choice.term-choice .c-price{font-size:16px; font-weight:800; color:var(--gold-light); white-space:nowrap; text-align:right; font-family:"Noto Serif KR",serif;}
+  .choice.term-choice .c-price small{display:block; font-size:10.5px; font-weight:600; color:var(--ink-dim); font-family:"Noto Sans KR",sans-serif;}
+
+  /* color choice cards w/ photo */
+  .color-grid{display:flex; gap:12px;}
+  .color-card{
+    flex:1; display:flex; flex-direction:column; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--card);
+    cursor:pointer; padding:0; text-align:left; color:var(--ink); position:relative;
+  }
+  .color-card .cc-photo{
+    display:block; width:100%; aspect-ratio:1/1; background-size:cover; background-position:center; background-color:#0e0d0b;
+  }
+  .color-card .cc-label{display:block; padding:12px 14px 14px;}
+  .color-card .cc-name{display:block; font-size:14.5px; font-weight:700;}
+  .color-card .cc-desc{display:block; font-size:11.5px; color:var(--ink-dim); margin-top:3px; line-height:1.5;}
+  .color-card.selected{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+  .color-card.selected .cc-label::before{
+    content:"✓ 선택됨"; display:inline-block; font-size:10.5px; font-weight:700; color:#141109;
+    background:var(--gold-light); padding:2px 8px; border-radius:999px; margin-bottom:6px;
+  }
+
+  .cta-primary{
+    display:block; width:100%; padding:16px 0; border:none; border-radius:14px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold)); color:#181307; font-size:16px; font-weight:800;
+    cursor:pointer; margin-top:8px; letter-spacing:.02em;
+  }
+  .back-link{
+    display:inline-block; margin-top:16px; font-size:12.5px; color:var(--ink-dim); text-decoration:underline;
+    cursor:pointer; background:none; border:none; padding:0;
+  }
+
+  /* result step */
+  .result-card{
+    position:relative; overflow:hidden; border-radius:20px; padding:24px 22px; margin-bottom:18px;
+    background:linear-gradient(160deg,#242018,#181510); border:1px solid var(--line);
+  }
+  .result-card .rc-photo{
+    position:absolute; right:-18px; bottom:-18px; width:150px; height:150px; background-size:cover; background-position:center;
+    border-radius:16px; opacity:.9; box-shadow:-12px 0 24px 10px #181510;
+  }
+  .result-card .rc-body{position:relative; z-index:1; max-width:66%;}
+  .result-card .rc-label{font-size:12px; color:var(--ink-dim); margin-bottom:8px; letter-spacing:.02em;}
+  .result-card .rc-normal{font-size:13.5px; text-decoration:line-through; color:#7a7263; margin-bottom:3px;}
+  .result-card .rc-promo{font-size:30px; font-weight:900; letter-spacing:-.5px; font-family:"Noto Serif KR",serif; color:var(--gold-light);}
+  .result-card .rc-promo span{font-size:14px; font-weight:700; color:var(--ink-dim); font-family:"Noto Sans KR",sans-serif;}
+  .result-card .rc-save{
+    display:inline-block; margin-top:12px; background:rgba(201,162,74,.16); border:1px solid rgba(228,201,136,.5);
+    color:var(--gold-light); padding:5px 12px; border-radius:999px; font-size:11.5px; font-weight:700;
+  }
+  .card-result{
+    border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:14px; background:var(--card);
+  }
+  .card-result .cr-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;}
+  .card-result .cr-final{
+    display:flex; justify-content:space-between; align-items:center; font-size:15.5px; font-weight:800; color:var(--gold-light);
+    padding-top:8px; border-top:1px dashed var(--line);
+  }
+  .promo-callout{
+    display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--gold-light);
+    background:rgba(201,162,74,.12); border:1px solid rgba(228,201,136,.45); border-radius:10px;
+    padding:10px 12px; margin-bottom:16px; line-height:1.5;
+  }
+  .result-summary{
+    display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-dim); padding:0 2px 16px;
+    border-bottom:1px solid var(--line); margin-bottom:18px;
+  }
+  .result-summary b{color:var(--ink); font-weight:700;}
+
+  .cta-row{display:flex; gap:9px; margin-top:4px;}
+  .cta{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:14px 0; border-radius:12px; font-size:14px; font-weight:700;
+    text-decoration:none; border:1px solid transparent;
+  }
+  .cta.kakao{background:var(--kakao); color:var(--kakao-ink);}
+  .cta.buy{background:transparent; color:var(--gold-light); border-color:var(--gold);}
+
+  .form-box{
+    margin:22px 0 0; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--card);
+  }
+  .form-box h2{font-size:15.5px; margin:0 0 5px; font-family:"Noto Serif KR",serif; color:var(--ink);}
+  .form-box .lead{font-size:12.5px; color:var(--ink-dim); margin:0 0 16px; line-height:1.55;}
+  .field{margin-bottom:11px;}
+  .field label{display:block; font-size:12px; font-weight:600; color:var(--ink-dim); margin-bottom:6px;}
+  .field input, .field textarea{
+    width:100%; padding:12px 13px; border:1px solid var(--line); border-radius:9px;
+    font-size:14px; font-family:inherit; background:#100e0b; color:var(--ink);
+  }
+  .field input::placeholder, .field textarea::placeholder{color:#5c5748;}
+  .field textarea{resize:vertical; min-height:56px;}
+  .submit-btn{
+    width:100%; padding:14px 0; margin-top:8px; border:none; border-radius:12px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold)); color:#181307; font-size:15px; font-weight:800; cursor:pointer;
+  }
+  .submit-btn:disabled{background:#4b4536; color:#8a8574; cursor:default;}
+  .form-msg{margin-top:11px; font-size:13px; text-align:center; display:none;}
+  .form-msg.ok{color:var(--green); display:block;}
+  .form-msg.err{color:var(--danger); display:block;}
+
+  .price-note{font-size:11px; color:var(--ink-dim); margin-top:16px; line-height:1.6;}
+  .foot-note{padding:24px 22px 0; font-size:10.5px; color:#5c5748; line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero" id="heroBox" style="background-image:url('img/cafe-ice-black.jpg');">
+    <div class="hero-inner">
+      <span class="badge">✦ 9월 프로모션</span>
+      <p class="eyebrow">물 · 얼음 · 커피를 단 하나의 정수기로</p>
+      <h1>코웨이 카페 얼음정수기</h1>
+      <div class="model">CHPCI-8400N</div>
+    </div>
+  </div>
+
+  <div class="progress">
+    <div class="dot done" data-dot="0"></div>
+    <div class="dot" data-dot="1"></div>
+    <div class="dot" data-dot="2"></div>
+    <div class="dot" data-dot="3"></div>
+    <div class="dot" data-dot="4"></div>
+  </div>
+
+  <!-- Step 0: intro / coffee features -->
+  <div class="step active step0-bg" id="step0">
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="fc-icon">☕</div>
+        <div class="fc-title">아이스 커피 &amp; 따뜻한 커피</div>
+        <div class="fc-desc">아이스 커피부터 따뜻한 커피까지 간편하게</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">◉</div>
+        <div class="fc-title">캡슐 호환</div>
+        <div class="fc-desc">다양한 캡슐 커피 완벽 호환<br>(네스프레소용, 돌체구스토용)</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">◇</div>
+        <div class="fc-title">드립커피</div>
+        <div class="fc-desc">브루잉 파우셋의 정교한 푸어링으로 완성하는 깊고 풍부한 커피 맛</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">●</div>
+        <div class="fc-title">분쇄 원두</div>
+        <div class="fc-desc">취향에 맞는 분쇄원두를 담아 만드는 나만의 커피</div>
+      </div>
+    </div>
+    <p class="feature-note">※ 네스프레소용은 오리지널 캡슐만 호환되며 버츄오 캡슐은 호환되지 않습니다.</p>
+    <button type="button" class="cta-primary" onclick="goStep(1)">내 요금 확인하기 →</button>
+  </div>
+
+  <!-- Step 1: 색상 선택 -->
+  <div class="step" id="step1">
+    <div class="step-label">STEP 1</div>
+    <div class="step-q">고객님이 원하시는<br>색상을 골라주세요</div>
+    <div class="color-grid">
+      <button type="button" class="color-card" data-color="white" onclick="selectColor('white')">
+        <span class="cc-photo" style="background-image:url('img/cafe-ice-white.jpg');"></span>
+        <span class="cc-label">
+          <span class="cc-name">화이트</span>
+          <span class="cc-desc">밝고 깔끔한 공간에 어울려요</span>
+        </span>
+      </button>
+      <button type="button" class="color-card" data-color="black" onclick="selectColor('black')">
+        <span class="cc-photo" style="background-image:url('img/cafe-ice-black.jpg');"></span>
+        <span class="cc-label">
+          <span class="cc-name">블랙</span>
+          <span class="cc-desc">차분한 다크톤 공간에 어울려요</span>
+        </span>
+      </button>
+    </div>
+    <button type="button" class="back-link" onclick="goStep(0)">← 이전으로</button>
+  </div>
+
+  <!-- Step 2: 관리주기 선택 -->
+  <div class="step" id="step2">
+    <div class="step-label">STEP 2</div>
+    <div class="step-q">관리 주기를 선택해주세요</div>
+    <div class="choice-list">
+      <button type="button" class="choice" data-cycle="2개월" onclick="selectCycle('2개월')">
+        <div class="c-title">2개월마다 방문관리</div>
+        <div class="c-desc">사용인원이 많은 곳에 추천드려요 (다중이용시설)</div>
+      </button>
+      <button type="button" class="choice" data-cycle="4개월" onclick="selectCycle('4개월')">
+        <div class="c-title">4개월마다 방문관리</div>
+        <div class="c-desc">가장 표준적인 관리주기입니다</div>
+      </button>
+    </div>
+    <button type="button" class="back-link" onclick="goStep(1)">← 이전으로</button>
+  </div>
+
+  <!-- Step 3: 약정 선택 -->
+  <div class="step" id="step3">
+    <div class="step-label">STEP 3</div>
+    <div class="step-q">얼마나 오래<br>사용하실 예정이세요?</div>
+    <div class="choice-list" id="termChoices"></div>
+    <p class="feature-note">💡 그거 아시나요? 2024년 국토부 통계 기준, 평균 이사 주기는 <b style="color:var(--gold-light);">8.4년</b>이에요.</p>
+    <button type="button" class="back-link" onclick="goStep(2)">← 이전으로</button>
+  </div>
+
+  <!-- Step 4: 제휴카드 -->
+  <div class="step" id="step4">
+    <div class="step-label">STEP 4</div>
+    <div class="step-q" id="cardQPhase">제휴카드 청구할인을<br>받고 싶으신가요?</div>
+
+    <div class="choice-list" id="cardYesNoPhase">
+      <button type="button" class="choice" onclick="cardWantYes()">
+        <div class="c-title">네, 카드 할인 받을게요</div>
+        <div class="c-desc">이번 달 제휴카드 프로모션 조건을 확인해드려요</div>
+      </button>
+      <button type="button" class="choice" onclick="cardWantNo()">
+        <div class="c-title">아니요, 필요 없어요</div>
+        <div class="c-desc">카드 할인 없이 진행할게요</div>
+      </button>
+    </div>
+
+    <div class="choice-list" id="cardListPhase" hidden></div>
+
+    <div class="choice-list" id="cardTierPhase" hidden></div>
+
+    <button type="button" class="back-link" onclick="cardBack()">← 이전으로</button>
+  </div>
+
+  <!-- Step 5: result -->
+  <div class="step" id="step5">
+    <div class="result-card">
+      <div class="rc-body">
+        <div class="rc-label">선택하신 조건의 프로모션 월 렌탈료</div>
+        <div class="rc-normal" id="rcNormal"></div>
+        <div class="rc-promo" id="rcPromo"></div>
+        <div class="rc-save" id="rcSave"></div>
+      </div>
+      <div class="rc-photo" id="rcPhoto"></div>
+    </div>
+
+    <div class="card-result" id="cardResult" hidden>
+      <div class="cr-row"><span>카드 청구할인</span><span id="crCardLine"></span></div>
+      <div class="cr-final"><span>실 부담 예상액</span><span id="crFinal"></span></div>
+    </div>
+
+    <div class="promo-callout">✦ 부가 프로모션은 매니저 상담 혹은 코웨이닷컴에서 확인하세요</div>
+
+    <div class="result-summary">
+      <span>색상 <b id="sumColor"></b></span>
+      <span>관리주기 <b id="sumCycle"></b></span>
+      <span>약정 <b id="sumTerm"></b></span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta kakao" href="http://pf.kakao.com/_gxixgxaX/friend" target="_blank" rel="noopener">💬 카카오톡 상담</a>
+      <a class="cta buy" href="https://cowayshare.onelink.me/0RpM/t9sjnouo" target="_blank" rel="noopener">코웨이닷컴 바로구매</a>
+    </div>
+
+    <div class="price-note">
+      · 위 금액은 신규 가입 기준 프로모션 월 렌탈료이며, 부가세 포함 금액입니다.<br>
+      · 카드 청구할인은 카드사 청구서에서 할인되는 금액으로, 코웨이 렌탈료 자체가 변경되는 것은 아닙니다.<br>
+      · 재렌탈(기존 코웨이 고객) 조건은 상담 시 별도 안내드립니다.<br>
+      · 실제 적용 조건은 매장 환경/설치 조건에 따라 상담을 통해 확정됩니다.
+    </div>
+
+    <div class="form-box">
+      <h2>전화 상담이 더 편하신가요?</h2>
+      <p class="lead">연락처를 남겨주시면 코웨이 직영점 매니저가 시간에 맞춰 연락드립니다.</p>
+      <form id="leadForm">
+        <div class="field">
+          <label for="f_name">이름</label>
+          <input id="f_name" name="name" type="text" placeholder="홍길동" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="f_phone">연락처 <span style="color:var(--danger);">*</span></label>
+          <input id="f_phone" name="phone" type="tel" placeholder="010-0000-0000" autocomplete="tel" required>
+        </div>
+        <div class="field">
+          <label for="f_time">편한 연락 시간</label>
+          <input id="f_time" name="time" type="text" placeholder="예: 평일 오후 2~6시">
+        </div>
+        <div class="field">
+          <label for="f_memo">메모 (설치 장소, 궁금한 점 등)</label>
+          <textarea id="f_memo" name="memo" placeholder="예: 카페 매장 입구 쪽 설치 예정, 정수/제빙 용량 문의드립니다."></textarea>
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">상담 신청하기</button>
+        <div class="form-msg" id="formMsg"></div>
+      </form>
+    </div>
+
+    <button type="button" class="back-link" onclick="goStep(0)">← 처음부터 다시 선택하기</button>
+  </div>
+
+  <div class="foot-note">
+    본 페이지는 코웨이 갤러리 안내용 참고 자료이며, 실제 계약 조건은 상담 및 계약서 기준으로 확정됩니다.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
+  var MODEL_LABEL = '카페 얼음 정수기 (CHPCI-8400N)';
+
+  var PHOTOS = { white:'img/cafe-ice-white.jpg', black:'img/cafe-ice-black.jpg' };
+  var COLOR_NAME = { white:'화이트', black:'블랙' };
+
+  var PRICES = {
+    '4개월': [
+      {term:3, normal:66900, promo:61900, desc:'3년 사용 후, 소유권 도래 전 반납 가능'},
+      {term:5, normal:62900, promo:57900, desc:'소유권 이전이 가능한 최소 약정'},
+      {term:6, normal:60900, promo:55900, desc:'이사 주기에 맞춘 약정'},
+      {term:7, normal:58900, promo:53900, desc:'이사 주기에 맞춘 약정'}
+    ],
+    '2개월': [
+      {term:3, normal:69900, promo:64900, desc:'3년 사용 후, 소유권 도래 전 반납 가능'},
+      {term:5, normal:66900, promo:61900, desc:'소유권 이전이 가능한 최소 약정'},
+      {term:6, normal:64900, promo:59900, desc:'이사 주기에 맞춘 약정'},
+      {term:7, normal:62900, promo:57900, desc:'이사 주기에 맞춘 약정'}
+    ]
+  };
+
+  // 2026년 9월 제휴카드 프로모션 조건 하드코딩 (코웨이 갤러리 제휴카드 안내 기준)
+  var CARDS = [
+    { id:'shinhan', name:'코웨이 신한카드', promoTitle:'60개월간 최대 3만원 청구할인', target:'직전 6개월간 신한카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'30만원 이상', total:24000}, {th:'70만원 이상', total:24000}, {th:'150만원 이상', total:30000} ] },
+    { id:'woori', name:'코웨이 ICON 우리카드', promoTitle:'60개월간 최대 3만원 청구할인', target:'직전 6개월간 우리카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'30만원 이상', total:24000}, {th:'80만원 이상', total:24000}, {th:'150만원 이상', total:30000} ] },
+    { id:'samsung', name:'코웨이 삼성카드', promoTitle:'60개월간 월 최대 1만 5천원 추가 할인', target:'직전 6개월간 삼성카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'30만원 이상', total:22000}, {th:'70만원 이상', total:24000}, {th:'120만원 이상', total:26000} ] },
+    { id:'loca', name:'코웨이 X LOCA (롯데카드)', promoTitle:'60개월간 최대 8천원 추가 청구할인', target:'직전 6개월간 롯데카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'40만원 이상', total:16000}, {th:'80만원 이상', total:19000}, {th:'160만원 이상', total:24000} ] },
+    { id:'kb', name:'KB국민 코웨이Ⅱ카드', promoTitle:'36개월간 최대 3만원 청구할인', target:'직전 6개월간 KB국민카드(KB BC카드 포함) 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'40만원 이상', total:26000}, {th:'80만원 이상', total:30000} ] },
+    { id:'nhbank', name:'코웨이 NH올원카드', promoTitle:'60개월간 1만원 추가 캐시백', target:'직전 6개월간 NH올원카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'30만원 이상', total:20000}, {th:'100만원 이상', total:25000}, {th:'200만원 이상', total:40000} ] },
+    { id:'hyundaiM', name:'코웨이 현대카드 M Edition3', promoTitle:'36개월간 월 1만원 추가 청구할인', target:'직전 6개월간 현대카드 청구·사용 이력이 없는 고객',
+      tiers:[ {th:'50만원 이상', total:25000}, {th:'100만원 이상', total:30000} ] }
+  ];
+
+  var state = { color:'black', cycle:null, term:null, cardId:null, cardName:null, cardDiscount:0 };
+  var steps = ['step0','step1','step2','step3','step4','step5'];
+
+  function won(n){ return n.toLocaleString('ko-KR') + '원'; }
+
+  window.goStep = function(idx){
+    steps.forEach(function(id, i){
+      document.getElementById(id).classList.toggle('active', i === idx);
+    });
+    document.querySelectorAll('.progress .dot').forEach(function(d){
+      d.classList.toggle('done', Number(d.getAttribute('data-dot')) <= (idx > 4 ? 4 : idx));
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  window.selectColor = function(color){
+    state.color = color;
+    document.querySelectorAll('.color-card').forEach(function(c){
+      c.classList.toggle('selected', c.getAttribute('data-color') === color);
+    });
+    document.getElementById('heroBox').style.backgroundImage = "url('" + PHOTOS[color] + "')";
+    setTimeout(function(){ goStep(2); }, 180);
+  };
+
+  window.selectCycle = function(cycle){
+    state.cycle = cycle;
+    renderTermChoices(cycle);
+    goStep(3);
+  };
+
+  function renderTermChoices(cycle){
+    var rows = PRICES[cycle];
+    var html = rows.map(function(r){
+      return '<button type="button" class="choice term-choice" data-term="' + r.term + '" onclick="selectTerm(' + r.term + ')">' +
+               '<span class="c-text"><span class="c-title">' + r.term + '년 약정</span><span class="c-desc">' + r.desc + '</span></span>' +
+               '<span class="c-price">' + won(r.promo) + '<small>/월</small></span>' +
+             '</button>';
+    }).join('');
+    document.getElementById('termChoices').innerHTML = html;
+  }
+
+  window.selectTerm = function(term){
+    state.term = term;
+    resetCardPhase();
+    goStep(4);
+  };
+
+  // ---- Step 4: 제휴카드 ----
+  function resetCardPhase(){
+    document.getElementById('cardQPhase').textContent = '제휴카드 청구할인을 받고 싶으신가요?';
+    document.getElementById('cardYesNoPhase').hidden = false;
+    document.getElementById('cardListPhase').hidden = true;
+    document.getElementById('cardTierPhase').hidden = true;
+  }
+
+  window.cardWantNo = function(){
+    state.cardId = null; state.cardName = null; state.cardDiscount = 0;
+    showResult();
+  };
+
+  window.cardWantYes = function(){
+    document.getElementById('cardQPhase').textContent = '이용 중이거나 발급 예정인\n카드사를 선택해주세요';
+    document.getElementById('cardYesNoPhase').hidden = true;
+    var html = CARDS.map(function(c, i){
+      return '<button type="button" class="choice" onclick="pickCard(' + i + ')">' +
+               '<div class="c-title">' + c.name + '</div>' +
+               '<div class="c-desc">' + c.promoTitle + '<br>' + c.target + '</div>' +
+             '</button>';
+    }).join('');
+    var listEl = document.getElementById('cardListPhase');
+    listEl.innerHTML = html;
+    listEl.hidden = false;
+  };
+
+  window.pickCard = function(i){
+    var card = CARDS[i];
+    state.cardId = card.id;
+    state.cardName = card.name;
+    document.getElementById('cardQPhase').textContent = '이번 달 카드 사용액 구간을\n선택해주세요';
+    document.getElementById('cardListPhase').hidden = true;
+    var html = card.tiers.map(function(t){
+      return '<button type="button" class="choice term-choice" onclick="pickTier(' + t.total + ')">' +
+               '<span class="c-text"><span class="c-title">' + t.th + ' 사용</span></span>' +
+               '<span class="c-price">-' + won(t.total) + '<small>/월</small></span>' +
+             '</button>';
+    }).join('');
+    var tierEl = document.getElementById('cardTierPhase');
+    tierEl.innerHTML = html;
+    tierEl.hidden = false;
+  };
+
+  window.pickTier = function(discount){
+    state.cardDiscount = discount;
+    showResult();
+  };
+
+  window.cardBack = function(){
+    if(!document.getElementById('cardTierPhase').hidden){
+      window.cardWantYes();
+      return;
+    }
+    if(!document.getElementById('cardListPhase').hidden){
+      resetCardPhase();
+      return;
+    }
+    goStep(3);
+  };
+
+  function showResult(){
+    var row = PRICES[state.cycle].filter(function(r){ return r.term === state.term; })[0];
+    document.getElementById('rcNormal').textContent = won(row.normal);
+    document.getElementById('rcPromo').innerHTML = won(row.promo) + '<span>/월</span>';
+    document.getElementById('rcSave').textContent = '정상가보다 매달 ' + won(row.normal - row.promo) + ' 절약';
+    document.getElementById('rcPhoto').style.backgroundImage = "url('" + PHOTOS[state.color] + "')";
+    document.getElementById('sumColor').textContent = COLOR_NAME[state.color];
+    document.getElementById('sumCycle').textContent = state.cycle;
+    document.getElementById('sumTerm').textContent = state.term + '년';
+
+    var cardResult = document.getElementById('cardResult');
+    if(state.cardDiscount > 0){
+      document.getElementById('crCardLine').textContent = state.cardName + ' -' + won(state.cardDiscount);
+      document.getElementById('crFinal').textContent = won(Math.max(row.promo - state.cardDiscount, 0)) + '/월';
+      cardResult.hidden = false;
+    } else {
+      cardResult.hidden = true;
+    }
+
+    goStep(5);
+  }
+
+  var form = document.getElementById('leadForm');
+  var msg = document.getElementById('formMsg');
+  var submitBtn = document.getElementById('submitBtn');
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var phone = document.getElementById('f_phone').value.trim();
+    if(!phone){
+      msg.className = 'form-msg err';
+      msg.textContent = '연락처를 입력해주세요.';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '전송 중...';
+    msg.className = 'form-msg';
+    msg.textContent = '';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'submitLead',
+        model: MODEL_LABEL,
+        name: document.getElementById('f_name').value.trim(),
+        phone: phone,
+        time: document.getElementById('f_time').value.trim(),
+        memo: document.getElementById('f_memo').value.trim() +
+              (state.cycle ? ('\n[선택 조건] 색상 ' + COLOR_NAME[state.color] + ' / 관리주기 ' + state.cycle + ' / 약정 ' + state.term + '년') : '') +
+              (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청'),
+        page: location.href
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      if(resp && resp.ok){
+        msg.className = 'form-msg ok';
+        msg.textContent = '상담 신청이 접수되었습니다. 코웨이 직영점 매니저가 곧 연락드립니다.';
+        form.reset();
+      } else {
+        msg.className = 'form-msg err';
+        msg.textContent = (resp && resp.error) || '전송에 실패했습니다. 잠시 후 다시 시도해주세요.';
+      }
+    })
+    .catch(function(){
+      msg.className = 'form-msg err';
+      msg.textContent = '전송에 실패했습니다. 잠시 후 다시 시도해주세요.';
+    })
+    .finally(function(){
+      submitBtn.disabled = false;
+      submitBtn.textContent = '상담 신청하기';
+    });
+  });
+})();
+</script>
+</body>
+</html>

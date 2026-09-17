@@ -80,6 +80,9 @@ function doPost(e) {
     if (action === 'cleanupZeroTasabToggles') {
       return _json(_cleanupZeroTasabToggles(body));
     }
+    if (action === 'submitLead') {
+      return _json(_submitLead(body));
+    }
     return _json({error: 'unknown action'});
   } catch(err) {
     return _json({error: err.message});
@@ -1261,6 +1264,37 @@ function testMailPermission() {
 }
 
 
+
+// ----------------------------------------------------------------
+// _submitLead() ← promo/*.html 상담 신청 폼 전용 (2026-09-17~)
+// 네이버 블로그 → 정적 모델별 견적 페이지 → 이 액션으로 상담 신청 접수
+// ----------------------------------------------------------------
+var LEAD_NOTIFY_EMAIL = '60001075@cowaygallery.com';
+
+function _submitLead(body) {
+  var name    = String(body.name || '').trim();
+  var phone   = String(body.phone || '').trim();
+  var time    = String(body.time || '').trim();
+  var memo    = String(body.memo || '').trim();
+  var model   = String(body.model || '').trim();
+  var page    = String(body.page || '').trim();
+
+  if (!phone) return {error: '연락처를 입력해주세요.'};
+
+  var subject = '[상담신청] ' + (model || '견적 페이지') + (name ? ' - ' + name : '');
+  var lines = [
+    '모델: ' + (model || '-'),
+    '이름: ' + (name || '-'),
+    '연락처: ' + phone,
+    '편한 연락 시간: ' + (time || '-'),
+    '메모: ' + (memo || '-'),
+    '유입 페이지: ' + (page || '-'),
+    '접수 시각: ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss')
+  ];
+
+  MailApp.sendEmail(LEAD_NOTIFY_EMAIL, subject, lines.join('\n'));
+  return {ok: true};
+}
 
 // ----------------------------------------------------------------
 // clearCache() ← 제품/가격 수정 후 앱 UI에서 호출

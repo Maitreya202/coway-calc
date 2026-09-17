@@ -203,6 +203,23 @@
 
   .price-note{font-size:11px; color:var(--ink-dim); margin-top:16px; line-height:1.6;}
   .foot-note{padding:24px 22px 0; font-size:10.5px; color:#5c5748; line-height:1.7;}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,7,5,.72); z-index:100;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay[hidden]{display:none;}
+  .modal-box{
+    max-width:400px; width:100%; background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:24px 22px; animation:fadeUp .25s ease;
+  }
+  .modal-title{font-size:17px; font-weight:800; font-family:"Noto Serif KR",serif; color:var(--gold-light); margin-bottom:14px;}
+  .modal-body{font-size:13.5px; line-height:1.7; color:#dcd5c8;}
+  .modal-body b{color:var(--gold-light); font-weight:700;}
+  .modal-actions{display:flex; gap:8px; margin-top:20px;}
+  .modal-btn{flex:1; padding:12px 0; border-radius:11px; font-size:14px; font-weight:700; border:1px solid transparent; cursor:pointer;}
+  .modal-btn.cancel{background:transparent; border-color:var(--line); color:var(--ink-dim);}
+  .modal-btn.confirm{background:linear-gradient(135deg,var(--gold-light),var(--gold)); color:#181307;}
 </style>
 </head>
 <body>
@@ -375,7 +392,7 @@
 
     <div class="cta-row">
       <a class="cta kakao" href="http://pf.kakao.com/_gxixgxaX/friend" target="_blank" rel="noopener">💬 카카오톡 상담</a>
-      <a class="cta buy" href="https://cowayshare.onelink.me/0RpM/t9sjnouo" target="_blank" rel="noopener">코웨이닷컴 바로구매</a>
+      <button type="button" class="cta buy" onclick="openBuyModal()">코웨이닷컴 바로구매</button>
     </div>
 
     <div class="price-note">
@@ -419,10 +436,37 @@
 
 </div>
 
+<div class="modal-overlay" id="buyModal" hidden>
+  <div class="modal-box">
+    <div class="modal-title">잠깐, 구매 전에 확인해주세요</div>
+    <div class="modal-body">
+      공식 홈페이지에서 구매하실 때는 <b>직영점 매니저가 추천인으로 등록</b>되어 있는지 꼭 확인해주세요.<br><br>
+      등록되어 있으면 제품 변경이나 설치 일정 조율을 고객센터 연락 없이 담당 매니저와 바로 진행할 수 있고, 추가 사은품·프로모션 혜택도 받으실 수 있어요.<br><br>
+      설치 후 사후관리까지, 믿을 수 있는 직영점 매니저에게 맡겨보세요!
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn cancel" onclick="closeBuyModal()">취소</button>
+      <button type="button" class="modal-btn confirm" onclick="confirmBuyModal()">확인하고 이동</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
   var MODEL_LABEL = '카페 얼음 정수기 (CHPCI-8400N)';
+  var BUY_URL = 'https://cowayshare.onelink.me/0RpM/t9sjnouo';
+
+  window.openBuyModal = function(){
+    document.getElementById('buyModal').hidden = false;
+  };
+  window.closeBuyModal = function(){
+    document.getElementById('buyModal').hidden = true;
+  };
+  window.confirmBuyModal = function(){
+    window.open(BUY_URL, '_blank', 'noopener');
+    closeBuyModal();
+  };
 
   var PHOTOS = { white:'img/cafe-ice-white.webp', black:'img/cafe-ice-black.webp' };
   var COLOR_NAME = { white:'화이트', black:'블랙' };

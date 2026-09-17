@@ -524,9 +524,10 @@
     document.getElementById('cardQPhase').textContent = '발급 예정인\n카드사를 선택해주세요';
     document.getElementById('cardYesNoPhase').hidden = true;
     var html = CARDS.map(function(c, i){
+      var minTier = c.tiers[0];
       return '<button type="button" class="choice" onclick="pickCard(' + i + ')">' +
                '<div class="c-title">' + c.name + '</div>' +
-               '<div class="c-desc">' + c.promoTitle + '<br>' + c.target + '</div>' +
+               '<div class="c-desc">' + minTier.th + ' 사용 시 매달 ' + won(minTier.total) + ' 청구할인<br>' + c.target + '</div>' +
              '</button>';
     }).join('');
     var listEl = document.getElementById('cardListPhase');

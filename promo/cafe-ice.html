@@ -620,11 +620,17 @@
   // ---- Step 4: 선납 ----
   // 3년 약정은 소유권 이전 대상이 아니라서 100만원 선납2 대신, 3년치 렌탈료를
   // 한 번에 내는 "36선납"(기존 계산기와 동일: 총 납입금액의 10% 할인) 방식으로 안내.
-  function calcLumpPrepay(promoPrice, months){
-    var fullTotal = promoPrice * months;
-    var total = f10(fullTotal * 0.9);
+  // 기존 계산기(index.html)와 동일한 순서로 계산: ①결합할인 5% 먼저 적용 → f10 반올림 →
+  // ②그 월렌탈료*개월수(정상 3년 총액) → ③총액의 10% 할인(36선납). 결합할인과 36선납은
+  // (카드 청구할인과 달리) 함께 스택되는 구조.
+  function calcLumpPrepay(promoPrice, months, bundleOn){
+    var discounted = bundleOn ? promoPrice * (1 - BUNDLE_RATE) : promoPrice;
+    var normalMonthly = f10(discounted);
+    var fullTotal = normalMonthly * months;       // 결합할인 반영된 정상 3년 총액
+    var total = f10(fullTotal * 0.9);              // 그 총액에서 다시 10% 할인
     var savings = fullTotal - total;
-    return { fullTotal: fullTotal, total: total, savings: savings };
+    var originalTotal = promoPrice * months;       // 결합할인 전 원래 정가 총액(비교용)
+    return { normalMonthly: normalMonthly, fullTotal: fullTotal, total: total, savings: savings, originalTotal: originalTotal };
   }
 
   function renderPrepayStep(){
@@ -636,7 +642,7 @@
       : '여유자금 100만원을 먼저 내고<br>매달 더 할인받고 싶으신가요?';
 
     if(isLump){
-      var lp = calcLumpPrepay(promoForTerm(3), 36);
+      var lp = calcLumpPrepay(promoForTerm(3), 36, state.bundle);
       html =
         '<button type="button" class="choice prepay-choice" onclick="selectPrepay(true)">' +
           '<div class="c-title">3년치 렌탈료 한번에 낼게요</div>' +
@@ -650,7 +656,8 @@
       document.getElementById('prepayChoices').innerHTML = html;
       document.getElementById('prepayNote').innerHTML =
         '⚠️ 3년 약정은 소유권이 이전되지 않아요. 3년 사용 후 제품을 반납하시거나, 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.<br>' +
-        '💳 일시납은 매달 자동이체 청구가 없어서 제휴카드 청구할인은 적용되지 않아요 — 매달 나눠 내는 게 부담스러운 분께 추천드려요.';
+        '💳 일시납은 매달 자동이체 청구가 없어서 제휴카드 청구할인은 적용되지 않아요 — 매달 나눠 내는 게 부담스러운 분께 추천드려요.<br>' +
+        '➕ 다른 코웨이 제품 결합할인(다음 단계)은 일시납과 함께 적용돼요 — 결합할인 5%가 반영된 금액에서 다시 10% 할인되는 방식이에요.';
     } else {
       var p = calcPrepay(state.term, promoForTerm(state.term));
       html =
@@ -780,11 +787,15 @@
 
     var prepayResult = document.getElementById('prepayResult');
     if(state.prepay && state.term === 3){
-      var lp = calcLumpPrepay(row.promo, 36);
-      document.getElementById('crPrepayLabel').textContent = '3년치 렌탈료 일시납';
+      var lp = calcLumpPrepay(row.promo, 36, state.bundle);
+      var totalSavingsAll = lp.originalTotal - lp.total;
+      document.getElementById('crPrepayLabel').textContent = '3년치 렌탈료 일시납' + (state.bundle ? ' (결합할인 반영)' : '');
       document.getElementById('crPrepayAmt').textContent = won(lp.total);
       document.getElementById('crPrepayNote').innerHTML =
-        '정가 대비 10% 할인(-' + won(lp.savings) + ') · ⚠️ 3년 약정은 소유권이 이전되지 않아요 — 3년 후 반납하시거나 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.';
+        (state.bundle
+          ? '결합할인 5% + 일시납 10% 합산, 정가 총액 대비 -' + won(totalSavingsAll) + ' 절약 · '
+          : '정가 대비 10% 할인(-' + won(lp.savings) + ') · ') +
+        '⚠️ 3년 약정은 소유권이 이전되지 않아요 — 3년 후 반납하시거나 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.';
       prepayResult.hidden = false;
     } else if(state.prepay){
       var p = calcPrepay(state.term, row.promo);
@@ -849,7 +860,7 @@
               (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음') +
               (state.prepay
                 ? (state.term === 3
-                    ? '\n[선납] 3년치 렌탈료 일시납 희망 (총 ' + won(calcLumpPrepay(promoForTerm(3), 36).total) + ', 10% 할인)'
+                    ? '\n[선납] 3년치 렌탈료 일시납 희망 (총 ' + won(calcLumpPrepay(promoForTerm(3), 36, state.bundle).total) + ', 10% 할인' + (state.bundle ? ' + 결합 5%' : '') + ')'
                     : '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term, promoForTerm(state.term)).annualRate.toFixed(1) + '%)')
                 : '\n[선납] 해당 없음'),
         page: location.href

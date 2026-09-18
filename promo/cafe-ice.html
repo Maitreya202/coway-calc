@@ -248,6 +248,7 @@
     <div class="dot" data-dot="3"></div>
     <div class="dot" data-dot="4"></div>
     <div class="dot" data-dot="5"></div>
+    <div class="dot" data-dot="6"></div>
   </div>
 
   <!-- Step 0: intro / coffee features -->
@@ -327,9 +328,18 @@
     <button type="button" class="back-link" onclick="goStep(2)">← 이전으로</button>
   </div>
 
-  <!-- Step 4: 제휴카드 -->
+  <!-- Step 4: 선납 -->
   <div class="step" id="step4">
     <div class="step-label">STEP 4</div>
+    <div class="step-q">목돈 100만원을 먼저 내고<br>매달 더 할인받고 싶으신가요?</div>
+    <div class="choice-list" id="prepayChoices"></div>
+    <p class="feature-note" id="prepayNote"></p>
+    <button type="button" class="back-link" onclick="goStep(3)">← 이전으로</button>
+  </div>
+
+  <!-- Step 5: 제휴카드 -->
+  <div class="step" id="step5">
+    <div class="step-label">STEP 5</div>
     <div class="step-q" id="cardQPhase">제휴카드 청구할인을<br>받고 싶으신가요?</div>
 
     <div class="choice-list" id="cardYesNoPhase">
@@ -350,9 +360,9 @@
     <button type="button" class="back-link" onclick="cardBack()">← 이전으로</button>
   </div>
 
-  <!-- Step 5: 결합할인 -->
-  <div class="step" id="step5">
-    <div class="step-label">STEP 5</div>
+  <!-- Step 6: 결합할인 -->
+  <div class="step" id="step6">
+    <div class="step-label">STEP 6</div>
     <div class="step-q">다른 코웨이 제품을<br>사용하고 계신가요?</div>
     <div class="choice-list">
       <button type="button" class="choice" onclick="selectBundle(true)">
@@ -364,11 +374,11 @@
         <div class="c-desc">프로모션가 그대로 진행할게요</div>
       </button>
     </div>
-    <button type="button" class="back-link" onclick="goStep(4)">← 이전으로</button>
+    <button type="button" class="back-link" onclick="goStep(5)">← 이전으로</button>
   </div>
 
-  <!-- Step 6: result -->
-  <div class="step" id="step6">
+  <!-- Step 7: result -->
+  <div class="step" id="step7">
     <div class="result-card">
       <div class="rc-body">
         <div class="rc-label">선택하신 조건의 프로모션 월 렌탈료</div>
@@ -383,10 +393,18 @@
       <div class="cr-row"><span>다른 코웨이 제품 결합할인</span><span id="crBundleLine">-5%</span></div>
     </div>
 
+    <div class="card-result" id="prepayResult" hidden>
+      <div class="cr-row"><span>선납금 100만원 (원금 환급 포함)</span><span id="crPrepayAmt"></span></div>
+      <div class="cr-note" id="crPrepayNote"></div>
+    </div>
+
     <div class="card-result" id="cardResult" hidden>
       <div class="cr-row"><span>카드 청구할인</span><span id="crCardLine"></span></div>
-      <div class="cr-final"><span>실 부담 예상액</span><span id="crFinal"></span></div>
       <div class="cr-note">※ 카드사 프로모션 금액 적용은 직영점 매니저 추천인 등록이 필수입니다.</div>
+    </div>
+
+    <div class="card-result" id="finalResult" hidden>
+      <div class="cr-final"><span>실 부담 예상액</span><span id="crFinal"></span></div>
     </div>
 
     <div class="promo-callout">✦ 다른 제품과 동시구매, 부가 프로모션은 매니저 상담 혹은 코웨이닷컴에서 확인하세요</div>
@@ -511,8 +529,8 @@
       tiers:[ {th:'50만원 이상', total:25000}, {th:'100만원 이상', total:30000} ] }
   ];
 
-  var state = { color:'black', cycle:null, term:null, cardId:null, cardName:null, cardDiscount:0, bundle:false };
-  var steps = ['step0','step1','step2','step3','step4','step5','step6'];
+  var state = { color:'black', cycle:null, term:null, cardId:null, cardName:null, cardDiscount:0, bundle:false, prepay:false };
+  var steps = ['step0','step1','step2','step3','step4','step5','step6','step7'];
 
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
@@ -521,10 +539,33 @@
       document.getElementById(id).classList.toggle('active', i === idx);
     });
     document.querySelectorAll('.progress .dot').forEach(function(d){
-      d.classList.toggle('done', Number(d.getAttribute('data-dot')) <= (idx > 5 ? 5 : idx));
+      d.classList.toggle('done', Number(d.getAttribute('data-dot')) <= (idx > 6 ? 6 : idx));
     });
     window.scrollTo({top:0, behavior:'smooth'});
   };
+
+  // ---- 선납2 (100만원 선납) 실효금리 계산 ----
+  // A구분(환경가전): 100만원 선납 시 16만원 할인. 원금+할인 총액을 약정 개월수만큼
+  // 균등 분할해서 매달 렌탈료에서 차감(원리금 균등상환형 annuity) — 단순 16%가 아니라
+  // 원금 상환 스케줄까지 고려한 실효 연 복리금리로 환산해서 보여줌.
+  var PREPAY_AMT = 1000000;
+  var PREPAY_DISC = 160000;
+
+  function calcPrepay(termYears){
+    var months = termYears * 12;
+    var mc = Math.floor(PREPAY_AMT / months);
+    var mb = Math.floor(PREPAY_DISC / months);
+    var mi = mc + mb;
+    // annuity IRR: PREPAY_AMT = mi * (1-(1+i)^-months)/i 를 이분탐색으로 근사
+    var lo = 0, hi = 0.05, i;
+    for(var k = 0; k < 60; k++){
+      i = (lo + hi) / 2;
+      var factor = i === 0 ? months : (1 - Math.pow(1 + i, -months)) / i;
+      if(mi * factor > PREPAY_AMT) lo = i; else hi = i;
+    }
+    var annualRate = (Math.pow(1 + i, 12) - 1) * 100;
+    return { months: months, mc: mc, mb: mb, mi: mi, annualRate: annualRate };
+  }
 
   window.selectColor = function(color){
     state.color = color;
@@ -554,11 +595,36 @@
 
   window.selectTerm = function(term){
     state.term = term;
-    resetCardPhase();
+    renderPrepayStep();
     goStep(4);
   };
 
-  // ---- Step 4: 제휴카드 ----
+  // ---- Step 4: 선납 ----
+  function renderPrepayStep(){
+    var p = calcPrepay(state.term);
+    var html =
+      '<button type="button" class="choice" onclick="selectPrepay(true)">' +
+        '<div class="c-title">네, 100만원 선납할게요</div>' +
+        '<div class="c-desc">월 ' + won(p.mi) + ' 추가 할인돼요 (원금 환급 + 총 16만원 혜택)</div>' +
+      '</button>' +
+      '<button type="button" class="choice" onclick="selectPrepay(false)">' +
+        '<div class="c-title">아니요, 선납 없이 진행할게요</div>' +
+        '<div class="c-desc">매달 나눠 내는 게 편해요</div>' +
+      '</button>';
+    document.getElementById('prepayChoices').innerHTML = html;
+    document.getElementById('prepayNote').innerHTML =
+      '💡 쉽게 설명하면: 100만원을 미리 내면 원금은 약정기간(' + state.term + '년) 동안 매달 렌탈료에서 나눠 돌려받고, ' +
+      '그 위에 총 16만원이 추가로 얹어져요. 이걸 은행 정기예금처럼 환산하면 <b style="color:var(--gold-light);">연 ' + p.annualRate.toFixed(1) + '% 복리</b> 상품에 가입한 것과 비슷한 효과예요 — ' +
+      '요즘 은행 정기예금 금리가 보통 연 3%대인 걸 감안하면 꽤 높은 혜택입니다.';
+  }
+
+  window.selectPrepay = function(owns){
+    state.prepay = owns;
+    resetCardPhase();
+    goStep(5);
+  };
+
+  // ---- Step 5: 제휴카드 ----
   function resetCardPhase(){
     document.getElementById('cardQPhase').textContent = '제휴카드 청구할인을 받고 싶으신가요?';
     document.getElementById('cardYesNoPhase').hidden = false;
@@ -568,7 +634,7 @@
 
   window.cardWantNo = function(){
     state.cardId = null; state.cardName = null; state.cardDiscount = 0;
-    goStep(5);
+    goStep(6);
   };
 
   window.cardWantYes = function(){
@@ -605,7 +671,7 @@
 
   window.pickTier = function(discount){
     state.cardDiscount = discount;
-    goStep(5);
+    goStep(6);
   };
 
   window.cardBack = function(){
@@ -617,10 +683,10 @@
       resetCardPhase();
       return;
     }
-    goStep(3);
+    goStep(4);
   };
 
-  // ---- Step 5: 결합할인 ----
+  // ---- Step 6: 결합할인 ----
   window.selectBundle = function(owns){
     state.bundle = owns;
     showResult();
@@ -645,16 +711,37 @@
 
     document.getElementById('bundleResult').hidden = !state.bundle;
 
+    var finalPrice = promoPrice;
+
+    var prepayResult = document.getElementById('prepayResult');
+    if(state.prepay){
+      var p = calcPrepay(state.term);
+      finalPrice -= p.mi;
+      document.getElementById('crPrepayAmt').textContent = '-' + won(p.mi) + '/월';
+      document.getElementById('crPrepayNote').innerHTML = '연 환산 복리 약 ' + p.annualRate.toFixed(1) + '% 효과 (은행 정기예금 대비 高금리)';
+      prepayResult.hidden = false;
+    } else {
+      prepayResult.hidden = true;
+    }
+
     var cardResult = document.getElementById('cardResult');
     if(state.cardDiscount > 0){
+      finalPrice -= state.cardDiscount;
       document.getElementById('crCardLine').textContent = state.cardName + ' -' + won(state.cardDiscount);
-      document.getElementById('crFinal').textContent = won(Math.max(promoPrice - state.cardDiscount, 0)) + '/월';
       cardResult.hidden = false;
     } else {
       cardResult.hidden = true;
     }
 
-    goStep(6);
+    var finalResult = document.getElementById('finalResult');
+    if(state.prepay || state.cardDiscount > 0){
+      document.getElementById('crFinal').textContent = won(Math.max(finalPrice, 0)) + '/월';
+      finalResult.hidden = false;
+    } else {
+      finalResult.hidden = true;
+    }
+
+    goStep(7);
   }
 
   var form = document.getElementById('leadForm');
@@ -685,7 +772,8 @@
         memo: document.getElementById('f_memo').value.trim() +
               (state.cycle ? ('\n[선택 조건] 색상 ' + COLOR_NAME[state.color] + ' / 관리주기 ' + state.cycle + ' / 약정 ' + state.term + '년') : '') +
               (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청') +
-              (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음'),
+              (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음') +
+              (state.prepay ? '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term).annualRate.toFixed(1) + '%)' : '\n[선납] 해당 없음'),
         page: location.href
       })
     })

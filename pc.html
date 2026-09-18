@@ -1186,6 +1186,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     h += '<span class="sec-label" style="margin-top:0">할인 선택</span>';
     var discOpts=[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%'],['페스타','-15%'],['선납2','선납2']];
     if(hasTasabData) discOpts.splice(1,0,['타사보상','타사보상']);
+    var s2Blocked = item.약정년 === 3;
     h += '<select onchange="var v=this.value; if(v===\'타사보상\'){setTasab('+idx+',true);}else{setDisc('+idx+',v);}" style="margin-bottom:8px">';
     discOpts.forEach(function(optArr) {
       var opt = optArr[0]; var optLabel = optArr[1];
@@ -1193,7 +1194,8 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
         : opt === '타사보상' ? isTasab
         : opt === '없음' ? (!isSunap2 && !isTasab && curDisc === '없음')
         : (!isSunap2 && !isTasab && curDisc === opt);
-      h += '<option value="' + opt + '"' + (isActive ? ' selected' : '') + '>' + optLabel + '</option>';
+      var isBlocked = opt === '선납2' && s2Blocked;
+      h += '<option value="' + opt + '"' + (isActive ? ' selected' : '') + (isBlocked ? ' disabled' : '') + '>' + optLabel + (isBlocked ? ' (3년 약정 불가)' : '') + '</option>';
     });
     h += '</select>';
     if (hasTasabData && isTasab) {
@@ -1673,6 +1675,12 @@ function renderS2UI(item,idx){
 
 function refreshCartItemRow(idx){
   var item=cart[idx];
+  if (item.약정년===3 && item.선납==='선납2') {
+    item.선납='none';
+    var d0=item.discounts||{};
+    d0.동시구매=false; d0.결합=false;
+    item.discounts=d0;
+  }
   var row=PRODUCTS.find(function(r){
     return r.제품명===item.제품명&&r.모델명===item.모델명&&
            (!item.관리방법||r.관리방법===item.관리방법)&&
@@ -1946,6 +1954,7 @@ function bulkCanApply(item,field,val){
     return cMeths.indexOf(val)>=0;
   }
   if (field==='disc'){
+    if (val==='선납2' && item.약정년===3) return false;
     return item.구매방법!=='cash' && !item.isRerental;
   }
   if (field==='half'){
@@ -2000,6 +2009,7 @@ function applyBulk(){
 
 function setDisc(idx,opt){
   var d=cart[idx].discounts||{};
+  if (opt==='선납2'&&cart[idx].약정년===3) return;
   if (opt==='선납2'){
     cart[idx].선납='선납2';cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;
     d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;

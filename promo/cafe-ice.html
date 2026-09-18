@@ -380,7 +380,7 @@
         <div class="c-desc">프로모션가 그대로 진행할게요</div>
       </button>
     </div>
-    <button type="button" class="back-link" onclick="goStep(5)">← 이전으로</button>
+    <button type="button" class="back-link" onclick="bundleBack()">← 이전으로</button>
   </div>
 
   <!-- Step 7: result -->
@@ -649,7 +649,8 @@
         '</button>';
       document.getElementById('prepayChoices').innerHTML = html;
       document.getElementById('prepayNote').innerHTML =
-        '⚠️ 3년 약정은 소유권이 이전되지 않아요. 3년 사용 후 제품을 반납하시거나, 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.';
+        '⚠️ 3년 약정은 소유권이 이전되지 않아요. 3년 사용 후 제품을 반납하시거나, 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.<br>' +
+        '💳 일시납은 매달 자동이체 청구가 없어서 제휴카드 청구할인은 적용되지 않아요 — 매달 나눠 내는 게 부담스러운 분께 추천드려요.';
     } else {
       var p = calcPrepay(state.term, promoForTerm(state.term));
       html =
@@ -670,7 +671,21 @@
 
   window.selectPrepay = function(owns){
     state.prepay = owns;
+    if(state.term === 3 && owns){
+      // 3년치 일시납은 매달 자동이체 청구가 없어 제휴카드 청구할인 적용 대상이 아님 — 카드 단계 건너뜀
+      state.cardId = null; state.cardName = null; state.cardDiscount = 0;
+      goStep(6);
+      return;
+    }
     resetCardPhase();
+    goStep(5);
+  };
+
+  window.bundleBack = function(){
+    if(state.term === 3 && state.prepay){
+      goStep(4);
+      return;
+    }
     goStep(5);
   };
 

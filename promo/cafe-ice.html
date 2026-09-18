@@ -337,7 +337,7 @@
   <!-- Step 4: 선납 -->
   <div class="step" id="step4">
     <div class="step-label">STEP 4</div>
-    <div class="step-q">여유자금 100만원을 먼저 내고<br>매달 더 할인받고 싶으신가요?</div>
+    <div class="step-q" id="prepayQ">여유자금 100만원을 먼저 내고<br>매달 더 할인받고 싶으신가요?</div>
     <div class="choice-list" id="prepayChoices"></div>
     <p class="feature-note" id="prepayNote"></p>
     <button type="button" class="back-link" onclick="goStep(3)">← 이전으로</button>
@@ -400,7 +400,7 @@
     </div>
 
     <div class="card-result" id="prepayResult" hidden>
-      <div class="cr-row"><span>선납 월 할인액 (원금 환급분 + 16만원 합산)</span><span id="crPrepayAmt"></span></div>
+      <div class="cr-row"><span id="crPrepayLabel"></span><span id="crPrepayAmt"></span></div>
       <div class="cr-note" id="crPrepayNote"></div>
     </div>
 
@@ -613,33 +613,59 @@
 
   window.selectTerm = function(term){
     state.term = term;
-    if(term === 3){
-      // 3년 약정은 선납 100만원 옵션 대상 아님 — 선납 단계 건너뛰고 바로 카드 단계로
-      state.prepay = false;
-      resetCardPhase();
-      goStep(5);
-      return;
-    }
     renderPrepayStep();
     goStep(4);
   };
 
   // ---- Step 4: 선납 ----
+  // 3년 약정은 소유권 이전 대상이 아니라서 100만원 선납2 대신, 3년치 렌탈료를
+  // 한 번에 내는 "36선납"(기존 계산기와 동일: 총 납입금액의 10% 할인) 방식으로 안내.
+  function calcLumpPrepay(promoPrice, months){
+    var fullTotal = promoPrice * months;
+    var total = f10(fullTotal * 0.9);
+    var savings = fullTotal - total;
+    return { fullTotal: fullTotal, total: total, savings: savings };
+  }
+
   function renderPrepayStep(){
-    var p = calcPrepay(state.term, promoForTerm(state.term));
-    var html =
-      '<button type="button" class="choice prepay-choice" onclick="selectPrepay(true)">' +
-        '<div class="c-title">100만원 선납할게요</div>' +
-        '<div class="c-desc">월 렌탈료 ' + won(p.mi) + ' 할인 (원금 환급분 + 16만원 혜택 합산)</div>' +
-        '<div class="prepay-badge">금융이자로 환산하면 연 ' + p.annualRate.toFixed(1) + '%대</div>' +
-      '</button>' +
-      '<button type="button" class="choice" onclick="selectPrepay(false)">' +
-        '<div class="c-title">선납 없이 진행할게요</div>' +
-        '<div class="c-desc">매달 나눠 내는 게 편해요</div>' +
-      '</button>';
-    document.getElementById('prepayChoices').innerHTML = html;
-    document.getElementById('prepayNote').innerHTML =
-      '💡 원금 100만원은 약정기간(' + state.term + '년) 동안 매달 렌탈료에서 나눠 차감되고, 그 위에 총 16만원이 추가로 할인되는 방식이에요.';
+    var isLump = state.term === 3;
+    var html;
+
+    document.getElementById('prepayQ').innerHTML = isLump
+      ? '3년치 렌탈료를<br>한번에 선납하시겠어요?'
+      : '여유자금 100만원을 먼저 내고<br>매달 더 할인받고 싶으신가요?';
+
+    if(isLump){
+      var lp = calcLumpPrepay(promoForTerm(3), 36);
+      html =
+        '<button type="button" class="choice prepay-choice" onclick="selectPrepay(true)">' +
+          '<div class="c-title">3년치 렌탈료 한번에 낼게요</div>' +
+          '<div class="c-desc">총 ' + won(lp.total) + ' (정가 ' + won(lp.fullTotal) + ' 대비 ' + won(lp.savings) + ' 절약)</div>' +
+          '<div class="prepay-badge">총 납입금액 10% 할인</div>' +
+        '</button>' +
+        '<button type="button" class="choice" onclick="selectPrepay(false)">' +
+          '<div class="c-title">선납 없이 진행할게요</div>' +
+          '<div class="c-desc">매달 나눠 내는 게 편해요</div>' +
+        '</button>';
+      document.getElementById('prepayChoices').innerHTML = html;
+      document.getElementById('prepayNote').innerHTML =
+        '⚠️ 3년 약정은 소유권이 이전되지 않아요. 3년 사용 후 제품을 반납하시거나, 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.';
+    } else {
+      var p = calcPrepay(state.term, promoForTerm(state.term));
+      html =
+        '<button type="button" class="choice prepay-choice" onclick="selectPrepay(true)">' +
+          '<div class="c-title">100만원 선납할게요</div>' +
+          '<div class="c-desc">월 렌탈료 ' + won(p.mi) + ' 할인 (원금 환급분 + 16만원 혜택 합산)</div>' +
+          '<div class="prepay-badge">금융이자로 환산하면 연 ' + p.annualRate.toFixed(1) + '%대</div>' +
+        '</button>' +
+        '<button type="button" class="choice" onclick="selectPrepay(false)">' +
+          '<div class="c-title">선납 없이 진행할게요</div>' +
+          '<div class="c-desc">매달 나눠 내는 게 편해요</div>' +
+        '</button>';
+      document.getElementById('prepayChoices').innerHTML = html;
+      document.getElementById('prepayNote').innerHTML =
+        '💡 원금 100만원은 약정기간(' + state.term + '년) 동안 매달 렌탈료에서 나눠 차감되고, 그 위에 총 16만원이 추가로 할인되는 방식이에요.';
+    }
   }
 
   window.selectPrepay = function(owns){
@@ -707,10 +733,6 @@
       resetCardPhase();
       return;
     }
-    if(state.term === 3){
-      goStep(3); // 3년 약정은 선납 단계가 없으므로 약정 선택으로 바로
-      return;
-    }
     goStep(4);
   };
 
@@ -742,9 +764,17 @@
     var finalPrice = promoPrice;
 
     var prepayResult = document.getElementById('prepayResult');
-    if(state.prepay){
+    if(state.prepay && state.term === 3){
+      var lp = calcLumpPrepay(row.promo, 36);
+      document.getElementById('crPrepayLabel').textContent = '3년치 렌탈료 일시납';
+      document.getElementById('crPrepayAmt').textContent = won(lp.total);
+      document.getElementById('crPrepayNote').innerHTML =
+        '정가 대비 10% 할인(-' + won(lp.savings) + ') · ⚠️ 3년 약정은 소유권이 이전되지 않아요 — 3년 후 반납하시거나 2년 더 연장(총 5년)하시면 소유권을 받으실 수 있어요.';
+      prepayResult.hidden = false;
+    } else if(state.prepay){
       var p = calcPrepay(state.term, row.promo);
       finalPrice -= p.mi;
+      document.getElementById('crPrepayLabel').textContent = '선납 월 할인액 (원금 환급분 + 16만원 합산)';
       document.getElementById('crPrepayAmt').textContent = '-' + won(p.mi) + '/월';
       document.getElementById('crPrepayNote').innerHTML = '금융이자로 환산해보면 연 ' + p.annualRate.toFixed(1) + '%대 수준이에요';
       prepayResult.hidden = false;
@@ -761,8 +791,9 @@
       cardResult.hidden = true;
     }
 
+    var isLumpPrepay = state.prepay && state.term === 3;
     var finalResult = document.getElementById('finalResult');
-    if(state.prepay || state.cardDiscount > 0){
+    if((state.prepay && !isLumpPrepay) || state.cardDiscount > 0){
       document.getElementById('crFinal').textContent = won(Math.max(finalPrice, 0)) + '/월';
       finalResult.hidden = false;
     } else {
@@ -801,7 +832,11 @@
               (state.cycle ? ('\n[선택 조건] 색상 ' + COLOR_NAME[state.color] + ' / 관리주기 ' + state.cycle + ' / 약정 ' + state.term + '년') : '') +
               (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청') +
               (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음') +
-              (state.prepay ? '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term, promoForTerm(state.term)).annualRate.toFixed(1) + '%)' : '\n[선납] 해당 없음'),
+              (state.prepay
+                ? (state.term === 3
+                    ? '\n[선납] 3년치 렌탈료 일시납 희망 (총 ' + won(calcLumpPrepay(promoForTerm(3), 36).total) + ', 10% 할인)'
+                    : '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term, promoForTerm(state.term)).annualRate.toFixed(1) + '%)')
+                : '\n[선납] 해당 없음'),
         page: location.href
       })
     })

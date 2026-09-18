@@ -394,7 +394,7 @@
     </div>
 
     <div class="card-result" id="prepayResult" hidden>
-      <div class="cr-row"><span>선납금 100만원 (원금 환급 포함)</span><span id="crPrepayAmt"></span></div>
+      <div class="cr-row"><span>선납 월 할인액 (원금 환급분 + 16만원 합산)</span><span id="crPrepayAmt"></span></div>
       <div class="cr-note" id="crPrepayNote"></div>
     </div>
 
@@ -605,7 +605,7 @@
     var html =
       '<button type="button" class="choice" onclick="selectPrepay(true)">' +
         '<div class="c-title">네, 100만원 선납할게요</div>' +
-        '<div class="c-desc">월 ' + won(p.mi) + ' 추가 할인돼요 (원금 환급 + 총 16만원 혜택)</div>' +
+        '<div class="c-desc">월 렌탈료가 ' + won(p.mi) + ' 줄어요 (선납 원금 환급분 + 총 16만원 할인이 합쳐진 금액)</div>' +
       '</button>' +
       '<button type="button" class="choice" onclick="selectPrepay(false)">' +
         '<div class="c-title">아니요, 선납 없이 진행할게요</div>' +

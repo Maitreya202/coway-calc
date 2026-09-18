@@ -847,6 +847,7 @@ if (item.tasabosangOn&&hasTasab) {
     var grade=item.s2.grade||'A';
     var oi=item.s2.oi||0;
     var bm=item.s2.반값월||0;
+    var s2Kind=item.s2.kind==='manwon'?'manwon':'half';
     var opt=SUNAP2[grade]&&SUNAP2[grade].opts[oi];
     if (opt) {
       var mc=Math.floor(opt.amt/months);
@@ -854,11 +855,12 @@ if (item.tasabosangOn&&hasTasab) {
       var mi=mc+mb;
       var ex=bm>0?bm+1:0; // 반값 기간 있을 때만 1개월차 포함
       var s2Amt=Math.floor((opt.amt-mc*ex)/1000)*1000;
-      var s2HalfM=bm>0?f10(normalMonthly*0.5):0;
+      var s2HalfM=bm>0?(s2Kind==='manwon'?10000:f10(normalMonthly*0.5)):0;
       var s2AfterM=f10(normalMonthly-mi);
       var s2AfterMo=months-bm;
-      sunap={label:'선납2'+(bm>0?' (반값 '+bm+'개월)':''),amt:s2Amt,월인하:mi,인하후:s2AfterM,
-             s2HalfM:s2HalfM,s2HalfMo:bm,s2AfterM:s2AfterM,s2AfterMo:s2AfterMo};
+      var s2HalfLabel=s2Kind==='manwon'?'1만원 청구':'반값';
+      sunap={label:'선납2'+(bm>0?' ('+s2HalfLabel+' '+bm+'개월)':''),amt:s2Amt,월인하:mi,인하후:s2AfterM,
+             s2HalfM:s2HalfM,s2HalfMo:bm,s2AfterM:s2AfterM,s2AfterMo:s2AfterMo,s2Kind:s2Kind};
       if (bm>0) { halfMonthly=s2HalfM; hvMonths=bm; monthly=s2HalfM; }
     }
   }
@@ -900,7 +902,7 @@ if (item.tasabosangOn&&hasTasab) {
     base:base,displayBase:displayBase,
     monthly:monthly,halfMonthly:halfMonthly,normalMonthly:normalMonthly,
     months:months,total:total,sunap:sunap,hasPromo:hasPromo,
-    hvMonths:hvMonths,isHanval:isHv,isManwon:!!d.만원,discLabel:discLabel,
+    hvMonths:hvMonths,isHanval:isHv,isManwon:!!d.만원||(sunap&&sunap.s2Kind==='manwon'&&hvMonths>0),discLabel:discLabel,
     hasBmp:hasBmp,
     bmpName:(bmpLines&&bmpLines.length?bmpLines.map(function(l){return l.name+(l.isPer&&l.cnt>1?' '+l.cnt+'개':'');}).join(', '):''),
     bmpAmt:bmpPrice,bmpCnt:bmpCnt,isBmpPer:isBmpPer,bmpLines:bmpLines,
@@ -999,7 +1001,7 @@ function openConfig(idx){
   item.구매방법='rental';item.일시불할인='none';
   item.재렌탈할인='none';item.재렌탈1년on=false;
   item.discounts={};item.반값개월=0;item.만원개월=0;item.선납='none';
-  item.s2={grade:'A',oi:0,반값월:0};
+  item.s2={grade:'A',oi:0,반값월:0,kind:'half'};
   item.kors=[];item.별매품선택={};item.별매품슬롯=['',''];item.지로On=false;
   item.headType='none';item.ilsiblOn=false;
   item.tasabosangOn=false;item.tasab1년on=false;
@@ -1049,7 +1051,7 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
     if (item.isRerental && item.재렌탈1년on) tags.push('1년 -20%');
     else if (!item.isRerental && d.반값 && item.선납 !== '선납2') tags.push('반값' + (item.반값개월 ? ' ' + item.반값개월 + '개월' : ''));
     else if (!item.isRerental && d.만원 && item.선납 !== '선납2') tags.push('1만원 청구' + (item.만원개월 ? ' ' + item.만원개월 + '개월' : ''));
-    else if (!item.isRerental && item.선납 === '선납2' && c.sunap && c.sunap.s2HalfMo > 0) tags.push('반값 ' + c.sunap.s2HalfMo + '개월');
+    else if (!item.isRerental && item.선납 === '선납2' && c.sunap && c.sunap.s2HalfMo > 0) tags.push((c.isManwon ? '1만원 청구 ' : '반값 ') + c.sunap.s2HalfMo + '개월');
   }
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
   if (korCnt > 0) tags.push('코라솔 ' + korCnt + '건');
@@ -1405,7 +1407,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
       var steps = _baseChainSteps(item, c, d);
       if (c.tasab1년On) steps.push({label:'타사보상 1년특가', val: useHalf?c.tasab1년Rate:c.normalMonthly});
       else if (c.isRe && c.re1년On) steps.push({label:'재렌탈 1년특가', val: useHalf?c.monthly:c.normalMonthly});
-      else if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? '반값' : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
+      else if (_st1==='선납2' && c.sunap) steps.push({label: useHalf ? (c.isManwon?'1만원 청구':'반값') : '선납2', val: useHalf?c.sunap.s2HalfM:c.sunap.s2AfterM});
       else if (d.반값 && useHalf) steps.push({label:'반값', val:c.halfMonthly});
       else if (d.만원 && useHalf) steps.push({label:'1만원 청구', val:c.halfMonthly});
       steps.push({label:'코라솔', val: useHalf?ki.halfRenM:(ki.normalRenM!=null?ki.normalRenM:ki.renM)});
@@ -1641,7 +1643,7 @@ function renderCart() {
 
 <script>
 function renderS2UI(item,idx){
-  var s2=item.s2||{grade:'A',oi:0,반값월:0};
+  var s2=item.s2||{grade:'A',oi:0,반값월:0,kind:'half'};
   var opts=SUNAP2[s2.grade]?SUNAP2[s2.grade].opts:[];
   var html='<div class="s2-box"><p class="s2-title">선납2 설정</p>';
   html+='<select onchange="setS2Grade('+idx+',this.value)">';
@@ -1650,8 +1652,15 @@ function renderS2UI(item,idx){
   html+='<select onchange="setS2Oi('+idx+',this.value)">';
   opts.forEach(function(o,i){html+='<option value="'+i+'"'+(s2.oi===i?' selected':'')+'>'+won(o.amt)+' 선납 (할인 '+won(o.disc)+')</option>';});
   html+='</select>';
+  var s2Kind=s2.kind==='manwon'?'manwon':'half';
+  html+='<p class="pl" style="margin-top:8px;margin-bottom:4px">추가 할인</p>';
+  html+='<select onchange="setS2Kind('+idx+',this.value)" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;background:white">';
+  [['half','반값 (-50%)'],['manwon','1만원 청구']].forEach(function(o){
+    html+='<option value="'+o[0]+'"'+(s2Kind===o[0]?' selected':'')+'>'+o[1]+'</option>';
+  });
+  html+='</select>';
   var bm=s2.반값월||0;
-  html+='<p class="pl" style="margin-top:8px;margin-bottom:4px">반값 적용 기간</p>';
+  html+='<p class="pl" style="margin-top:8px;margin-bottom:4px">'+(s2Kind==='manwon'?'1만원 청구':'반값')+' 적용 기간</p>';
   html+='<div style="display:flex;align-items:center;gap:4px">';
   var s2Max=item.약정년*12;
   html+='<input type="number" value="'+bm+'" min="0" max="'+s2Max+'" onchange="setS2Val('+idx+',\'반값월\',Math.max(0,Math.min(+this.value,'+s2Max+')))" style="width:54px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;text-align:center">';
@@ -1995,7 +2004,7 @@ function setDisc(idx,opt){
     cart[idx].선납='선납2';cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;
     d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;
     cart[idx].discounts=d;
-    if (!cart[idx].s2) cart[idx].s2={grade:'A',oi:0,반값월:0};
+    if (!cart[idx].s2) cart[idx].s2={grade:'A',oi:0,반값월:0,kind:'half'};
   } else {
     d.동시구매=false;d.결합=false;d.동시결합=false;d.페스타=false;d.반값=false;d.만원=false;
     cart[idx].선납='none';cart[idx].tasabosangOn=false;cart[idx].tasab1년on=false;
@@ -2093,6 +2102,7 @@ function toggleIlsiblCmp(idx){cart[idx]._ilsiblCmpOpen=!cart[idx]._ilsiblCmpOpen
 function setMemberCmp(idx,v){cart[idx].memberCmpOn=v;renderCart();}
 function setS2Grade(idx,g){cart[idx].s2=Object.assign({},cart[idx].s2,{grade:g,oi:0});renderCart();}
 function setS2Oi(idx,i){cart[idx].s2=Object.assign({},cart[idx].s2,{oi:parseInt(i)});renderCart();}
+function setS2Kind(idx,k){cart[idx].s2=Object.assign({},cart[idx].s2,{kind:k==='manwon'?'manwon':'half'});renderCart();}
 function setS2Val(idx,k,v){var s2=Object.assign({},cart[idx].s2);s2[k]=v;cart[idx].s2=s2;renderCart();}
 
 var KORASOL={};  // 서버에서 로드 (코라솔_기본/지원금/페이백 시트)
@@ -2944,7 +2954,7 @@ function computeQuoteRows(cart){
       if(item.isRerental)bg[0]+=' / 재렌탈';
       if(item.tasabosangOn)bg[0]+=' / 타사보상';
       if(c.isHanval&&c.hvMonths>0){var _hvLbl=c.isManwon?'1만원 청구':'반값';bg[0]+= c.hvMonths<c.months ? (' / '+_hvLbl+' '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / '+_hvLbl+' '+c.hvMonths+'개월');}
-      else if(item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){bg[0]+=' / 반값 '+c.sunap.s2HalfMo+'개월 ('+c.sunap.s2HalfM.toLocaleString('ko-KR')+'원/월)';}
+      else if(item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0){bg[0]+=' / '+(c.isManwon?'1만원 청구':'반값')+' '+c.sunap.s2HalfMo+'개월 ('+c.sunap.s2HalfM.toLocaleString('ko-KR')+'원/월)';}
       if(c.tasab1년On)bg[0]+=' / 타사보상 1년 특가';
       if(item.선납&&item.선납!=='none'&&item.선납!=='선납2'){bg[0]+=' / '+item.선납+'개월 선납';}
       if(ki){ki.lines.forEach(function(l){bg.push('코라솔 '+l.prod+' '+l.cnt+'구좌 결합');});}
@@ -2959,7 +2969,7 @@ function computeQuoteRows(cart){
       if(c.discLabel) discParts.push(c.discLabel);
       if(!item.isRerental&&d.반값&&item.선납!=='선납2') discParts.push('반값'+(item.반값개월?' '+item.반값개월+'개월':''));
       else if(!item.isRerental&&d.만원&&item.선납!=='선납2') discParts.push('1만원 청구'+(item.만원개월?' '+item.만원개월+'개월':''));
-      else if(!item.isRerental&&item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0) discParts.push('반값 '+c.sunap.s2HalfMo+'개월');
+      else if(!item.isRerental&&item.선납==='선납2'&&c.sunap&&c.sunap.s2HalfMo>0) discParts.push((c.isManwon?'1만원 청구 ':'반값 ')+c.sunap.s2HalfMo+'개월');
       if(ki) discParts.push('코라솔');
       discBadge=discParts.join(' · ');
     }

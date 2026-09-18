@@ -545,17 +545,24 @@
   };
 
   // ---- 선납2 (100만원 선납) 실효금리 계산 ----
-  // A구분(환경가전): 100만원 선납 시 16만원 할인. 원금+할인 총액을 약정 개월수만큼
-  // 균등 분할해서 매달 렌탈료에서 차감(원리금 균등상환형 annuity) — 단순 16%가 아니라
-  // 원금 상환 스케줄까지 고려한 실효 연 복리금리로 환산해서 보여줌.
+  // 기존 견적 계산기(index.html)의 선납2 로직과 동일한 방식/반올림 규칙으로 계산:
+  // A구분(환경가전) 100만원 선납 시 16만원 할인. mc(원금 환급분)+mb(할인분)을 약정
+  // 개월수로 균등 분할하고, index.html처럼 "인하후 월렌탈료"를 f10(10원 단위 내림)
+  // 으로 반올림한 뒤 그 차이를 실제 표시 할인액으로 사용 — 예: 5년 약정이면
+  // 정상 월렌탈료 대비 19,340원 차감(raw 19,332원이 아니라 반올림 보정된 값).
   var PREPAY_AMT = 1000000;
   var PREPAY_DISC = 160000;
 
-  function calcPrepay(termYears){
+  function f10(n){ return Math.floor(n / 10) * 10; }
+
+  function calcPrepay(termYears, normalMonthly){
     var months = termYears * 12;
     var mc = Math.floor(PREPAY_AMT / months);
     var mb = Math.floor(PREPAY_DISC / months);
-    var mi = mc + mb;
+    var rawMi = mc + mb;
+    var afterPrice = f10(f10(normalMonthly) - rawMi);
+    var mi = f10(normalMonthly) - afterPrice; // 실제 표시되는 월 차감액(반올림 보정)
+
     // annuity IRR: PREPAY_AMT = mi * (1-(1+i)^-months)/i 를 이분탐색으로 근사
     var lo = 0, hi = 0.05, i;
     for(var k = 0; k < 60; k++){
@@ -565,6 +572,11 @@
     }
     var annualRate = (Math.pow(1 + i, 12) - 1) * 100;
     return { months: months, mc: mc, mb: mb, mi: mi, annualRate: annualRate };
+  }
+
+  function promoForTerm(term){
+    var row = PRICES[state.cycle].filter(function(r){ return r.term === term; })[0];
+    return row ? row.promo : 0;
   }
 
   window.selectColor = function(color){
@@ -595,13 +607,20 @@
 
   window.selectTerm = function(term){
     state.term = term;
+    if(term === 3){
+      // 3년 약정은 선납 100만원 옵션 대상 아님 — 선납 단계 건너뛰고 바로 카드 단계로
+      state.prepay = false;
+      resetCardPhase();
+      goStep(5);
+      return;
+    }
     renderPrepayStep();
     goStep(4);
   };
 
   // ---- Step 4: 선납 ----
   function renderPrepayStep(){
-    var p = calcPrepay(state.term);
+    var p = calcPrepay(state.term, promoForTerm(state.term));
     var html =
       '<button type="button" class="choice" onclick="selectPrepay(true)">' +
         '<div class="c-title">네, 100만원 선납할게요</div>' +
@@ -683,6 +702,10 @@
       resetCardPhase();
       return;
     }
+    if(state.term === 3){
+      goStep(3); // 3년 약정은 선납 단계가 없으므로 약정 선택으로 바로
+      return;
+    }
     goStep(4);
   };
 
@@ -715,7 +738,7 @@
 
     var prepayResult = document.getElementById('prepayResult');
     if(state.prepay){
-      var p = calcPrepay(state.term);
+      var p = calcPrepay(state.term, row.promo);
       finalPrice -= p.mi;
       document.getElementById('crPrepayAmt').textContent = '-' + won(p.mi) + '/월';
       document.getElementById('crPrepayNote').innerHTML = '연 환산 복리 약 ' + p.annualRate.toFixed(1) + '% 효과 (은행 정기예금 대비 高금리)';
@@ -773,7 +796,7 @@
               (state.cycle ? ('\n[선택 조건] 색상 ' + COLOR_NAME[state.color] + ' / 관리주기 ' + state.cycle + ' / 약정 ' + state.term + '년') : '') +
               (state.cardName ? ('\n[제휴카드] ' + state.cardName + ' (월 -' + state.cardDiscount.toLocaleString('ko-KR') + '원)') : '\n[제휴카드] 미신청') +
               (state.bundle ? '\n[결합할인] 다른 코웨이 제품 사용 중 (5% 적용)' : '\n[결합할인] 해당 없음') +
-              (state.prepay ? '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term).annualRate.toFixed(1) + '%)' : '\n[선납] 해당 없음'),
+              (state.prepay ? '\n[선납] 100만원 선납 희망 (연 환산 약 ' + calcPrepay(state.term, promoForTerm(state.term)).annualRate.toFixed(1) + '%)' : '\n[선납] 해당 없음'),
         page: location.href
       })
     })

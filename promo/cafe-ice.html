@@ -633,8 +633,7 @@
     document.getElementById('prepayChoices').innerHTML = html;
     document.getElementById('prepayNote').innerHTML =
       '💡 쉽게 설명하면: 100만원을 미리 내면 원금은 약정기간(' + state.term + '년) 동안 매달 렌탈료에서 나눠 돌려받고, ' +
-      '그 위에 총 16만원이 추가로 얹어져요. 이걸 은행 정기예금처럼 환산하면 <b style="color:var(--gold-light);">연 ' + p.annualRate.toFixed(1) + '% 복리</b> 상품에 가입한 것과 비슷한 효과예요 — ' +
-      '요즘 은행 정기예금 금리가 보통 연 3%대인 걸 감안하면 꽤 높은 혜택입니다.';
+      '그 위에 총 16만원이 추가로 얹어져요. 이 혜택을 금융이자로 환산해보면 <b style="color:var(--gold-light);">연 ' + p.annualRate.toFixed(1) + '%대</b> 수준입니다.';
   }
 
   window.selectPrepay = function(owns){
@@ -741,7 +740,7 @@
       var p = calcPrepay(state.term, row.promo);
       finalPrice -= p.mi;
       document.getElementById('crPrepayAmt').textContent = '-' + won(p.mi) + '/월';
-      document.getElementById('crPrepayNote').innerHTML = '연 환산 복리 약 ' + p.annualRate.toFixed(1) + '% 효과 (은행 정기예금 대비 高금리)';
+      document.getElementById('crPrepayNote').innerHTML = '금융이자로 환산해보면 연 ' + p.annualRate.toFixed(1) + '%대 수준이에요';
       prepayResult.hidden = false;
     } else {
       prepayResult.hidden = true;

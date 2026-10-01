@@ -554,6 +554,8 @@ function isSelfMgmt(m) { return !!(m&&m.indexOf('자가')>=0); }
 function isServiceFree(m) { return !!(m&&m.indexOf('서비스프리')>=0); }
 function f10(n) { return Math.floor(n/10)*10; }
 function won(n) { return (n||0).toLocaleString('ko-KR')+'원'; }
+// 약정년이 1 미만이면(0.25/0.5 등) 개월 단위 약정(단기렌탈 등)을 뜻함 — 표시만 "N개월"로, 내부 계산(약정년*12)은 그대로 둬도 정확함
+function yakjLabel(y) { y = Number(y)||0; return y < 1 ? (Math.round(y*12) + '개월') : (y + '년'); }
 
 function sunapBase(n,start,isHanval,halfM,normalM,hvMonths) {
   if (!isHanval) return normalM*n;
@@ -1041,7 +1043,7 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   // 능동형 태그: 의미있는 값만 수집
   var tags = [];
   if (!isCashMode) {
-    tags.push(item.약정년 + '년');
+    tags.push(yakjLabel(item.약정년));
     var mgmt = getMgmtLabel(item);
     tags.push(mgmt + (item.관리주기 && item.관리주기 !== '-' ? ' · ' + item.관리주기 : ''));
   }
@@ -1142,7 +1144,7 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   // 약정 패널
   h += '<div class="box-panel"><span class="sec-label" style="margin-top:0">약정기간</span><div class="pill-group">';
   cYaks.forEach(function(y) {
-    h += '<button class="pill' + (item.약정년 === y ? ' active' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + y + '년</button>';
+    h += '<button class="pill' + (item.약정년 === y ? ' active' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + yakjLabel(y) + '</button>';
   });
   h += '</div></div>';
 
@@ -1535,7 +1537,7 @@ function renderResultBox(item, idx, c, d, isSunap2) {
         + '</div>'
         + '<div class="res-sub" style="color:#334155;font-weight:600"><span>본품 일시불가</span><span>' + won(ilBase) + '</span></div>'
         + (ilOn ? '<div class="res-sub" style="color:#2563eb;font-weight:700"><span>&#8627; 동시구매 (-10%)</span><span>' + won(ilDisc) + '</span></div>' : '')
-        + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + item.약정년 + '년차)</span><span>' + won(ilMembership) + '</span></div>' : '')
+        + (ilMembership > 0 ? '<div class="res-sub" style="color:#64748b"><span>&#8627; 멤버십 비용 (2년차~' + yakjLabel(item.약정년).replace('년','년차').replace('개월','개월차') + ')</span><span>' + won(ilMembership) + '</span></div>' : '')
         + (ilBmpTotal > 0 ? ilBmpLines.map(function(l) {
             return '<div class="res-sub" style="color:#15803d;font-weight:600"><span>별매품 일시불가' + (ilBmpLines.length > 1 ? ' (' + l.name + ')' : '') + '</span><span>' + won(l.total) + '</span></div>';
           }).join('') : '')
@@ -2960,7 +2962,7 @@ function computeQuoteRows(cart){
     if(isCash){
       bg=['일시불 구매'+(c.discLabel?' / '+c.discLabel:'')];
     } else {
-      bg=[item.약정년+'년 약정 / '+ml+(ml==='방문관리'&&item.관리주기&&item.관리주기!=='-'?' ('+item.관리주기+')':'')];
+      bg=[yakjLabel(item.약정년)+' 약정 / '+ml+(ml==='방문관리'&&item.관리주기&&item.관리주기!=='-'?' ('+item.관리주기+')':'')];
       if(item.isRerental)bg[0]+=' / 재렌탈';
       if(item.tasabosangOn)bg[0]+=' / 타사보상';
       if(c.isHanval&&c.hvMonths>0){var _hvLbl=c.isManwon?'1만원 청구':'반값';bg[0]+= c.hvMonths<c.months ? (' / '+_hvLbl+' '+c.hvMonths+'개월 ('+c.halfMonthly.toLocaleString('ko-KR')+'원/월)') : (' / '+_hvLbl+' '+c.hvMonths+'개월');}
@@ -3326,7 +3328,7 @@ function buildStoryHTML(cart,customer,salesperson,today,opts){
       h+='<tr><td style="padding:9px 4px;color:'+BRASSD+';font-weight:700;font-size:'+FS_BODY+'px">할인 적용가'+(r.discBadge?_badge(r.discBadge,BRASSD,BRASS,PAPER):'')+'</td><td style="padding:9px 4px;text-align:right;font-family:'+SERIF+';font-size:'+FS_H3+'px;color:'+BRASSD+'">'+wonM(r.dp)+'</td></tr>';
       if(r.hasDiscount) h+='<tr><td colspan="2" style="padding:2px 4px 0;text-align:right;font-size:'+FS_META+'px;color:'+INKS+'">정상가 대비 <b style="color:'+BRASSD+'">'+wonM(r.totalSaving)+'</b> 절감</td></tr>';
     } else {
-      h+='<tr style="border-bottom:1px solid '+LINE+'"><td style="padding:7px 4px;color:'+INKS+';font-size:'+FS_META+'px">약정기간</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:'+INK+'">'+item.약정년+'년</td></tr>';
+      h+='<tr style="border-bottom:1px solid '+LINE+'"><td style="padding:7px 4px;color:'+INKS+';font-size:'+FS_META+'px">약정기간</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:'+INK+'">'+yakjLabel(item.약정년)+'</td></tr>';
       var cycleLabel=item.관리주기&&item.관리주기!=='-'?(mgmt==='자가관리'?' (키트발송 &middot; '+item.관리주기+')':mgmt==='방문관리'?' (방문주기 &middot; '+item.관리주기+')':' ('+item.관리주기+')'):'';
       h+='<tr style="border-bottom:1px solid '+LINE+'"><td style="padding:7px 4px;color:'+INKS+';font-size:'+FS_META+'px">관리 방법</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:'+INK+'">'+mgmt+cycleLabel+'</td></tr>';
       h+='<tr style="border-bottom:1px solid '+LINE+'"><td style="padding:7px 4px;color:'+INKS+';font-size:'+FS_META+'px">등록비 &middot; 설치비</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:'+INK+'">전액 면제</td></tr>';
@@ -3355,7 +3357,7 @@ function buildStoryHTML(cart,customer,salesperson,today,opts){
       // 약정 안내
       h+='<div style="padding:'+SEC_PAD+'">';
       h+=eyebrow('약정 안내');
-      h+=bodyText('고객님께서는 <strong style="color:'+INK+';font-weight:600">'+item.약정년+'년 약정</strong>으로 진행하십니다. 이 기간 동안 매달 정해진 금액으로 편안하게 이용하시면 되고, 약정기간 내 무상 A/S가 포함됩니다.');
+      h+=bodyText('고객님께서는 <strong style="color:'+INK+';font-weight:600">'+yakjLabel(item.약정년)+' 약정</strong>으로 진행하십니다. 이 기간 동안 매달 정해진 금액으로 편안하게 이용하시면 되고, 약정기간 내 무상 A/S가 포함됩니다.');
       h+=_infoBox('약정기간 종료 후','제품은 고객님 소유가 됩니다','별도 절차 없이 자연스럽게 소유권이 이전됩니다.',PAPER,LINE,BRASS,BRASSD,INKS,SERIF,FS_META,FS_H3,LH_BODY);
       h+='</div>';
       h+=rule();
@@ -3399,7 +3401,7 @@ function buildStoryHTML(cart,customer,salesperson,today,opts){
       h+='<td style="padding:7px 6px;border-bottom:1px solid '+PAPER3+';font-family:'+SERIF+';color:'+BRASSD+';font-size:'+FS_EMPH+'px;vertical-align:top">'+String(idx+1).padStart(2,'0')+'</td>';
       h+='<td style="padding:7px 6px;border-bottom:1px solid '+PAPER3+';vertical-align:top">';
       h+='<span style="color:'+INK+';font-weight:600">'+esc(r.name)+'</span><span style="color:'+INKS+';font-size:'+FS_META+'px;display:block;margin-top:1px">'+esc(r.model)+'</span>';
-      h+='<span style="display:inline-block;font-size:'+FS_TAG+'px;color:'+INKS+';background:'+PAPER+';border:1px solid '+LINE+';border-radius:20px;padding:2px 8px;margin-top:4px">'+r.item.약정년+'년 &middot; '+r.mgmt+'</span>';
+      h+='<span style="display:inline-block;font-size:'+FS_TAG+'px;color:'+INKS+';background:'+PAPER+';border:1px solid '+LINE+';border-radius:20px;padding:2px 8px;margin-top:4px">'+yakjLabel(r.item.약정년)+' &middot; '+r.mgmt+'</span>';
       h+='</td>';
       h+='<td style="padding:7px 6px;border-bottom:1px solid '+PAPER3+';text-align:right;white-space:nowrap;vertical-align:top">'+(r.hasDiscount?'<span style="display:block;font-size:'+FS_TAG+'px;color:'+INKS+';text-decoration:line-through">'+wonM(r.regularPrice)+'</span>':'')+'<span style="color:'+INK+';font-weight:600">'+wonM(r.dp)+'</span></td>';
       h+='</tr>';

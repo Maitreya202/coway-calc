@@ -813,6 +813,40 @@ function updateCardDataSep2026() {
 //  - 신규 카드 3종 추가(전부 프로모션 없는 상시 카드, N): LOCA X Special SE(locaSE),
 //    코웨이라이프솔루션 신한카드(shinhanLife), 코웨이라이프솔루션 하나카드(hanaLife)
 // ----------------------------------------------------------------
+// ----------------------------------------------------------------
+// addKorasolShortTerm() ← 코라솔 단기(10/12/13년) 신상품 6종을 코라솔_기본/지원금에 1회 추가.
+// - 코라솔_기본 G열 '마지막회차납부금', 코라솔_지원금 E열 '마지막회차지원금' 컬럼을 추가(비어 있으면 기존처럼 납부금/월지원금과 동일 취급)
+// - 이미 있는 상품키는 건너뜀(중복 실행 안전). 실행 후 clearCache() 호출.
+// ----------------------------------------------------------------
+function addKorasolShortTerm() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var base = ss.getSheetByName(COND_SHEETS.KOR_BASE);
+  var sup  = ss.getSheetByName(COND_SHEETS.KOR_SUP);
+  if (!base || !sup) return '코라솔_기본/코라솔_지원금 시트 없음';
+  base.getRange(1, 7).setValue('마지막회차납부금').setFontWeight('bold');
+  sup.getRange(1, 5).setValue('마지막회차지원금').setFontWeight('bold');
+  // [키, 이름, 상품가(만원), 월납부금, 납부회차, 만기환급금, 마지막회차납부금, 지원개월, 총지원금, 월지원금, 마지막회차지원금]
+  var defs = [
+    ['599-10','CowayLife 599 (10년)',599,101000,60,5990000,31000, 60,900000,15000,15000],
+    ['599-12','CowayLife 599 (12년)',599, 84000,72,5990000,26000, 72,900000,12500,12500],
+    ['599-13','CowayLife 599 (13년)',599, 72000,84,5990000,14000, 84,900000,10700,11900],
+    ['699-10','CowayLife 699 (10년)',699,116500,60,6990000,116500,60,1100000,18300,20300],
+    ['699-12','CowayLife 699 (12년)',699, 98000,72,6990000,32000, 72,1100000,15200,20800],
+    ['699-13','CowayLife 699 (13년)',699, 83500,84,6990000,59500, 84,1100000,13000,21000]
+  ];
+  var have = {};
+  base.getDataRange().getValues().slice(1).forEach(function(r){ have[String(r[0]).trim()] = true; });
+  var added = 0;
+  defs.forEach(function(d) {
+    if (have[d[0]]) return;
+    base.appendRow([d[0], d[1], d[2], d[3], d[4], d[5], d[6]]);
+    sup.appendRow([d[0], d[7], d[8], d[9], d[10]]);
+    added++;
+  });
+  clearCache();
+  return added + '개 상품 추가';
+}
+
 function updateCardDataOct2026() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
@@ -950,13 +984,15 @@ function getConditions() {
     korBase.getDataRange().getValues().slice(1).forEach(function(r) {
       var key = String(r[0]).trim();
       if (!key) return;
-      korMap[key] = { name:String(r[1]), 납부금:Number(r[3]), 납부회차:Number(r[4]), 만기환급금:Number(r[5]), 지원:[], 페이백:{} };
+      korMap[key] = { name:String(r[1]), 납부금:Number(r[3]), 납부회차:Number(r[4]), 만기환급금:Number(r[5]),
+        마지막회차납부금:(r[6]===''||r[6]==null)?null:Number(r[6]), 지원:[], 페이백:{} };
     });
     // 지원금
     korSup.getDataRange().getValues().slice(1).forEach(function(r) {
       var key = String(r[0]).trim();
       if (!key || !korMap[key]) return;
-      korMap[key].지원.push({ months:Number(r[1]), total:Number(r[2]), monthly:Number(r[3]) });
+      korMap[key].지원.push({ months:Number(r[1]), total:Number(r[2]), monthly:Number(r[3]),
+        last:(r[4]===''||r[4]==null)?null:Number(r[4]) });
     });
     // 페이백
     korPbk.getDataRange().getValues().slice(1).forEach(function(r) {

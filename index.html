@@ -2134,14 +2134,22 @@ function itemKorCalc(item,c){
   var effM=getEffM(item,c);
   var totalSupM=0,totalSupCap=0,totalNabM=0,totalNabTotal=0,totalRefund=0,maxSupMonths=0;
   var lines=[],pbkLines=[];
+  var supDrift=0,hasLast=false,lastSupM=0,lastNabM=0,nabEndMo=0;
   activeKors.forEach(function(kor){
     var k=KORASOL[kor.prod];if(!k)return;
     var sup=k.지원[kor.si]||k.지원[0];
     var cnt=kor.cnt||1;
     totalSupM+=sup.monthly*cnt;totalSupCap+=(sup.total||sup.monthly*sup.months)*cnt;totalNabM+=k.납부금*cnt;
-    totalNabTotal+=(k.납부금*cnt)*k.납부회차;totalRefund+=k.만기환급금*cnt;
+    // 마지막 회차 금액이 다른 상품(단기 신상품)은 (회차-1)회 + 마지막회차로 정확히 합산
+    var nabTot=((k.마지막회차납부금!=null)?(k.납부금*(k.납부회차-1)+k.마지막회차납부금):(k.납부금*k.납부회차))*cnt;
+    var lastSup=(sup.last!=null)?sup.last:sup.monthly;
+    if (sup.last!=null) supDrift+=(sup.monthly*sup.months-sup.total)*cnt;
     if (sup.months>maxSupMonths) maxSupMonths=sup.months;
-    lines.push({k:k,sup:sup,cnt:cnt,supM:sup.monthly*cnt,nabM:k.납부금*cnt,nabTotal:(k.납부금*cnt)*k.납부회차,refund:k.만기환급금*cnt,prod:kor.prod});
+    if (k.마지막회차납부금!=null||sup.last!=null) hasLast=true;
+    lastSupM+=lastSup*cnt;lastNabM+=((k.마지막회차납부금!=null)?k.마지막회차납부금:k.납부금)*cnt;
+    if (k.납부회차<c.months) nabEndMo=nabEndMo?Math.min(nabEndMo,k.납부회차):k.납부회차;
+    totalNabTotal+=nabTot;totalRefund+=k.만기환급금*cnt;
+    lines.push({k:k,sup:sup,cnt:cnt,supM:sup.monthly*cnt,nabM:k.납부금*cnt,nabTotal:nabTot,refund:k.만기환급금*cnt,prod:kor.prod});
   });
   var supMo=Math.min(maxSupMonths,c.months);
   var renM,pbkM,pbkTotal,renTotal,halfRenM=null,normalRenM=null;
@@ -2170,6 +2178,8 @@ function itemKorCalc(item,c){
     renM=Math.max(0,effM-totalSupM);pbkM=Math.max(0,totalSupM-effM);
     pbkTotal=pbkM*maxSupMonths;renTotal=renM*supMo+effM*(c.months-supMo);
   }
+  // 지원금 총액이 '월지원×개월'과 다른 상품은 정확한 총액 기준으로 보정(지원기간을 다 채울 때만)
+  if (supDrift!==0&&supMo===maxSupMonths) renTotal+=supDrift;
   // 선납2 결합 시 렌탈 총납입에 선납금(일시 지급액)도 포함 (일시불 비교 등에서 실제 총비용 기준으로 사용)
   if (st==='선납2'&&c.sunap) renTotal+=c.sunap.amt;
   return {
@@ -2181,7 +2191,8 @@ function itemKorCalc(item,c){
     normalInSup:hvMo>0?supMo-Math.min(hvMo,supMo):supMo,
     halfRenM:halfRenM,normalRenM:normalRenM,
     halfMonthly:hvRate||0,normalMonthly:afterRate||0,pbkLines:pbkLines,
-    totalSupCap:totalSupCap
+    totalSupCap:totalSupCap,
+    hasLast:hasLast,lastSupM:lastSupM,lastNabM:lastNabM,nabEndMo:nabEndMo
   };
 }
 
@@ -2202,7 +2213,10 @@ function itemPhases(it){
       if (ki.normalInSup>0) push(ki.hvInSup+ki.normalInSup, ki.normalRenM||0);
       if (c.months>supMo) push(c.months, ki.normalMonthly);
     } else {
-      if (supMo>0) push(supMo, ki.renM);
+      if (ki.hasLast&&supMo===ki.maxSupMonths&&supMo>1&&ki.lastSupM!==ki.totalSupM){
+        push(supMo-1, ki.renM);
+        push(supMo, Math.max(0,ki.effM-ki.lastSupM));
+      } else if (supMo>0) push(supMo, ki.renM);
       if (c.months>supMo) push(c.months, ki.effM);
     }
   } else if (c.tasab1년On){
@@ -2388,6 +2402,8 @@ function renderKorItem(item,idx){
       } else {
         html+='<div class="kor-cr main"><span>렌탈 실납입 (지원기간)</span><span>'+won(ki.renM)+'/월</span></div>';
       }
+      if (ki.hasLast&&ki.maxSupMonths>1&&(ki.lastSupM!==ki.totalSupM||ki.lastNabM!==ki.totalNabM)) html+='<div class="kor-cr" style="color:#64748b;font-size:11px"><span>&#8627; 마지막 '+ki.maxSupMonths+'회차</span><span>코라솔 납부 '+won(ki.lastNabM)+' / 지원 -'+won(ki.lastSupM)+'</span></div>';
+      if (ki.nabEndMo>0) html+='<div class="kor-cr" style="color:#b45309;font-size:11px"><span>&#8627; 코라솔 납입은 '+ki.nabEndMo+'회차에 종료(이후 거치) — 이 뒤 월 합계는 코라솔 납부금 제외</span><span></span></div>';
       if (ki.pbkTotal>0){
         var pbkAfterMo=ki.maxSupMonths+1;
         if (ki.pbkLines&&ki.pbkLines.length>0) ki.pbkLines.forEach(function(pl){html+='<div class="kor-cr" style="color:#16a34a;font-weight:700"><span>&#8627; 페이백 ('+pl.label+') '+pbkAfterMo+'개월차</span><span style="color:#16a34a">-'+won(pl.amt*pl.months)+'</span></div>';});

@@ -119,3 +119,10 @@ Cloudflare Pages (index.html)
   - 이미 연결된 항목도 "다량 선택"/"렌탈 허용" 토글 스위치가 목록에 항상 표시되고, 껐다 켰다 하면 `doPost(action:'updateBmpPairing')`가 재연결 없이 해당 컬럼만 바로 수정함(연결 해제 후 재연결할 필요 없음).
   - `calcItem()`에서 선택된 별매품 옵션을 월렌탈 추가형(`bmpPrice`, 기존)과 일시불 전용형(`bmpOneTimeTotal`, 신규)으로 분리 — 일시불 전용형은 `base`(월렌탈료)에 안 더해지고 별도 1회성 금액으로만 반환됨.
   - `calcTotals()`가 `agg.bmpOneTime`으로 전체 아이템의 일시불 전용 별매품 총액을 집계(선납금 `agg.ilsibl`과 같은 패턴 — **월 렌탈료 합산(buildTimeline)은 안 건드림**), `buildQuoteParts()`가 "별매품(일시불)" 한 줄로 견적 요약에 표시함.
+
+## PWA 테스트 (`/pwa/`) — 2026-10-02~
+- **`index.html`/`pc.html`과 별개의 테스트 경로**(`https://coway-calc.pages.dev/pwa/index.html`). 서비스 워커 범위가 `/pwa/`로 제한돼 기존 페이지에 영향 없음. 목적: 구글 GAS가 간헐적으로 멈추는 문제(요청 경로에서 구글 제거) + 오프라인 사용.
+- **`pwa/index.html`, `pwa/data.json`, `pwa/version.json`은 `node tools/build-pwa.js`가 생성하는 파일** — 직접 수정하지 말 것. `index.html`을 고쳤으면 이 스크립트를 다시 실행해서 `pwa/index.html`에 반영(데이터 로딩부 패치 + `tools/pwa-snippet.html` 삽입; 패치 위치를 못 찾으면 에러로 멈춤). 손으로 관리하는 파일: `pwa/sw.js`, `pwa/manifest.webmanifest`, 아이콘.
+- 동작: 가격표는 기기에 저장된 `data.json`을 우선 사용(실패하면 기존 GAS 방식으로 폴백). 접속 때 `version.json`만 확인해서 다르면 "새 가격표가 있습니다 [업데이트]" 배너 → 누르면 새 `data.json`으로 교체. 화면 하단에 "가격표 기준 날짜" 표시(표시만, 견적 차단 없음).
+- **시트 수정 후 `node tools/build-pwa.js` → 커밋/푸시해야 PWA에 반영됨**(자동화 아직 없음, 내용이 안 바뀌면 version/기준시각 유지). 화면 파일(HTML)은 서비스 워커가 네트워크 우선이라 코드 수정은 자동 반영, 데이터만 사용자 확인 후 갱신.
+- 알려진 한계: 접근을 막아도 이미 기기에 저장된 데이터는 원격 삭제 불가 / 아이폰 Safari는 약 7일 미사용 시 저장본 삭제 가능(홈 화면에 추가하면 제외) / html2canvas·jsPDF·폰트는 CDN이라 오프라인에서 견적서 이미지·PDF 생성 불가.

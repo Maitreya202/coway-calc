@@ -287,11 +287,12 @@ input:focus,select:focus { border-color:#2563eb; }
           <option value="mgmt">관리방법</option>
           <option value="disc">할인</option>
           <option value="half">반값 (-50%)</option>
+          <option value="manwon">1만원 청구</option>
         </select>
         <p class="sec-label">변경 값</p>
         <select id="bulkVal" onchange="toggleBulkHalfMonthsWrap()" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#f8fafc;margin-bottom:12px"></select>
         <div id="bulkHalfMonthsWrap" style="display:none;margin-bottom:20px">
-          <p class="sec-label">반값 적용 기간 (개월, 0=전기간)</p>
+          <p class="sec-label" id="bulkHalfMonthsLabel">반값 적용 기간 (개월, 0=전기간)</p>
           <input type="number" id="bulkHalfMonths" min="0" value="0" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#f8fafc">
           <p style="font-size:11px;color:#94a3b8;margin-top:4px">* 약정기간을 초과하는 값은 각 항목의 약정년 한도로 자동 조정됩니다</p>
         </div>
@@ -1965,7 +1966,8 @@ var BULK_FIELD_DEFS = {
   term:   { label:'약정기간', opts:[[3,'3년'],[5,'5년'],[6,'6년'],[7,'7년']] },
   mgmt:   { label:'관리방법', opts:[['방문관리','방문관리'],['자가관리','자가관리'],['서비스프리','서비스프리']] },
   disc:   { label:'할인', opts:[['없음','없음'],['결합','-5%'],['동시구매','-10%'],['동시결합','10%+5%'],['페스타','-15%']] },
-  half:   { label:'반값 (-50%)', opts:[['off','미적용'],['on','반값 (-50%) 적용']] }
+  half:   { label:'반값 (-50%)', opts:[['off','미적용'],['on','반값 (-50%) 적용']] },
+  manwon: { label:'1만원 청구', opts:[['off','미적용'],['on','1만원 청구 적용']] }
 };
 function renderBulkOptsHtml(){
   var field=document.getElementById('bulkField').value;
@@ -1987,7 +1989,8 @@ function onBulkFieldChange(){
 function toggleBulkHalfMonthsWrap(){
   var field=document.getElementById('bulkField').value;
   var val=document.getElementById('bulkVal').value;
-  document.getElementById('bulkHalfMonthsWrap').style.display=(field==='half'&&val==='on')?'block':'none';
+  document.getElementById('bulkHalfMonthsWrap').style.display=((field==='half'||field==='manwon')&&val==='on')?'block':'none';
+  document.getElementById('bulkHalfMonthsLabel').textContent=(field==='manwon'?'1만원 청구':'반값')+' 적용 기간 (개월, 0=전기간)';
 }
 function bulkCanApply(item,field,val){
   if (field==='method'){
@@ -2010,6 +2013,10 @@ function bulkCanApply(item,field,val){
   }
   if (field==='half'){
     return item.구매방법!=='cash';
+  }
+  if (field==='manwon'){
+    // 개별 카드의 "특정 기간 할인"과 동일 조건 — 재렌탈(1년 추가할인 체계)/선납2(자체 반값 체계)/일시불에는 없음
+    return item.구매방법!=='cash' && !item.isRerental && item.선납!=='선납2';
   }
   return true;
 }
@@ -2042,6 +2049,7 @@ function applyBulk(){
       if (cart[idx].isRerental) cart[idx].재렌탈1년on=(val==='on');
       else {
         cart[idx].discounts=Object.assign({},cart[idx].discounts,{반값:(val==='on')});
+        if (val==='on') cart[idx].discounts.만원=false, cart[idx].만원개월=0; // 반값/1만원 청구는 동시 적용 불가
         if (val==='on') {
           var hvMax=cart[idx].약정년*12;
           var hvRaw=Math.max(0,parseInt(document.getElementById('bulkHalfMonths').value,10)||0);
@@ -2049,6 +2057,19 @@ function applyBulk(){
         } else {
           cart[idx].반값개월=0;
         }
+      }
+    }
+    else if (field==='manwon') {
+      // setPeriodDisc()/setPeriodMonths()와 동일한 결과 — 반값 해제, 타사보상 해제, 기간 반영
+      cart[idx].discounts=Object.assign({},cart[idx].discounts,{만원:(val==='on'),반값:false});
+      cart[idx].반값개월=0;
+      if (val==='on') {
+        var mwMax=cart[idx].약정년*12;
+        var mwRaw=Math.max(0,parseInt(document.getElementById('bulkHalfMonths').value,10)||0);
+        cart[idx].만원개월=Math.min(mwRaw,mwMax);
+        cart[idx].tasabosangOn=false; cart[idx].tasab1년on=false;
+      } else {
+        cart[idx].만원개월=0;
       }
     }
   });

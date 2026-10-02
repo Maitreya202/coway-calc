@@ -492,6 +492,10 @@ function pwaAfterLoad() {
     if (v && m && v.version !== m.version && banner) banner.style.display = 'flex';
   }).catch(function(){});
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+  // 견적서용 한글 폰트(약 4MB)를 오프라인용으로 백그라운드 저장 — 이미 저장돼 있으면 서비스 워커가 건너뜀
+  setTimeout(function(){
+    try { if (navigator.serviceWorker && navigator.serviceWorker.controller && navigator.onLine) navigator.serviceWorker.controller.postMessage('warm-fonts'); } catch(e) {}
+  }, 4000);
 }
 function pwaDoUpdate() {
   document.getElementById('pwaUpdateBanner').style.display = 'none';
@@ -2902,14 +2906,14 @@ function ensureAssetsLoaded(cb){
   if(window._assetsLoaded){ cb(); return; }
   window._assetsLoaded=true;
   var s1=document.createElement('script');
-  s1.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  s1.src='lib/html2canvas.min.js';
   s1.onload=function(){
     var s2=document.createElement('script');
-    s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s2.src='lib/jspdf.umd.min.js';
     s2.onload=function(){
       var l=document.createElement('link');
       l.rel='stylesheet';
-      l.href='https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Song+Myung&display=swap';
+      l.href='fonts/fonts.css';
       l.onload=function(){ (document.fonts?document.fonts.ready:Promise.resolve()).then(cb); };
       document.head.appendChild(l);
     };

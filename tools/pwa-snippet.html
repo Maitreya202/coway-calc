@@ -31,6 +31,10 @@ function pwaAfterLoad() {
     if (v && m && v.version !== m.version && banner) banner.style.display = 'flex';
   }).catch(function(){});
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+  // 견적서용 한글 폰트(약 4MB)를 오프라인용으로 백그라운드 저장 — 이미 저장돼 있으면 서비스 워커가 건너뜀
+  setTimeout(function(){
+    try { if (navigator.serviceWorker && navigator.serviceWorker.controller && navigator.onLine) navigator.serviceWorker.controller.postMessage('warm-fonts'); } catch(e) {}
+  }, 4000);
 }
 function pwaDoUpdate() {
   document.getElementById('pwaUpdateBanner').style.display = 'none';

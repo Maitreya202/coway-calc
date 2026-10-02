@@ -125,4 +125,4 @@ Cloudflare Pages (index.html)
 - **`pwa/index.html`, `pwa/data.json`, `pwa/version.json`은 `node tools/build-pwa.js`가 생성하는 파일** — 직접 수정하지 말 것. `index.html`을 고쳤으면 이 스크립트를 다시 실행해서 `pwa/index.html`에 반영(데이터 로딩부 패치 + `tools/pwa-snippet.html` 삽입; 패치 위치를 못 찾으면 에러로 멈춤). 손으로 관리하는 파일: `pwa/sw.js`, `pwa/manifest.webmanifest`, 아이콘.
 - 동작: 가격표는 기기에 저장된 `data.json`을 우선 사용(실패하면 기존 GAS 방식으로 폴백). 접속 때 `version.json`만 확인해서 다르면 "새 가격표가 있습니다 [업데이트]" 배너 → 누르면 새 `data.json`으로 교체. 화면 하단에 "가격표 기준 날짜" 표시(표시만, 견적 차단 없음).
 - **시트 수정 후 `node tools/build-pwa.js` → 커밋/푸시해야 PWA에 반영됨**(자동화 아직 없음, 내용이 안 바뀌면 version/기준시각 유지). 화면 파일(HTML)은 서비스 워커가 네트워크 우선이라 코드 수정은 자동 반영, 데이터만 사용자 확인 후 갱신.
-- 알려진 한계: 접근을 막아도 이미 기기에 저장된 데이터는 원격 삭제 불가 / 아이폰 Safari는 약 7일 미사용 시 저장본 삭제 가능(홈 화면에 추가하면 제외) / html2canvas·jsPDF·폰트는 CDN이라 오프라인에서 견적서 이미지·PDF 생성 불가.
+- 알려진 한계: 접근을 막아도 이미 기기에 저장된 데이터는 원격 삭제 불가 / 아이폰 Safari는 약 7일 미사용 시 저장본 삭제 가능(홈 화면에 추가하면 제외) / 견적서 이미지·PDF용 html2canvas/jsPDF/한글 웹폰트는 `pwa/lib`·`pwa/fonts`로 자체 호스팅(`node tools/fetch-pwa-assets.js`로 내려받음, 약 4.6MB — index.html의 ensureAssetsLoaded 경로는 build-pwa.js가 로컬 경로로 패치). 폰트는 접속 4초 뒤 서비스 워커가 백그라운드로 저장하므로 설치 직후 한동안은 오프라인 견적서 폰트가 시스템 폰트로 대체될 수 있음.

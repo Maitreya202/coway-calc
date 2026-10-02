@@ -49,11 +49,16 @@ async function fetchGas() {
   rep("      document.getElementById('app').style.display='block';\n      renderCart();\n    })\n    .catch(function(e){\n      document.getElementById('loadingScreen').style.display='none';",
       "      document.getElementById('app').style.display='block';\n      if(cond.cards) CARDS=cond.cards;\n      renderCart();\n      pwaAfterLoad();\n    })\n    .catch(function(e){\n      document.getElementById('loadingScreen').style.display='none';");
 
-  // 3) <head>: manifest / 아이콘
+  // 3) 견적서 이미지/PDF용 외부 리소스(CDN) → 자체 호스팅(tools/fetch-pwa-assets.js로 내려받은 pwa/lib, pwa/fonts) — 오프라인에서도 동작
+  rep("s1.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';", "s1.src='lib/html2canvas.min.js';");
+  rep("s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';", "s2.src='lib/jspdf.umd.min.js';");
+  rep("l.href='https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Song+Myung&display=swap';", "l.href='fonts/fonts.css';");
+
+  // 4) <head>: manifest / 아이콘
   rep('<meta name="theme-color" content="#1d4ed8">',
       '<meta name="theme-color" content="#1d4ed8">\n<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">\n<link rel="apple-touch-icon" href="icon-192.png">');
 
-  // 4) PWA 보조 스크립트 (맨 마지막 script 앞 — loadAppData() 호출 전에 정의돼야 하므로 첫 <script> 앞에 삽입)
+  // 5) PWA 보조 스크립트 (맨 마지막 script 앞 — loadAppData() 호출 전에 정의돼야 하므로 첫 <script> 앞에 삽입)
   const pwaJs = fs.readFileSync(path.join(__dirname, 'pwa-snippet.html'), 'utf8');
   const firstScript = s.indexOf('<script>');
   if (firstScript < 0) throw new Error('script 태그 없음');

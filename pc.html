@@ -490,16 +490,16 @@ setTimeout(fixModalHeight, 100);
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qfysb0FSaCEVnijccb3-ANZu7ahER0W245c9lYoZ2UMMSA/exec';
 // GAS 웹앱 exec URL은 콜드스타트/재배포 직후 등 Google 쪽 일시적 지연으로 가끔 HTTP 404가 뜨는데,
 // 대부분 몇백ms~몇초 뒤 재요청하면 바로 성공함 — 에러 화면을 바로 띄우기 전에 최대 2회 자동 재시도.
-var LOAD_DATA_MAX_RETRIES = 2;
+var LOAD_DATA_MAX_RETRIES = 3;
 function loadAppData(attempt) {
   attempt = attempt || 0;
   if (attempt > 0) {
     var lsSmall = document.querySelector('#loadingScreen small');
     if (lsSmall) lsSmall.textContent = '연결이 원활하지 않아 재시도 중... (' + attempt + '/' + LOAD_DATA_MAX_RETRIES + ')';
   }
-  // GAS가 가끔 응답 없이 멈추는 경우(무한 로딩) 대비 — 45초 넘으면 중단하고 아래 catch의 재시도 로직을 탄다
+  // GAS가 가끔 응답 없이 멈추는 경우(무한 로딩) 대비 — 15초 넘으면 중단하고 아래 catch의 재시도 로직을 탄다
   var _ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-  var _to = setTimeout(function(){ if(_ctl) _ctl.abort(); }, 45000);
+  var _to = setTimeout(function(){ if(_ctl) _ctl.abort(); }, 15000);
   fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', redirect:'follow', cache:'no-store', signal:_ctl?_ctl.signal:undefined})
     .then(function(r){ clearTimeout(_to); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(resp) {

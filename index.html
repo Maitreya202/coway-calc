@@ -1734,7 +1734,29 @@ function setCartMgmt(idx,method){
 }
 function toggleDetail(idx){ cart[idx]._detailOpen=!cart[idx]._detailOpen; renderCart(); }
 function toggleCard(idx){cart[idx]._open=cart[idx]._open===false?true:false;renderCart();}
-function removeCart(idx){cart.splice(idx,1);delete cartSel[idx];renderCart();}
+var _undoDel=null,_undoTimer=null;
+function removeCart(idx){
+  _undoDel={item:cart[idx],idx:idx,sel:Object.assign({},cartSel)};
+  cart.splice(idx,1);delete cartSel[idx];renderCart();
+  var t=document.getElementById('undoToast');
+  if(!t){
+    t=document.createElement('div');t.id='undoToast';
+    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:9999;background:#1e293b;color:#fff;border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+    document.body.appendChild(t);
+  }
+  t.innerHTML='<span>제품을 삭제했습니다</span><button onclick="undoRemoveCart()" style="background:none;border:none;color:#7dd3fc;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:2px 4px">되돌리기</button>';
+  t.style.display='flex';
+  clearTimeout(_undoTimer);
+  _undoTimer=setTimeout(function(){t.style.display='none';_undoDel=null;},5000);
+}
+function undoRemoveCart(){
+  if(!_undoDel)return;
+  cart.splice(Math.min(_undoDel.idx,cart.length),0,_undoDel.item);
+  cartSel=_undoDel.sel;_undoDel=null;
+  clearTimeout(_undoTimer);
+  var t=document.getElementById('undoToast');if(t)t.style.display='none';
+  renderCart();
+}
 function copySelectedItems(){
   var idxs=Object.keys(cartSel).map(Number).filter(function(i){return cart[i];}).sort(function(a,b){return a-b;});
   if (idxs.length===0) return;

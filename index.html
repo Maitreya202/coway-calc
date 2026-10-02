@@ -496,9 +496,9 @@ function loadAppData(attempt) {
     var lsSmall = document.querySelector('#loadingScreen small');
     if (lsSmall) lsSmall.textContent = '연결이 원활하지 않아 재시도 중... (' + attempt + '/' + LOAD_DATA_MAX_RETRIES + ')';
   }
-  // GAS가 가끔 응답 없이 멈추는 경우(무한 로딩) 대비 — 20초 넘으면 중단하고 아래 catch의 재시도 로직을 탄다
+  // GAS가 가끔 응답 없이 멈추는 경우(무한 로딩) 대비 — 45초 넘으면 중단하고 아래 catch의 재시도 로직을 탄다
   var _ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-  var _to = setTimeout(function(){ if(_ctl) _ctl.abort(); }, 20000);
+  var _to = setTimeout(function(){ if(_ctl) _ctl.abort(); }, 45000);
   fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', redirect:'follow', cache:'no-store', signal:_ctl?_ctl.signal:undefined})
     .then(function(r){ clearTimeout(_to); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(resp) {
@@ -531,10 +531,13 @@ function loadAppData(attempt) {
         return;
       }
       var msg = e && e.message ? e.message : String(e);
-      var isAuth = /permission|access|author|login|sign|scope/i.test(msg);
+      var isAbort = (e && e.name==='AbortError') || /abort/i.test(msg);
+      var isAuth = !isAbort && /permission|access|author|login|sign|scope/i.test(msg);
       var isId   = /not found|invalid.*id|no.*sheet/i.test(msg);
-      var title  = isAuth ? '로그인 또는 권한 오류' : isId ? '스프레드시트를 찾을 수 없음' : '데이터 로드 실패';
-      var hint   = isAuth
+      var title  = isAbort ? '서버 응답 지연' : isAuth ? '로그인 또는 권한 오류' : isId ? '스프레드시트를 찾을 수 없음' : '데이터 로드 실패';
+      var hint   = isAbort
+        ? '가격표 서버(Google)가 응답하지 않습니다.<br>잠시 후 "다시 시도"를 눌러 주세요.'
+        : isAuth
         ? 'Google 계정으로 로그인되어 있는지 확인하거나<br>관리자에게 접근 권한을 요청하세요.'
         : isId
         ? 'Code.gs의 SPREADSHEET_ID를 확인하세요.'

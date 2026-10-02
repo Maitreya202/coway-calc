@@ -496,8 +496,11 @@ function loadAppData(attempt) {
     var lsSmall = document.querySelector('#loadingScreen small');
     if (lsSmall) lsSmall.textContent = '연결이 원활하지 않아 재시도 중... (' + attempt + '/' + LOAD_DATA_MAX_RETRIES + ')';
   }
-  fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', redirect:'follow', cache:'no-store'})
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  // GAS가 가끔 응답 없이 멈추는 경우(무한 로딩) 대비 — 20초 넘으면 중단하고 아래 catch의 재시도 로직을 탄다
+  var _ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  var _to = setTimeout(function(){ if(_ctl) _ctl.abort(); }, 20000);
+  fetch(GAS_URL + '?action=getData&_ts=' + Date.now(), {method:'GET', mode:'cors', redirect:'follow', cache:'no-store', signal:_ctl?_ctl.signal:undefined})
+    .then(function(r){ clearTimeout(_to); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(resp) {
       var rows = resp.products || resp; // 하위 호환: 구 버전은 배열 직접
       PRODUCTS = rows.map(function(r) {
@@ -522,6 +525,7 @@ function loadAppData(attempt) {
       document.getElementById('noDataMsg').style.display = (PRODUCTS.length===0) ? 'block' : 'none';
     })
     .catch(function(e) {
+      clearTimeout(_to);
       if (attempt < LOAD_DATA_MAX_RETRIES) {
         setTimeout(function(){ loadAppData(attempt + 1); }, 800 * (attempt + 1));
         return;

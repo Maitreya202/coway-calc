@@ -1289,7 +1289,8 @@ function getData() {
 // CacheService는 키 하나당 100KB 제한이라 데이터가 커지면(제품 ~2천 행, 약 300KB) 통째로 put이 조용히 실패해서
 // 캐시가 한 번도 안 먹고 매 요청마다 시트를 다시 읽게 됨(응답 5~9초) — 조각으로 나눠 저장.
 // 'appData' 키는 조각 개수만 담은 목록(manifest)이고, 기존 코드의 remove('appData')로 무효화하면 조각은 더 이상 안 읽혀서 그대로 호환됨.
-var _CACHE_CHUNK = 90000;
+// 한글은 UTF-8로 글자당 3바이트라 글자 수 기준 30000자 = 최대 90KB(제한 100KB는 바이트 기준)
+var _CACHE_CHUNK = 30000;
 function _cachePutData(data) {
   try {
     var cache = CacheService.getScriptCache();

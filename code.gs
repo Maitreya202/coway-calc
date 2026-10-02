@@ -1279,14 +1279,46 @@ function _memNum(v) {
 // getData() — 제품 데이터 + 조건 데이터 한번에 반환
 // ----------------------------------------------------------------
 function getData() {
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get('appData');
-  if (cached) {
-    try { return JSON.parse(cached); } catch(e) {}
-  }
+  var cached = _cacheGetData();
+  if (cached) return cached;
   var data = _fetchData();
-  try { cache.put('appData', JSON.stringify(data), 21600); } catch(e) {}
+  _cachePutData(data);
   return data;
+}
+
+// CacheService는 키 하나당 100KB 제한이라 데이터가 커지면(제품 ~2천 행, 약 300KB) 통째로 put이 조용히 실패해서
+// 캐시가 한 번도 안 먹고 매 요청마다 시트를 다시 읽게 됨(응답 5~9초) — 조각으로 나눠 저장.
+// 'appData' 키는 조각 개수만 담은 목록(manifest)이고, 기존 코드의 remove('appData')로 무효화하면 조각은 더 이상 안 읽혀서 그대로 호환됨.
+var _CACHE_CHUNK = 90000;
+function _cachePutData(data) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var json = JSON.stringify(data);
+    var n = Math.ceil(json.length / _CACHE_CHUNK);
+    var ver = String(new Date().getTime());
+    var all = {};
+    for (var i = 0; i < n; i++) all['appData_' + ver + '_' + i] = json.substr(i * _CACHE_CHUNK, _CACHE_CHUNK);
+    cache.putAll(all, 21600);
+    cache.put('appData', JSON.stringify({chunks: n, ver: ver}), 21600);
+  } catch(e) {}
+}
+function _cacheGetData() {
+  try {
+    var cache = CacheService.getScriptCache();
+    var m = cache.get('appData');
+    if (!m) return null;
+    var meta = JSON.parse(m);
+    if (!meta || !meta.chunks) return meta; // 구 버전 형식(통째로 저장) 호환
+    var keys = [];
+    for (var i = 0; i < meta.chunks; i++) keys.push('appData_' + meta.ver + '_' + i);
+    var got = cache.getAll(keys);
+    var json = '';
+    for (var j = 0; j < keys.length; j++) {
+      if (!got[keys[j]]) return null; // 조각 하나라도 만료/유실이면 캐시 미스
+      json += got[keys[j]];
+    }
+    return JSON.parse(json);
+  } catch(e) { return null; }
 }
 
 // ----------------------------------------------------------------
@@ -1461,7 +1493,7 @@ function onEdit(e) {
 // ----------------------------------------------------------------
 function warmUpCache() {
   var data = _fetchData();
-  try { CacheService.getScriptCache().put('appData', JSON.stringify(data), 21600); } catch(e) {}
+  _cachePutData(data);
 }
 // ----------------------------------------------------------------
 // diagSheets() ← Apps Script 에디터에서 실행 후 로그 확인

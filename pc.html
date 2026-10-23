@@ -3165,6 +3165,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   });
 
   // [3] 제품 테이블 (모델명 아래에 계약상세 바로 표기)
+  var anyQty=dispRows.some(function(r){return r.qty>1;});
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
   h+='<tr style="background:'+HEADBG+'">';
   h+='<th style="padding:9px 8px 9px 16px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';width:30px">No</th>';
@@ -3172,6 +3173,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:center;width:40px">수량</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">정상가</th>';
   h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">적용가</th>';
+  if(anyQty) h+='<th style="padding:9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">합산가</th>';
   if(opts.showIlsibl) h+='<th style="padding:9px 16px 9px 8px;border-bottom:1px solid '+LINED+';font-weight:500;color:'+SUB+';text-align:right">일시불가</th>';
   h+='</tr>';
   dispRows.forEach(function(r,idx){
@@ -3197,6 +3199,7 @@ function buildQuoteHTML(cart,customer,salesperson,today,opts){
       dpSub=r.phaseNote;
     }
     h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:500;font-size:11.5px;white-space:nowrap">'+wM(r.dp)+(dpSub?'<div style="font-size:9px;color:'+MUTE+';font-weight:400;margin-top:1px;white-space:nowrap">'+dpSub+'</div>':'')+'</td>';
+    if(anyQty) h+='<td style="padding:9px 8px;border-bottom:1px solid '+LINE+';text-align:right;font-weight:600;font-size:11.5px;white-space:nowrap">'+(r.qty>1?wM(r.dp*r.qty)+'<div style="font-size:9px;color:'+MUTE+';font-weight:400;margin-top:1px">'+wM(r.dp)+' x '+r.qty+'</div>':'<span style="color:'+MUTE+';font-weight:400">-</span>')+'</td>';
     if(opts.showIlsibl){
       var ilVal=null;
       if(!r.isCash && r.item.일시불>0){

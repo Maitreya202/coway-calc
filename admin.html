@@ -58,6 +58,10 @@ table.edit-tbl input.dirty { border-color:#f59e0b; background:#fffbeb; }
 .switch input:checked + .slider:before { transform:translateX(16px); }
 .row-save-btn { background:#2563eb; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700; }
 .row-save-btn:disabled { background:#cbd5e1; }
+.row-del-btn { background:#fff; color:#b91c1c; border:1px solid #fca5a5; border-radius:6px; padding:5px 8px; font-size:10px; font-weight:700; margin-top:4px; cursor:pointer; }
+.row-del-btn:disabled { color:#cbd5e1; border-color:#e2e8f0; }
+.btn-danger { background:#fff; color:#b91c1c; border:1.5px solid #fca5a5; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:700; cursor:pointer; }
+.btn-danger:disabled { color:#cbd5e1; border-color:#e2e8f0; }
 .row-msg { font-size:10px; margin-top:3px; }
 .row-msg.ok { color:#15803d; }
 .row-msg.err { color:#b91c1c; }
@@ -152,7 +156,9 @@ tr.row-saved td { background:#f0fdf4; }
     <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
       <button class="btn-secondary" id="saveAllBtn">변경된 행 전체 저장</button>
       <span id="saveAllMsg" style="font-size:12px;color:#64748b"></span>
+      <button class="btn-danger" id="deleteGroupBtn" style="margin-left:auto">🗑 이 제품 전체 삭제</button>
     </div>
+    <div id="deleteMsg" style="margin-top:8px"></div>
 
     <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid #f1f5f9">
       <p style="font-size:13px;font-weight:800;margin-bottom:8px">별매품 연결</p>
@@ -438,7 +444,7 @@ function renderTable(){
         h += '<td><input type="text" data-f="' + c.f + '" value="' + esc(v||'') + '"></td>';
       }
     });
-    h += '<td><button class="row-save-btn" data-ri="' + ri + '">저장</button><div class="row-msg" data-ri="' + ri + '"></div></td>';
+    h += '<td><button class="row-save-btn" data-ri="' + ri + '">저장</button><br><button class="row-del-btn" data-ri="' + ri + '">삭제</button><div class="row-msg" data-ri="' + ri + '"></div></td>';
     h += '</tr>';
   });
   h += '</tbody>';
@@ -451,7 +457,43 @@ function renderTable(){
   Array.prototype.forEach.call(t.querySelectorAll('.row-save-btn'), function(btn){
     btn.onclick = function(){ saveRow(Number(this.dataset.ri), this); };
   });
+  Array.prototype.forEach.call(t.querySelectorAll('.row-del-btn'), function(btn){
+    btn.onclick = function(){
+      var row = CUR_ROWS[Number(this.dataset.ri)];
+      var label = (row.관리방법||'-') + ' / ' + (row.관리주기||'-') + ' / ' + (row.약정년 ? row.약정년+'년' : '약정없음');
+      deleteRows([row], '이 행을 삭제할까요?\n' + row.제품명 + ' (' + row.모델명 + ')\n' + label + '\n\n삭제하면 되돌릴 수 없습니다.', this);
+    };
+  });
 }
+
+function deleteRows(rows, confirmText, btn){
+  if (!rows.length || !confirm(confirmText)) return;
+  var keys = rows.map(function(r){ return { 모델명:r.모델명, 제품명:r.제품명, 관리방법:r.관리방법, 관리주기:r.관리주기, 약정년:r.약정년 }; });
+  var group = CUR_GROUP;
+  btn.disabled = true;
+  showMsg('deleteMsg', '삭제 중...', true);
+  postGas({action:'deleteProducts', password:ADMIN_PW, keys:keys})
+    .then(function(resp){
+      btn.disabled = false;
+      if (!resp.ok) { showMsg('deleteMsg', resp.error || '삭제 실패', false); return; }
+      var note = resp.orphanPairings ? ' ⚠ 별매품 연결 ' + resp.orphanPairings + '건이 남아있습니다(제품이 없어져 화면엔 안 뜨지만 연결 목록엔 남음).' : '';
+      var doneText = resp.deleted + '행 삭제 완료.' + note + pwaNote(resp);
+      showMsg('deleteMsg', doneText + ' 목록 새로고침 중...', true);
+      loadProducts(0, function(ok){
+        if (!ok) return;
+        var remain = PRODUCTS.some(function(p){ return p.제품명===group.제품명 && p.모델명===group.모델명; });
+        if (remain) { openTable(group); showMsg('deleteMsg', doneText, true); }
+        else { document.getElementById('tableView').classList.add('hidden'); document.getElementById('searchView').classList.remove('hidden'); alert(doneText); }
+      });
+    })
+    .catch(function(e){ btn.disabled = false; showMsg('deleteMsg', '삭제 실패: ' + e.message, false); });
+}
+
+document.getElementById('deleteGroupBtn').onclick = function(){
+  if (!CUR_ROWS.length) return;
+  var g = CUR_GROUP;
+  deleteRows(CUR_ROWS.slice(), '⚠ 이 제품의 모든 행(' + CUR_ROWS.length + '개)을 삭제할까요?\n' + g.제품명 + ' (' + g.모델명 + ')\n\n삭제하면 되돌릴 수 없습니다.', this);
+};
 
 document.getElementById('saveAllBtn').onclick = function(){
   var t = document.getElementById('editTable');

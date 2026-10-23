@@ -56,7 +56,7 @@ function doPost(e) {
     var action = body.action;
 
     // 제품/가격/별매품 연결을 바꾸는 동작이 성공하면 PWA 가격표(data.json) 재생성을 GitHub Actions에 요청
-    var PWA_REBUILD_ACTIONS = ['updateProduct','addBmpPairing','updateBmpPairing','removeBmpPairing','bulkUpsertProducts','cleanupZeroTasabToggles'];
+    var PWA_REBUILD_ACTIONS = ['updateProduct','deleteProducts','addBmpPairing','updateBmpPairing','removeBmpPairing','bulkUpsertProducts','cleanupZeroTasabToggles'];
     if (PWA_REBUILD_ACTIONS.indexOf(action) >= 0) {
       var result = _dispatchAdminAction(action, body);
       if (result && result.ok) result.pwaBuild = _triggerPwaBuild();
@@ -86,6 +86,7 @@ function doPost(e) {
 
 function _dispatchAdminAction(action, body) {
   if (action === 'updateProduct') return _updateProduct(body);
+  if (action === 'deleteProducts') return _deleteProducts(body);
   if (action === 'addBmpPairing') return _addBmpPairing(body);
   if (action === 'updateBmpPairing') return _updateBmpPairing(body);
   if (action === 'removeBmpPairing') return _removeBmpPairing(body);
@@ -207,6 +208,70 @@ function _updateProduct(body) {
 
   CacheService.getScriptCache().remove('appData');
   return {ok: true, row: sheetRow};
+}
+
+// 제품DB 행 삭제 — admin.html 표의 "삭제"/"이 제품 전체 삭제" 버튼에서 호출. body.keys = [{모델명,제품명,관리방법,관리주기,약정년}, ...]
+// 안전장치: 모든 key가 시트에서 정확히 1개 행에 매칭될 때만 삭제(하나라도 0개/2개 이상이면 아무것도 지우지 않음).
+// 삭제 후 해당 모델명이 제품DB에 더 없는데 별매품페어링에 남아있으면 그 연결 수를 orphanPairings로 알려줌(자동 삭제는 안 함).
+function _deleteProducts(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var keys = body.keys;
+  if (!keys || !keys.length) return {error: '삭제할 행이 없습니다'};
+  if (keys.length > 200) return {error: '한 번에 200행까지만 삭제할 수 있습니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return {error: '시트를 찾을 수 없음: "' + SHEET_NAME + '"'};
+  var colMap = _headerColMap(sheet);
+  if (!colMap.모델명 || !colMap.제품명 || !colMap.약정년) return {error: '모델명/제품명/약정(년) 헤더 컬럼을 시트에서 찾지 못했습니다'};
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < HEADER_ROW + 1) return {error: '제품 데이터가 없습니다'};
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues();
+  function cellAt(row, field) { var c = colMap[field]; return c ? row[c-1] : ''; }
+
+  var toDelete = {}; // raw index -> true
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k] || {};
+    if (!key.모델명 || !key.제품명 || key.약정년 === undefined) return {error: '삭제할 행을 식별할 수 없습니다 (모델명/제품명/약정년 누락)'};
+    var matches = [];
+    raw.forEach(function(row, i) {
+      var yRaw = Number(cellAt(row,'약정년'));
+      var y = (!yRaw || isNaN(yRaw)) ? 0 : yRaw;
+      if (String(cellAt(row,'모델명')).trim() === String(key.모델명).trim() &&
+          String(cellAt(row,'제품명')).trim() === String(key.제품명).trim() &&
+          String(cellAt(row,'관리방법')||'').trim() === String(key.관리방법 || '').trim() &&
+          String(cellAt(row,'관리주기')||'').trim() === String(key.관리주기 || '').trim() &&
+          y === Number(key.약정년)) matches.push(i);
+    });
+    if (matches.length === 0) return {error: '일치하는 행을 찾지 못했습니다 (' + key.모델명 + ' ' + (key.관리방법||'') + ' ' + key.약정년 + '년) — 새로고침 후 다시 시도해주세요. 아무것도 삭제하지 않았습니다'};
+    if (matches.length > 1) return {error: '조건에 맞는 행이 ' + matches.length + '개라 안전하게 삭제할 수 없습니다 (' + key.모델명 + '). 시트에서 직접 확인해주세요. 아무것도 삭제하지 않았습니다'};
+    toDelete[matches[0]] = true;
+  }
+
+  var idxs = Object.keys(toDelete).map(Number).sort(function(a, b) { return b - a; }); // 아래쪽 행부터 지워야 위치가 안 밀림
+  idxs.forEach(function(i) { sheet.deleteRow(HEADER_ROW + 1 + i); });
+
+  // 남은 제품DB에 더는 없는 모델명이 별매품페어링에 남아있는지 확인
+  var remaining = {};
+  raw.forEach(function(row, i) { if (!toDelete[i]) remaining[String(cellAt(row,'모델명')).trim()] = true; });
+  var deletedModels = {};
+  keys.forEach(function(key) { var m = String(key.모델명).trim(); if (!remaining[m]) deletedModels[m] = true; });
+  var orphanPairings = 0;
+  try {
+    var ps = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+    if (ps && ps.getLastRow() >= 2) {
+      var pc = _bmpColMap(ps);
+      var prow = ps.getRange(2, 1, ps.getLastRow() - 1, ps.getLastColumn()).getValues();
+      prow.forEach(function(r) {
+        if (deletedModels[String(r[pc.모델명] || '').trim()] || deletedModels[String(r[pc.별매품모델명] || '').trim()]) orphanPairings++;
+      });
+    }
+  } catch (e) {}
+
+  CacheService.getScriptCache().remove('appData');
+  return {ok: true, deleted: idxs.length, orphanPairings: orphanPairings};
 }
 
 // 가격표(엑셀) 일괄 등록/업데이트 — admin.html "일괄 등록/업데이트" 화면에서 호출.

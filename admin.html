@@ -96,6 +96,8 @@ tr.row-saved td { background:#f0fdf4; }
     <div id="searchResults"></div>
     <button class="btn-secondary" id="showBulkBtn" style="margin-top:14px">📥 엑셀로 일괄 등록/업데이트</button>
     <button class="btn-secondary" id="showCashBtn" style="margin-top:8px">💰 일시불가 관리</button>
+    <button class="btn-secondary" id="rebuildPwaBtn" style="margin-top:8px">📱 PWA 가격표 갱신 요청</button>
+    <div id="rebuildPwaMsg" style="margin-top:8px"></div>
     <button class="btn-secondary" id="cleanupTasabBtn" style="margin-top:8px">🧹 타사보상 0원 토글 정리</button>
     <div id="cleanupTasabMsg"></div>
   </div>
@@ -170,6 +172,13 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbw_06KQ9F7v2qibjtlrm6s2qf
 // GAS 웹앱은 콜드스타트/일시적 지연으로 가끔 응답이 씹히거나(net::ERR → "Failed to fetch") HTML 오류 페이지를
 // JSON 대신 돌려줄 때(→ "Unexpected token '<'")가 있음 — 서버(doPost)는 이미 실행/반영됐는데 클라이언트만 응답을
 // 못 받는 경우가 대부분이라, 저장류 POST는 여기서 최대 2회 자동 재시도 후에도 실패하면 에러로 표시함.
+function pwaNote(resp){
+  var st = resp && resp.pwaBuild;
+  if (st === 'triggered') return ' (PWA 가격표 자동 갱신 요청됨 — 1~3분 뒤 반영)';
+  if (st === 'no_token') return ' (PWA 자동 갱신 미설정 — GITHUB_TOKEN 필요)';
+  if (st) return ' (PWA 자동 갱신 요청 실패: ' + st + ')';
+  return '';
+}
 function postGas(bodyObj, attempt){
   attempt = attempt || 0;
   return fetch(GAS_URL, {method:'POST', body: JSON.stringify(bodyObj)})
@@ -1091,7 +1100,7 @@ document.getElementById('bulkApplyBtn').onclick = function(){
         if (res.status === 'error') { cell.textContent = '오류: ' + res.message; cell.className = 'bulk-status row-msg err'; }
         else { cell.textContent = res.status === 'updated' ? '업데이트 완료' : '신규 등록 완료'; cell.className = 'bulk-status row-msg ok'; }
       });
-      showMsg('bulkMsg', '적용 완료 — 목록 새로고침 중...', true);
+      showMsg('bulkMsg', '적용 완료 — 목록 새로고침 중...' + pwaNote(resp), true);
       loadProducts();
     })
     .catch(function(e){
@@ -1099,6 +1108,18 @@ document.getElementById('bulkApplyBtn').onclick = function(){
       btn.textContent = '적용 (' + BULK_ROWS.length + '행)';
       showMsg('bulkMsg', '적용 실패: ' + e.message, false);
     });
+};
+document.getElementById('rebuildPwaBtn').onclick = function(){
+  var btn = this;
+  btn.disabled = true;
+  showMsg('rebuildPwaMsg', 'PWA 가격표 갱신 요청 중...', true);
+  postGas({action:'rebuildPwa', password:ADMIN_PW})
+    .then(function(resp){
+      btn.disabled = false;
+      if (resp.ok) showMsg('rebuildPwaMsg', 'PWA 가격표 갱신 요청됨 — 1~3분 뒤 반영됩니다.', true);
+      else showMsg('rebuildPwaMsg', resp.error || ('요청 실패: ' + (resp.pwaBuild || '')), false);
+    })
+    .catch(function(e){ btn.disabled = false; showMsg('rebuildPwaMsg', '요청 실패: ' + e.message, false); });
 };
 </script>
 </body>

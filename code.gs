@@ -55,30 +55,25 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     var action = body.action;
 
+    // 제품/가격/별매품 연결을 바꾸는 동작이 성공하면 PWA 가격표(data.json) 재생성을 GitHub Actions에 요청
+    var PWA_REBUILD_ACTIONS = ['updateProduct','addBmpPairing','updateBmpPairing','removeBmpPairing','bulkUpsertProducts','cleanupZeroTasabToggles'];
+    if (PWA_REBUILD_ACTIONS.indexOf(action) >= 0) {
+      var result = _dispatchAdminAction(action, body);
+      if (result && result.ok) result.pwaBuild = _triggerPwaBuild();
+      return _json(result);
+    }
+    if (action === 'rebuildPwa') {
+      if (!_checkAdminPassword(body.password)) return _json({error: '비밀번호가 올바르지 않습니다'});
+      var st = _triggerPwaBuild();
+      return _json({ok: st === 'triggered', pwaBuild: st});
+    }
+
     if (action === 'clearCache') {
       clearCache();
       return _json({ok: true});
     }
     if (action === 'adminAuth') {
       return _json({ok: _checkAdminPassword(body.password)});
-    }
-    if (action === 'updateProduct') {
-      return _json(_updateProduct(body));
-    }
-    if (action === 'addBmpPairing') {
-      return _json(_addBmpPairing(body));
-    }
-    if (action === 'updateBmpPairing') {
-      return _json(_updateBmpPairing(body));
-    }
-    if (action === 'removeBmpPairing') {
-      return _json(_removeBmpPairing(body));
-    }
-    if (action === 'bulkUpsertProducts') {
-      return _json(_bulkUpsertProducts(body));
-    }
-    if (action === 'cleanupZeroTasabToggles') {
-      return _json(_cleanupZeroTasabToggles(body));
     }
     if (action === 'submitLead') {
       return _json(_submitLead(body));
@@ -87,6 +82,44 @@ function doPost(e) {
   } catch(err) {
     return _json({error: err.message});
   }
+}
+
+function _dispatchAdminAction(action, body) {
+  if (action === 'updateProduct') return _updateProduct(body);
+  if (action === 'addBmpPairing') return _addBmpPairing(body);
+  if (action === 'updateBmpPairing') return _updateBmpPairing(body);
+  if (action === 'removeBmpPairing') return _removeBmpPairing(body);
+  if (action === 'bulkUpsertProducts') return _bulkUpsertProducts(body);
+  if (action === 'cleanupZeroTasabToggles') return _cleanupZeroTasabToggles(body);
+  return {error: 'unknown action'};
+}
+
+// GitHub Actions의 "PWA 가격표 갱신" 워크플로(.github/workflows/pwa-data.yml)를 repository_dispatch로 실행.
+// 스크립트 속성 GITHUB_TOKEN(이 저장소 Actions 쓰기 권한만 있는 fine-grained 토큰)이 있어야 동작 — 없으면 건너뛰고 저장 결과에는 영향 없음.
+// 반환: 'triggered' | 'no_token' | 'error: ...'
+function _triggerPwaBuild() {
+  try {
+    var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+    if (!token) return 'no_token';
+    var res = UrlFetchApp.fetch('https://api.github.com/repos/Maitreya202/coway-calc/dispatches', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+      payload: JSON.stringify({ event_type: 'pwa-data' }),
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    return code === 204 ? 'triggered' : 'error: HTTP ' + code;
+  } catch (err) {
+    return 'error: ' + err.message;
+  }
+}
+
+// Apps Script 편집기에서 한 번 실행 → GitHub 호출 권한(외부 요청) 승인 + 토큰/연결 점검용
+function _testPwaTrigger() {
+  var r = _triggerPwaBuild();
+  Logger.log('PWA 빌드 트리거 결과: ' + r);
+  return r;
 }
 
 // ----------------------------------------------------------------

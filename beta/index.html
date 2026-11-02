@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="코웨이 갤러리 전용 견적">
-<meta name="theme-color" content="#1d4ed8">
+<meta name="theme-color" content="#10223A">
 <meta name="format-detection" content="telephone=no">
 <meta name="robots" content="noindex,nofollow">
 <title>코웨이 견적 계산기 (베타)</title>
@@ -255,6 +255,54 @@ body.tab-other #bBar { display:none !important; }
 .kor-cr.main { font-weight:800; color:#0369a1; font-size:12px; border-top:1px dashed #bae6fd; margin-top:5px; padding-top:5px; }
 .kor-cr.red { color:#dc2626; font-weight:700; }
 .kor-cr.grn { color:#16a34a; font-weight:700; }
+</style>
+<style id="themeB">
+/* ===== 베타 테마 B: 프리미엄 네이비 + 브라스 ===== */
+:root { --navy:#10223A; --navy2:#1E3452; --brass:#A8843F; --brassF:#8F6D2B; --brassL:#F3EAD6; --brassD:#6E5420; --paper:#F6F4EF; --line:#E6E0D2; --ink:#14202F; --sub:#7B8190; }
+html, body { background:var(--paper) !important; color:var(--ink); }
+.beta-head { background:var(--navy) !important; }
+.bh-title small { background:var(--brass) !important; color:#fff; }
+.bh-search { background:var(--navy2) !important; color:#9FB0C6 !important; }
+.cart-card { border:1px solid var(--line) !important; box-shadow:0 1px 3px rgba(16,34,58,.06) !important; border-radius:14px !important; }
+.cart-card input[type=checkbox], .check-row input[type=checkbox] { accent-color:var(--brassF) !important; }
+.bbar { border-top:1px solid var(--line); box-shadow:0 -4px 16px rgba(16,34,58,.08); }
+.bbar .sum small { color:var(--sub); }
+.bbar .sum b { color:var(--navy); }
+.bbar button, .dsheet-foot button { background:var(--brassF) !important; }
+.dsheet { background:var(--paper); }
+.dsheet-head, .dsheet-tabs, .dsheet-foot { background:#fff; }
+.dsheet-tabs { border-bottom:1px solid var(--line); }
+.dsheet-foot { border-top:1px solid var(--line); }
+.dsheet-head .t b { color:var(--ink); }
+.dsheet-head .t span { color:var(--sub); }
+.dsheet-head .price { color:var(--navy); }
+.dsheet-head .price span { color:var(--brassD) !important; }
+.dsheet-tabs .tab { color:var(--sub); }
+.dsheet-tabs .tab.on { color:var(--navy); border-color:var(--brass); }
+.dsheet-grab { background:#D9D2C2; }
+.box-panel { border:1px solid var(--line); border-radius:12px; }
+.sec-label { color:var(--sub); }
+.pill { border:1.5px solid var(--line); color:#5A6275; }
+.pill.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+input[type=text], input[type=number], select { border:1.5px solid var(--line); }
+input:focus, select:focus { border-color:var(--brass); }
+.result-box { background:var(--paper); border:1px solid var(--line); }
+.res-main { color:var(--navy); }
+.res-total span:last-child { color:var(--ink); }
+.s2-box { background:var(--brassL); }
+.s2-box .s2-title { color:var(--brassD); }
+.s2-box select, .s2-inline input[type=number] { border-color:#E6D6B0; }
+.s2-inline span, .s2-inline label { color:var(--brassD); }
+.total-bar { background:var(--navy); }
+.total-bar span[style*="#60a5fa"] { color:#D9BC7C !important; }
+[style*="#93c5fd"] { border-color:#D9C79B !important; background:var(--brassL) !important; color:var(--brassD) !important; }
+button[style*="background:#1D4ED8"], button[style*="background:#2563eb"], button[style*="background:#1E40AF"] { background:var(--navy) !important; }
+button[style*="background:#0ea5e9"] { background:var(--brassF) !important; }
+.fab { background:rgba(16,34,58,.72); border-color:rgba(217,188,124,.6); color:#D9BC7C; }
+.fab:hover, .fab.drag { background:rgba(16,34,58,.95); }
+.wheel .core { background:rgba(16,34,58,.82); }
+.wheel.on .w.hot { background:var(--brassF); color:#fff; }
+.bflash { background:rgba(16,34,58,.92); }
 </style>
 </head>
 <body>
@@ -1139,10 +1187,10 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   // 1줄: 제품명(타이틀) + 가격, 모델명은 그 아래 보조 텍스트
   h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
     + '<div style="min-width:0">'
-    + '<div style="font-size:15px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
+    + '<div style="font-size:15px;font-weight:800;color:#14202F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
     + '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + item.모델명 + ' (' + _pmTxt + ')' + '</div>'
     + '</div>'
-    + '<div style="font-size:17px;font-weight:800;color:#0F172A;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
+    + '<div style="font-size:17px;font-weight:800;color:#10223A;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
     + '</div>';
 
   // 2줄: 능동형 태그들 — 파란색
@@ -1164,9 +1212,9 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
 }
 
 function badgeHtml(text, color) {
-  var bg = color === 'green' ? '#ECFDF5' : '#EFF6FF';
-  var border = color === 'green' ? '#86EFAC' : '#BFDBFE';
-  var fg = color === 'green' ? '#15803D' : '#1E40AF';
+  var bg = color === 'green' ? '#ECFDF5' : '#F3EAD6';
+  var border = color === 'green' ? '#86EFAC' : '#E6D6B0';
+  var fg = color === 'green' ? '#15803D' : '#6E5420';
   return '<span style="display:inline-block;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:' + fg + ';white-space:nowrap">' + text + '</span>';
 }
 

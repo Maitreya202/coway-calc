@@ -41,19 +41,38 @@ input:focus,select:focus { border-color:#2563eb; }
 .empty .t1 { font-size:15px; font-weight:600; color:#94a3b8; margin-bottom:4px; }
 .empty .t2 { font-size:13px; }
 .cart-list { background:transparent; overflow:visible; display:flex; flex-direction:column; gap:10px; }
-/* ===== 베타: 제품 설정 바텀시트 (기존 옵션/할인/결과 패널을 그대로 담음) ===== */
-.beta-ribbon { position:fixed; top:0; right:0; z-index:150; background:#f59e0b; color:#fff; font-size:10px; font-weight:800; padding:3px 10px; border-radius:0 0 0 8px; letter-spacing:.5px; pointer-events:none; }
+/* ===== 베타 UI (v2 목업 적용) ===== */
+.beta-head { background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; padding:max(12px, env(safe-area-inset-top)) 16px 14px; }
+.bh-in { max-width:480px; margin:0 auto; }
+.bh-title { font-size:17px; font-weight:800; display:flex; justify-content:space-between; align-items:center; }
+.bh-title small { font-size:10px; background:#f59e0b; padding:2px 9px; border-radius:10px; letter-spacing:.5px; }
+.bh-search { margin-top:10px; background:#fff; border-radius:12px; padding:12px 14px; color:#94a3b8; font-size:14px; cursor:pointer; }
+.main-tabbar { padding-top:12px !important; }
+body.has-bbar .wrap { padding-bottom:96px; }
+body.tab-other #bBar { display:none !important; }
+.bbar { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; z-index:40; background:#fff; border-top:1px solid #e2e8f0; padding:10px 16px max(12px, env(safe-area-inset-bottom)); align-items:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.07); }
+.bbar .sum { flex:1; min-width:0; }
+.bbar .sum small { display:block; font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bbar .sum b { font-size:20px; font-weight:800; color:#0F172A; }
+.bbar button { background:#2563eb; color:#fff; border:none; border-radius:12px; padding:13px 18px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; flex-shrink:0; }
 .dsheet-dim { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:54; opacity:0; pointer-events:none; transition:opacity .25s; }
 .dsheet-dim.on { opacity:1; pointer-events:auto; }
 .dsheet { position:fixed; left:50%; bottom:0; width:100%; max-width:480px; height:90vh; height:90dvh; background:#f8fafc; border-radius:20px 20px 0 0; z-index:55; display:flex; flex-direction:column; transform:translate(-50%,100%); transition:transform .3s ease; }
 .dsheet.on { transform:translate(-50%,0); box-shadow:0 -8px 30px rgba(0,0,0,.2); }
 .dsheet-grab { width:40px; height:4px; background:#cbd5e1; border-radius:2px; margin:8px auto 0; flex-shrink:0; }
-.dsheet-head { display:flex; align-items:center; gap:8px; padding:8px 16px 10px; background:white; border-radius:20px 20px 0 0; border-bottom:1px solid #e2e8f0; flex-shrink:0; }
+.dsheet-head { padding:6px 16px 10px; background:white; border-radius:20px 20px 0 0; flex-shrink:0; }
+.dsheet-head .row { display:flex; align-items:center; gap:8px; margin-top:4px; }
 .dsheet-head .t { flex:1; min-width:0; }
 .dsheet-head .t b { display:block; font-size:15px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dsheet-head .t span { font-size:11px; color:#94a3b8; }
 .dsheet-head button { background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; padding:2px 6px; }
-.dsheet-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px 12px 16px; }
+.dsheet-head .price { margin-top:4px; font-size:26px; font-weight:900; color:#2563eb; }
+.dsheet-head .price span { font-size:12px !important; color:#b45309 !important; font-weight:700; }
+.dsheet-tabs { display:flex; background:white; border-bottom:1px solid #e2e8f0; flex-shrink:0; }
+.dsheet-tabs .tab { flex:1; text-align:center; padding:11px 0; font-size:14px; color:#64748b; border-bottom:2px solid transparent; cursor:pointer; }
+.dsheet-tabs .tab.on { color:#2563eb; border-color:#2563eb; font-weight:800; }
+.dsheet-tabs .tab.dim { color:#cbd5e1; }
+.dsheet-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 12px 16px; }
 .dsheet-foot { padding:10px 16px max(14px, env(safe-area-inset-bottom)); background:white; border-top:1px solid #e2e8f0; flex-shrink:0; }
 .dsheet-foot button { width:100%; background:#2563eb; color:white; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; }
 .cart-card { border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.05); overflow:visible; position:relative; }
@@ -247,6 +266,7 @@ input:focus,select:focus { border-color:#2563eb; }
       </div>
     </div>
   </div>
+  <div class="beta-head"><div class="bh-in"><div class="bh-title">코웨이 갤러리 견적 <small>BETA</small></div><div class="bh-search" onclick="openSearchModal()">&#128269; 모델명 · 제품명 검색</div></div></div>
   <div class="main-tabbar" style="max-width:480px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px 0;display:flex;gap:6px">
     <button type="button" id="mtabEstimate" onclick="switchMainTab('estimate')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">📄 견적서</button>
     <button type="button" id="mtabCard" onclick="switchMainTab('card')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">💳 제휴카드</button>
@@ -467,14 +487,18 @@ input:focus,select:focus { border-color:#2563eb; }
 </div>
 
 <!-- 이미지 생성 중 전체화면 로딩 -->
-<div class="beta-ribbon">BETA</div>
+<div class="bbar" id="bBar" style="display:none">
+  <div class="sum"><small id="bbSub"></small><b id="bbMain"></b></div>
+  <button onclick="openQuoteInfoModal('all')">견적서 보기</button>
+</div>
 <div class="dsheet-dim" id="dSheetDim" onclick="closeDetail()"></div>
 <div class="dsheet" id="dSheet">
   <div class="dsheet-grab"></div>
   <div class="dsheet-head">
-    <div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span></div>
-    <button onclick="closeDetail()" aria-label="닫기">&#10005;</button>
+    <div class="row"><div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span></div><button onclick="closeDetail()" aria-label="닫기">&#10005;</button></div>
+    <div class="price" id="dSheetPrice"></div>
   </div>
+  <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
   <div class="dsheet-foot"><button onclick="closeDetail()">적용하기</button></div>
 </div>
@@ -1102,10 +1126,10 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   // 1줄: 제품명(타이틀) + 가격, 모델명은 그 아래 보조 텍스트
   h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
     + '<div style="min-width:0">'
-    + '<div style="font-size:13px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
-    + '<div style="font-size:10px;color:#94a3b8;margin-top:1px">' + item.모델명 + ' (' + _pmTxt + ')' + '</div>'
+    + '<div style="font-size:15px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
+    + '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + item.모델명 + ' (' + _pmTxt + ')' + '</div>'
     + '</div>'
-    + '<div style="font-size:13px;font-weight:800;color:#2563eb;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
+    + '<div style="font-size:17px;font-weight:800;color:#0F172A;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
     + '</div>';
 
   // 2줄: 능동형 태그들 — 파란색
@@ -1156,10 +1180,8 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   var cMeths  = getMethods(item.제품명, item.모델명);
   var cJugis  = getJugis(item.제품명, item.모델명, item.관리방법).filter(function(j) { return j && j !== '-'; });
   var cYaks   = getYakjs(item.제품명, item.모델명, item.관리방법, item.관리주기);
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;background:#0F172A;color:white;border-radius:10px;padding:10px 14px;margin-bottom:8px;position:sticky;top:0;z-index:50">'
-    +'<div style="font-size:11px;opacity:.7">'+item.모델명+' · '+pmLabel+'</div>'
-    +'<div style="font-size:15px;font-weight:900;color:#60a5fa">'+_sumPrice+'</div>'
-    +'</div>';
+  window._sheetPrice = _sumPrice; window._sheetPm = pmLabel; // 베타: 가격은 시트 헤더에 표시
+  var h = '';
 
   // 구매방법 + 제품변경 패널
   var pmOpts = [['rental', '신규(렌탈)']];
@@ -1309,9 +1331,7 @@ function renderDiscPanels(item, idx, c, d, isSunap2) {
     + '<input type="checkbox"' + (item.지로On ? ' checked' : '') + ' onchange="setJiro(' + idx + ',this.checked)">'
     + '<span>지로 납부 <em style="font-weight:400;font-size:11px;color:#94a3b8">(자동납부 할인 미적용, +' + won(JIRO_SURCHARGE) + '/월 가산)</em></span></div>';
 
-  // 별매품/헤드보드 패널 — 자주 쓰는 옵션이 아니라 맨 아래 배치
-  h += renderBmpPanel(item, idx);
-
+  // 베타: 별매품 패널은 시트의 '별매품' 탭에서 별도 렌더
   return h;
 }
 
@@ -1625,41 +1645,40 @@ function renderCart() {
     var isCashMode = item.구매방법 === 'cash';
     var isSunap2   = item.선납 === '선납2';
 
-    html += '<div class="cart-card" style="padding:8px 10px 6px;background:' + (_isOpen ? '#f0f7ff' : 'white') + ';transition:background .15s;border-left:' + (item.inQuote ? '3px solid #15803D' : '3px solid transparent') + '">';
+    html += '<div class="cart-card" style="padding:13px 12px 11px;background:' + (_isOpen ? '#f0f7ff' : 'white') + ';transition:background .15s;border-left:' + (item.inQuote ? '3px solid #15803D' : '3px solid transparent') + '">';
     html += '<div class="cart-body" style="padding:0">';
 
     // 1. 박스 한 줄
     html += renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen);
 
     // 2. 펼침 시 옵션 + 할인 + 계산결과
-    var _preHtml = html;
     if (_isOpen) {
-      html = '';
+      var _tb = { buy:'', disc:'', bmp:'', res:'' };
       if (isCashMode) {
-        html += '<div style="background:#f8fafc;border-radius:10px;padding:9px 12px;margin-bottom:10px;border:1px solid #e2e8f0;font-size:12px;color:#64748b">A/S: 1년 무상 A/S &middot; 관리방법: 1년 무상관리 후 고객 자율</div>';
-        html += renderOptionPanels(item, idx, c, true, isSunap2);
+        _tb.buy = '<div style="background:#f8fafc;border-radius:10px;padding:9px 12px;margin-bottom:10px;border:1px solid #e2e8f0;font-size:12px;color:#64748b">A/S: 1년 무상 A/S &middot; 관리방법: 1년 무상관리 후 고객 자율</div>'
+          + renderOptionPanels(item, idx, c, true, isSunap2);
         if (item.타사보상일시불 > 0 && item.타사보상일시불사용 !== false) {
-          html += '<div class="check-row" style="margin:0 2px 8px">'
+          _tb.disc += '<div class="check-row" style="margin:0 2px 8px">'
             + '<input type="checkbox"' + (item.tasabosangOn ? ' checked' : '') + ' onchange="setTasab(' + idx + ',this.checked)">'
             + '<span>타사보상 <em style="font-weight:400;font-size:11px;color:#94a3b8">(경쟁사 반납 시 일시불 ' + won(item.타사보상일시불) + ')</em></span></div>';
         }
-        html += '<div class="box-panel"><span class="sec-label" style="margin-top:0">일시불 할인 선택</span><div class="pill-group">';
+        _tb.disc += '<div class="box-panel"><span class="sec-label" style="margin-top:0">일시불 할인 선택</span><div class="pill-group">';
         [['none','없음'],['10','-10%'],['15','-15%'],['1010','-10%+10%(복리)']].forEach(function(o) {
-          html += '<button class="pill' + ((item.일시불할인 || 'none') === o[0] ? ' active' : '') + '" onclick="setCashDisc(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
+          _tb.disc += '<button class="pill' + ((item.일시불할인 || 'none') === o[0] ? ' active' : '') + '" onclick="setCashDisc(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
         });
-        html += '</div></div>';
-        html += renderBmpPanel(item, idx, true);
-        html += '<div class="result-box"><div class="res-row"><span>일시불 정가</span><span>' + won(c.base) + '</span></div>';
-        if (c.discLabel) html += '<div class="res-sub" style="color:#2563eb"><span>&#8627; ' + c.discLabel + '</span><span></span></div>';
-        if (c.bmpOneTimeTotal > 0) html += '<div class="res-sub" style="color:#15803d;font-weight:700"><span>별매품(일시불)</span><span>' + won(c.bmpOneTimeTotal) + '</span></div>';
-        html += '<div class="res-main"><span>최종 결제금액</span><span>' + won(c.cashFinal + c.bmpOneTimeTotal) + '</span></div></div>';
+        _tb.disc += '</div></div>';
+        _tb.bmp = renderBmpPanel(item, idx, true);
+        _tb.res = '<div class="result-box"><div class="res-row"><span>일시불 정가</span><span>' + won(c.base) + '</span></div>';
+        if (c.discLabel) _tb.res += '<div class="res-sub" style="color:#2563eb"><span>&#8627; ' + c.discLabel + '</span><span></span></div>';
+        if (c.bmpOneTimeTotal > 0) _tb.res += '<div class="res-sub" style="color:#15803d;font-weight:700"><span>별매품(일시불)</span><span>' + won(c.bmpOneTimeTotal) + '</span></div>';
+        _tb.res += '<div class="res-main"><span>최종 결제금액</span><span>' + won(c.cashFinal + c.bmpOneTimeTotal) + '</span></div></div>';
       } else {
-        html += renderOptionPanels(item, idx, c, false, isSunap2);
-        html += renderDiscPanels(item, idx, c, d, isSunap2);
-        html += renderResultBox(item, idx, c, d, isSunap2);
+        _tb.buy = renderOptionPanels(item, idx, c, false, isSunap2);
+        _tb.disc = renderDiscPanels(item, idx, c, d, isSunap2);
+        _tb.bmp = renderBmpPanel(item, idx);
+        _tb.res = renderResultBox(item, idx, c, d, isSunap2);
       }
-      _sheet = { idx: idx, name: item.제품명, model: item.모델명, html: html };
-      html = _preHtml;
+      _sheet = { idx: idx, name: item.제품명, model: item.모델명, pm: window._sheetPm, price: window._sheetPrice, tabs: _tb };
     }
 
     html += '</div></div>';
@@ -1781,16 +1800,23 @@ function toggleDetail(idx){
   renderCart();
 }
 function closeDetail(){ cart.forEach(function(it){ it._detailOpen=false; }); renderCart(); }
-var _dSheetIdx=-1;
+var _dSheetIdx=-1, _dTab='buy', _dShownTab='';
+function setDetailTab(t){ _dTab=t; renderCart(); }
 function syncDetailSheet(s){
   var sh=document.getElementById('dSheet'), dim=document.getElementById('dSheetDim'), body=document.getElementById('dSheetBody');
-  if(!s){ sh.classList.remove('on'); dim.classList.remove('on'); document.body.style.overflow=''; _dSheetIdx=-1; return; }
-  var st=(_dSheetIdx===s.idx)?body.scrollTop:0;
+  if(!s){ sh.classList.remove('on'); dim.classList.remove('on'); document.body.style.overflow=''; _dSheetIdx=-1; _dTab='buy'; _dShownTab=''; return; }
+  if(_dSheetIdx!==s.idx) _dTab='buy';
+  var st=(_dSheetIdx===s.idx && _dShownTab===_dTab)?body.scrollTop:0;
   document.getElementById('dSheetTitle').textContent=s.name;
-  document.getElementById('dSheetSub').textContent=s.model;
-  body.innerHTML=s.html;
+  document.getElementById('dSheetSub').textContent=s.model+' · '+s.pm;
+  document.getElementById('dSheetPrice').innerHTML=s.price;
+  var T=[['buy','구매'],['disc','할인'],['bmp','별매품'],['res','계산내역']];
+  document.getElementById('dSheetTabs').innerHTML=T.map(function(t){
+    return '<div class="tab'+(_dTab===t[0]?' on':'')+((t[0]==='bmp'&&!s.tabs.bmp)?' dim':'')+'" onclick="setDetailTab(\''+t[0]+'\')">'+t[1]+'</div>';
+  }).join('');
+  body.innerHTML=s.tabs[_dTab]||'<p style="text-align:center;color:#94a3b8;font-size:13px;padding:40px 0">연결된 항목이 없습니다.</p>';
   body.scrollTop=st;
-  _dSheetIdx=s.idx;
+  _dSheetIdx=s.idx; _dShownTab=_dTab;
   sh.classList.add('on'); dim.classList.add('on'); document.body.style.overflow='hidden';
 }
 function toggleCard(idx){cart[idx]._open=cart[idx]._open===false?true:false;renderCart();}
@@ -1821,7 +1847,7 @@ function removeCart(idx){
   var t=document.getElementById('undoToast');
   if(!t){
     t=document.createElement('div');t.id='undoToast';
-    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:9999;background:#1e293b;color:#fff;border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:92px;z-index:9999;background:#1e293b;color:#fff;border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
     document.body.appendChild(t);
   }
   t.innerHTML='<span>제품을 삭제했습니다</span><button onclick="undoRemoveCart()" style="background:none;border:none;color:#7dd3fc;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:2px 4px">되돌리기</button>';
@@ -2463,8 +2489,19 @@ function buildQuoteParts(t){
 function updateTotalBar(){
   var totalBar=document.getElementById('totalBar');
   var ab=document.getElementById('actionBtns');
-  if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';return;}
+  if (cart.length===0){totalBar.style.display='none';if(ab)ab.style.display='none';document.getElementById('bBar').style.display='none';document.body.classList.remove('has-bbar');return;}
   var t=calcTotals();
+  (function(){
+    var tl=t.timeline, a=t.agg, sub=[];
+    var main=tl.length?won(tl[0].total)+'/월':won(t.totT);
+    if(tl.length>1) sub.push('이후 '+won(tl[tl.length-1].total)+'/월');
+    if(a.cashCnt>0) sub.push('일시불 '+won(a.cashTotal));
+    if(a.ilsibl>0) sub.push('선납 '+won(a.ilsibl));
+    document.getElementById('bbMain').textContent=main;
+    document.getElementById('bbSub').textContent='합산 · 제품 '+cart.length+'개'+(sub.length?' · '+sub.join(' · '):'');
+    document.getElementById('bBar').style.display='flex';
+    document.body.classList.add('has-bbar');
+  })();
   var rows=buildQuoteParts(t);
 
   var notes='';
@@ -3657,6 +3694,7 @@ var cardCurrentId = null;
 var cardActiveTab = 'agent'; // 'agent' | 'customer'
 
 function switchMainTab(tab){
+  document.body.classList.toggle('tab-other', tab!=='estimate');
   var panels={estimate:'tabPanelEstimate',card:'tabPanelCard',notice:'tabPanelNotice'};
   var btns={estimate:'mtabEstimate',card:'mtabCard',notice:'mtabNotice'};
   Object.keys(panels).forEach(function(key){

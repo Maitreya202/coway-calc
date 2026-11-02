@@ -296,13 +296,26 @@ input:focus, select:focus { border-color:var(--brass); }
 .total-bar { background:var(--navy); }
 .total-bar span[style*="#60a5fa"] { color:#D9BC7C !important; }
 [style*="#93c5fd"] { border-color:#D9C79B !important; background:var(--brassL) !important; color:var(--brassD) !important; }
-button[style*="background:#1D4ED8"], button[style*="background:#2563eb"], button[style*="background:#1E40AF"] { background:var(--navy) !important; }
-button[style*="background:#0ea5e9"] { background:var(--brassF) !important; }
 .fab { background:rgba(16,34,58,.72); border-color:rgba(217,188,124,.6); color:#D9BC7C; }
 .fab:hover, .fab.drag { background:rgba(16,34,58,.95); }
 .wheel .core { background:rgba(16,34,58,.82); }
 .wheel.on .w.hot { background:var(--brassF); color:#fff; }
 .bflash { background:rgba(16,34,58,.92); }
+/* --- 남은 화면(모달/제휴카드/고객안내문 등) 통일: 코드에 직접 박힌 파란색을 테마색으로 치환 --- */
+[style*="background:#1D4ED8"], [style*="background:#1d4ed8"], [style*="background:#2563eb"], [style*="background:#0ea5e9"] { background:var(--brassF) !important; }
+[style*="background:#1E40AF"] { background:var(--navy2) !important; }
+[style*="background:#0F172A"], [style*="background:#1e293b"] { background:var(--navy) !important; }
+[style*="background:#eff6ff"], [style*="background:#EFF6FF"], [style*="background:#f0f7ff"], [style*="background:#dbeafe"] { background:var(--brassL) !important; }
+[style*="color:#2563eb"], [style*="color:#1D4ED8"], [style*="color:#1d4ed8"], [style*="color:#3b82f6"], [style*="color:#1E40AF"] { color:var(--brassD) !important; }
+[style*="#bfdbfe"], [style*="#93c5fd"] { border-color:#E6D6B0 !important; }
+.search-box.active { border-color:var(--brass); }
+.drop-item:active { background:var(--brassL); }
+.modal-tag { color:var(--brassD); }
+.price-preview { background:var(--brassL); }
+.tag-blue { background:var(--brassL); color:var(--brassD); }
+.modal-title { color:var(--ink); }
+.modal-sheet { border:1px solid var(--line); }
+.btn-quote { background:var(--brassF); box-shadow:0 4px 14px rgba(143,109,43,.3); }
 </style>
 </head>
 <body>

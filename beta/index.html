@@ -42,12 +42,28 @@ input:focus,select:focus { border-color:#2563eb; }
 .empty .t2 { font-size:13px; }
 .cart-list { background:transparent; overflow:visible; display:flex; flex-direction:column; gap:10px; }
 /* ===== 베타 UI (v2 목업 적용) ===== */
+.fab { position:fixed; width:54px; height:54px; border-radius:50%; background:rgba(37,99,235,.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:23px; z-index:45; touch-action:none; user-select:none; -webkit-user-select:none; box-shadow:0 4px 14px rgba(0,0,0,.25); cursor:pointer; }
+.fab:hover, .fab.drag { background:rgba(37,99,235,.9); }
+.wveil { position:fixed; inset:0; z-index:90; background:rgba(10,20,35,.4); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); opacity:0; pointer-events:none; transition:.2s; }
+.wveil.on { opacity:1; pointer-events:auto; }
+.wheel { position:fixed; z-index:91; width:0; height:0; pointer-events:none; }
+.wheel .core { position:absolute; left:-44px; top:-44px; width:88px; height:88px; border-radius:50%; background:rgba(20,30,45,.74); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#fff; font-size:12px; line-height:1.4; text-align:center; display:flex; align-items:center; justify-content:center; padding:8px; transform:scale(0); transition:.18s; }
+.wheel .w { position:absolute; left:0; top:0; width:66px; height:66px; margin:-33px 0 0 -33px; border-radius:50%; background:rgba(255,255,255,.66); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.75); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; white-space:nowrap; font-size:11px; font-weight:700; color:#1b2430; transform:translate(0,0) scale(.2); opacity:0; transition:transform .2s cubic-bezier(.3,1.4,.5,1), opacity .15s, background .1s; pointer-events:auto; user-select:none; -webkit-user-select:none; }
+.wheel .w span { font-size:21px; line-height:1.1; }
+.wheel.on .core { transform:scale(1); }
+.wheel.on .w { opacity:1; transform:translate(var(--x),var(--y)) scale(1); }
+.wheel.on .w.hot { background:rgba(37,99,235,.94); color:#fff; transform:translate(var(--x),var(--y)) scale(1.18); }
+.wheel .core span { font-size:12px; }
+.bflash { position:fixed; left:50%; top:76px; transform:translateX(-50%) translateY(-10px); background:rgba(20,30,45,.88); color:#fff; font-size:13px; padding:8px 14px; border-radius:18px; z-index:95; opacity:0; transition:.25s; pointer-events:none; white-space:nowrap; }
+.bflash.on { opacity:1; transform:translateX(-50%); }
 .beta-head { background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; padding:max(12px, env(safe-area-inset-top)) 16px 14px; }
 .bh-in { max-width:480px; margin:0 auto; }
 .bh-title { font-size:17px; font-weight:800; display:flex; justify-content:space-between; align-items:center; }
 .bh-title small { font-size:10px; background:#f59e0b; padding:2px 9px; border-radius:10px; letter-spacing:.5px; }
 .bh-search { margin-top:10px; background:#fff; border-radius:12px; padding:12px 14px; color:#94a3b8; font-size:14px; cursor:pointer; }
-.main-tabbar { padding-top:12px !important; }
+.main-tabbar { display:none !important; }
+body.tab-other .bh-search { display:none; }
+.bh-title .sec { font-weight:600; opacity:.85; font-size:14px; margin-left:6px; }
 body.has-bbar .wrap { padding-bottom:96px; }
 body.tab-other #bBar { display:none !important; }
 .bbar { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; z-index:40; background:#fff; border-top:1px solid #e2e8f0; padding:10px 16px max(12px, env(safe-area-inset-bottom)); align-items:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.07); }
@@ -266,7 +282,7 @@ body.tab-other #bBar { display:none !important; }
       </div>
     </div>
   </div>
-  <div class="beta-head"><div class="bh-in"><div class="bh-title">코웨이 갤러리 견적 <small>BETA</small></div><div class="bh-search" onclick="openSearchModal()">&#128269; 모델명 · 제품명 검색</div></div></div>
+  <div class="beta-head"><div class="bh-in"><div class="bh-title"><span>코웨이 갤러리 견적<span class="sec" id="bhSec"></span></span><small>BETA</small></div><div class="bh-search" onclick="openSearchModal()">&#128269; 모델명 · 제품명 검색</div></div></div>
   <div class="main-tabbar" style="max-width:480px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px 0;display:flex;gap:6px">
     <button type="button" id="mtabEstimate" onclick="switchMainTab('estimate')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">📄 견적서</button>
     <button type="button" id="mtabCard" onclick="switchMainTab('card')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">💳 제휴카드</button>
@@ -274,14 +290,7 @@ body.tab-other #bBar { display:none !important; }
   </div>
 
   <div class="wrap" id="tabPanelEstimate">
-    <div class="empty" id="emptyMsg">
-      <div onclick="openSearchModal()" style="display:flex;align-items:center;gap:8px;background:#eff6ff;border:1.5px dashed #93c5fd;border-radius:12px;padding:12px 16px;cursor:pointer;margin-bottom:6px">
-        <span style="font-size:18px;flex-shrink:0">🔍</span>
-        <span style="font-size:13px;font-weight:700;color:#2563eb">제품 선택</span>
-        <span style="font-size:11px;color:#94a3b8;margin-left:2px">— 탭하여 검색하세요</span>
-      </div>
-      <p class="t2" style="text-align:center;margin-top:4px">제품 검색 후 견적에 담아보세요</p>
-    </div>
+    <div class="empty" id="emptyMsg" style="padding:40px 0"></div>
     <div id="noDataMsg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.6">
       제품 데이터를 불러왔지만 0건입니다.<br>
       연결된 구글 시트에 <strong>"제품DB"</strong> 라는 이름의 시트가 있는지, 3행이 헤더이고 4행부터 데이터가 있는지 확인해주세요.
@@ -487,6 +496,10 @@ body.tab-other #bBar { display:none !important; }
 </div>
 
 <!-- 이미지 생성 중 전체화면 로딩 -->
+<div class="fab" id="fab" title="명령 휠">&#8982;</div>
+<div class="wveil" id="wveil"></div>
+<div class="wheel" id="wheel"><div class="core" id="wcore"></div></div>
+<div class="bflash" id="bflash"></div>
 <div class="bbar" id="bBar" style="display:none">
   <div class="sum"><small id="bbSub"></small><b id="bbMain"></b></div>
   <button onclick="openQuoteInfoModal('all')">견적서 보기</button>
@@ -3695,6 +3708,7 @@ var cardActiveTab = 'agent'; // 'agent' | 'customer'
 
 function switchMainTab(tab){
   document.body.classList.toggle('tab-other', tab!=='estimate');
+  document.getElementById('bhSec').textContent = tab==='card' ? ' · 제휴카드' : tab==='notice' ? ' · 고객 안내문' : '';
   var panels={estimate:'tabPanelEstimate',card:'tabPanelCard',notice:'tabPanelNotice'};
   var btns={estimate:'mtabEstimate',card:'mtabCard',notice:'mtabNotice'};
   Object.keys(panels).forEach(function(key){
@@ -4145,6 +4159,101 @@ function _renderQuoteNoticeContent(){
   };
 }
 
+
+/* ===== 베타: 플로팅 명령 휠 (상단 탭 기능 이관) ===== */
+(function(){
+  var fab=document.getElementById('fab'), wveil=document.getElementById('wveil'), wheel=document.getElementById('wheel'), wcore=document.getElementById('wcore'), fl=document.getElementById('bflash');
+  var flT;
+  function flash(m){ fl.textContent=m; fl.classList.add('on'); clearTimeout(flT); flT=setTimeout(function(){fl.classList.remove('on');},1800); }
+  function selCnt(){ return Object.keys(cartSel).filter(function(k){return cart[k];}).length; }
+  var ACTIONS=[
+    {ic:'&#128196;',lb:'견적서',run:function(){switchMainTab('estimate');}},
+    {ic:'&#128179;',lb:'제휴카드',run:function(){switchMainTab('card');}},
+    {ic:'&#128226;',lb:'고객안내문',run:function(){switchMainTab('notice');}},
+    {ic:'&#10133;',lb:'제품추가',run:function(){switchMainTab('estimate');openSearchModal();}},
+    {ic:'&#129534;',lb:'견적서생성',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} openQuoteInfoModal('all'); }},
+    {ic:'&#9745;&#65039;',lb:'전체선택',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} var all=cart.every(function(_,i){return cartSel[i];}); toggleAllCart(!all); flash(all?'선택 해제':'전체 선택'); }},
+    {ic:'&#9998;&#65039;',lb:'일괄변경',run:function(){ if(!selCnt()){flash('먼저 제품을 선택하세요 (전체선택 가능)');return;} openBulkChangeModal(); }},
+    {ic:'&#128260;',lb:'데이터갱신',run:function(){ openUpdateConfirm(); }}
+  ];
+  var R=104;
+  ACTIONS.forEach(function(a,i){
+    var d=document.createElement('div'); d.className='w';
+    var ang=i*Math.PI/4;
+    d.style.setProperty('--x',(R*Math.sin(ang)).toFixed(1)+'px');
+    d.style.setProperty('--y',(-R*Math.cos(ang)).toFixed(1)+'px');
+    d.innerHTML='<span>'+a.ic+'</span>'+a.lb;
+    d.addEventListener('click',function(e){ e.stopPropagation(); pick(i); });
+    wheel.appendChild(d);
+  });
+  var els=[].slice.call(wheel.querySelectorAll('.w'));
+  var wOpen=false, hot=-1, cx=0, cy=0, pressMode=false;
+  function setHot(i){ hot=i; els.forEach(function(e,k){e.classList.toggle('hot',k===i);}); wcore.innerHTML=i>=0?'<span>'+ACTIONS[i].ic+'<br>'+ACTIONS[i].lb+'</span>':'<span>끌어서<br>선택</span>'; }
+  function openWheel(x,y,press){
+    var m=140, W=window.innerWidth, H=window.innerHeight;
+    cx=Math.min(Math.max(x,m),Math.max(W-m,m)); cy=Math.min(Math.max(y,m+10),Math.max(H-m-10,m+10));
+    wheel.style.left=cx+'px'; wheel.style.top=cy+'px';
+    wOpen=true; pressMode=press; setHot(-1);
+    wveil.classList.add('on'); wheel.classList.add('on');
+    if(navigator.vibrate){ try{navigator.vibrate(15);}catch(e){} }
+  }
+  function closeWheel(){ wOpen=false; wveil.classList.remove('on'); wheel.classList.remove('on'); setHot(-1); }
+  function pick(i){ closeWheel(); ACTIONS[i].run(); }
+  function track(x,y){
+    var dx=x-cx, dy=y-cy;
+    if(Math.hypot(dx,dy)<34){ setHot(-1); return; }
+    var a=Math.atan2(dx,-dy)*180/Math.PI; if(a<0)a+=360;
+    setHot(Math.round(a/45)%8);
+  }
+  /* 길게 누르기(빈 영역) / 마우스 휠 클릭 */
+  var lp=null, sx=0, sy=0;
+  var BLOCK='button,input,select,textarea,a,label,.cart-card,.dsheet,.modal-bg,.quote-modal,.fab,.wheel,.bbar,.total-bar,.box-panel,.check-row';
+  document.addEventListener('pointerdown',function(e){
+    if(wOpen) return;
+    if(e.target.closest(BLOCK)) { if(!(e.pointerType==='mouse'&&e.button===1)) return; }
+    if(e.pointerType==='mouse'&&e.button===1){ if(e.target.closest('input,textarea,select')) return; e.preventDefault(); openWheel(e.clientX,e.clientY,true); return; }
+    if(e.pointerType==='mouse'&&e.button!==0) return;
+    sx=e.clientX; sy=e.clientY;
+    lp=setTimeout(function(){ lp=null; openWheel(sx,sy,true); },500);
+  });
+  document.addEventListener('mousedown',function(e){ if(e.button===1&&!e.target.closest('input,textarea,select')) e.preventDefault(); });
+  document.addEventListener('pointermove',function(e){
+    if(lp&&Math.hypot(e.clientX-sx,e.clientY-sy)>10){ clearTimeout(lp); lp=null; }
+    if(wOpen&&pressMode) track(e.clientX,e.clientY);
+  });
+  function release(){
+    if(lp){ clearTimeout(lp); lp=null; }
+    if(wOpen&&pressMode){ if(hot>=0) pick(hot); else pressMode=false; }
+  }
+  document.addEventListener('pointerup',release);
+  document.addEventListener('pointercancel',function(){ if(lp){clearTimeout(lp);lp=null;} });
+  document.addEventListener('touchmove',function(e){ if(wOpen&&pressMode) e.preventDefault(); },{passive:false});
+  document.addEventListener('contextmenu',function(e){ if(wOpen||lp) e.preventDefault(); });
+  wveil.addEventListener('click',function(){ if(!pressMode) closeWheel(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeWheel(); });
+
+  /* 드래그 가능한 플로팅 버튼 */
+  function placeFab(l,t){
+    var W=window.innerWidth,H=window.innerHeight;
+    fab.style.left=Math.min(Math.max(l,4),W-58)+'px'; fab.style.top=Math.min(Math.max(t,4),H-58)+'px';
+  }
+  var saved=null; try{ saved=JSON.parse(localStorage.getItem('betaFab')||'null'); }catch(e){}
+  placeFab(saved?saved.l:Math.min(window.innerWidth,(window.innerWidth+480)/2)-70, saved?saved.t:window.innerHeight-170);
+  window.addEventListener('resize',function(){ placeFab(fab.offsetLeft,fab.offsetTop); });
+  var fx,fy,ol,ot,moved=false,down=false;
+  fab.addEventListener('pointerdown',function(e){ down=true; moved=false; fx=e.clientX; fy=e.clientY; ol=fab.offsetLeft; ot=fab.offsetTop; fab.setPointerCapture(e.pointerId); e.stopPropagation(); });
+  fab.addEventListener('pointermove',function(e){
+    if(!down) return;
+    if(!moved && Math.hypot(e.clientX-fx,e.clientY-fy)>6){ moved=true; fab.classList.add('drag'); }
+    if(moved) placeFab(ol+e.clientX-fx, ot+e.clientY-fy);
+    e.stopPropagation();
+  });
+  fab.addEventListener('pointerup',function(e){
+    down=false; fab.classList.remove('drag'); e.stopPropagation();
+    if(moved){ try{ localStorage.setItem('betaFab',JSON.stringify({l:fab.offsetLeft,t:fab.offsetTop})); }catch(er){} }
+    else { var b=fab.getBoundingClientRect(); openWheel(b.left+b.width/2,b.top+b.height/2,false); }
+  });
+})();
 </script>
 
 </html>

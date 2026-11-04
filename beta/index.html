@@ -316,6 +316,16 @@ input:focus, select:focus { border-color:var(--brass); }
 .modal-title { color:var(--ink); }
 .modal-sheet { border:1px solid var(--line); }
 .btn-quote { background:var(--brassF); box-shadow:0 4px 14px rgba(143,109,43,.3); }
+.dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
+.dsheet-head .delta b { font-weight:800; }
+.dsheet-head .delta .up { color:#B45309; }
+.dsheet-head .delta .down { color:#15803D; }
+.dsheet-foot { display:flex; gap:10px; }
+.dsheet-foot button { width:auto; flex:2; }
+.dsheet-foot button.ghost { flex:1; background:#fff !important; color:var(--navy); border:1.5px solid var(--line); }
+.sum3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+.sum3 small { display:block; font-size:11px; opacity:.7; margin-bottom:2px; }
+.sum3 b { font-size:15px; font-weight:800; color:#D9BC7C; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -571,10 +581,11 @@ input:focus, select:focus { border-color:var(--brass); }
   <div class="dsheet-head">
     <div class="row"><div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span></div><button onclick="closeDetail()" aria-label="닫기">&#10005;</button></div>
     <div class="price" id="dSheetPrice"></div>
+    <div class="delta" id="dSheetDelta" style="display:none"></div>
   </div>
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
-  <div class="dsheet-foot"><button onclick="closeDetail()">적용하기</button></div>
+  <div class="dsheet-foot"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
 </div>
 <div id="quoteGenOverlay"style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:14px">
   <div class="spinner"></div>
@@ -1143,6 +1154,7 @@ function openConfig(idx){
   item._detailOpen=true;
   if (searchTargetIdx===null){
     cart.forEach(function(it){ it._detailOpen=false; });
+    item._new=true; // 베타: 시트에서 '취소'하면 방금 담은 제품은 제거
     cart.push(item);
   } else {
     item.id=cart[searchTargetIdx]?cart[searchTargetIdx].id:item.id;
@@ -1873,17 +1885,49 @@ function toggleDetail(idx){
   cart[idx]._detailOpen=open;
   renderCart();
 }
-function closeDetail(){ cart.forEach(function(it){ it._detailOpen=false; }); renderCart(); }
+function closeDetail(){ cart.forEach(function(it){ it._detailOpen=false; delete it._new; }); renderCart(); }
+// 베타: 시트를 열 때 스냅샷을 저장해 두고, '취소'하면 그 상태로 복원 / 변경 전후 금액 표시
+var _dSnap=null;
+function _itemJson(it){ return JSON.stringify(it,function(k,v){ return (k.charAt(0)==='_')?undefined:v; }); }
+function betaPriceNum(item){
+  var c=calcItem(item), cash=item.구매방법==='cash', s2=item.선납==='선납2', ki=itemKorCalc(item,c);
+  var steady=ki?(ki.isHanval?(ki.normalInSup>0?ki.normalRenM:ki.halfRenM):ki.renM):null;
+  if(cash) return {n:c.cashFinal,kind:'cash',label:'일시불'};
+  if(c.sunap&&!s2) return {n:c.sunap.amt,kind:'sunap',label:'선납'};
+  if(steady!==null) return {n:steady,kind:'month',label:'월 렌탈'};
+  if(c.sunap&&s2) return {n:c.sunap.인하후,kind:'month',label:'월 렌탈'};
+  return {n:c.normalMonthly||c.monthly,kind:'month',label:'월 렌탈'};
+}
+function cancelDetail(){
+  if(_dSnap && cart[_dSnap.idx]){
+    if(cart[_dSnap.idx]._new){ cart.splice(_dSnap.idx,1); delete cartSel[_dSnap.idx]; }
+    else { var o=JSON.parse(JSON.stringify(_dSnap.obj)); cart[_dSnap.idx]=o; }
+  }
+  cart.forEach(function(it){ it._detailOpen=false; delete it._new; });
+  renderCart();
+}
+function _deltaHtml(idx){
+  var cur=cart[idx]; if(!cur||!_dSnap||_dSnap.idx!==idx) return '';
+  if(_itemJson(cur)===_dSnap.json) return '';
+  if(cur.모델명!==_dSnap.obj.모델명) return '제품이 변경되었습니다 (취소하면 원래 제품으로 복원)';
+  var p0=_dSnap.price, p1=betaPriceNum(cur);
+  if(p0.kind!==p1.kind) return '구매 방식 변경: '+p0.label+' → '+p1.label;
+  var diff=p1.n-p0.n, unit=p0.kind==='month'?'/월':'';
+  var sign=diff>0?'+':(diff<0?'−':'±'), cls=diff>0?'up':(diff<0?'down':'');
+  return '변경 전 '+won(p0.n)+unit+' <b class="'+cls+'">'+sign+won(Math.abs(diff))+unit+'</b>';
+}
 var _dSheetIdx=-1, _dTab='buy', _dShownTab='';
 function setDetailTab(t){ _dTab=t; renderCart(); }
 function syncDetailSheet(s){
   var sh=document.getElementById('dSheet'), dim=document.getElementById('dSheetDim'), body=document.getElementById('dSheetBody');
-  if(!s){ sh.classList.remove('on'); dim.classList.remove('on'); document.body.style.overflow=''; _dSheetIdx=-1; _dTab='buy'; _dShownTab=''; return; }
-  if(_dSheetIdx!==s.idx) _dTab='buy';
+  if(!s){ sh.classList.remove('on'); dim.classList.remove('on'); document.body.style.overflow=''; _dSheetIdx=-1; _dTab='buy'; _dShownTab=''; _dSnap=null; return; }
+  if(_dSheetIdx!==s.idx){ _dTab='buy'; _dSnap={idx:s.idx,json:_itemJson(cart[s.idx]),obj:JSON.parse(JSON.stringify(cart[s.idx])),price:betaPriceNum(cart[s.idx])}; }
   var st=(_dSheetIdx===s.idx && _dShownTab===_dTab)?body.scrollTop:0;
   document.getElementById('dSheetTitle').textContent=s.name;
   document.getElementById('dSheetSub').textContent=s.model+' · '+s.pm;
   document.getElementById('dSheetPrice').innerHTML=s.price;
+  var _dh=_deltaHtml(s.idx), _de=document.getElementById('dSheetDelta');
+  _de.innerHTML=_dh; _de.style.display=_dh?'block':'none';
   var T=[['buy','구매'],['disc','할인'],['bmp','별매품'],['res','계산내역']];
   document.getElementById('dSheetTabs').innerHTML=T.map(function(t){
     return '<div class="tab'+(_dTab===t[0]?' on':'')+((t[0]==='bmp'&&!s.tabs.bmp)?' dim':'')+'" onclick="setDetailTab(\''+t[0]+'\')">'+t[1]+'</div>';
@@ -2560,6 +2604,10 @@ function buildQuoteParts(t){
   return rows;
 }
 
+function betaSummary(t){
+  var a=t.agg, tl=t.timeline;
+  return { month: tl.length?tl[0].total:0, multi: tl.length>1, init:(a.ilsibl||0)+(a.cashTotal||0)+(a.bmpOneTime||0), total:t.totT };
+}
 function updateTotalBar(){
   var totalBar=document.getElementById('totalBar');
   var ab=document.getElementById('actionBtns');
@@ -2567,12 +2615,9 @@ function updateTotalBar(){
   var t=calcTotals();
   (function(){
     var tl=t.timeline, a=t.agg, sub=[];
-    var main=tl.length?won(tl[0].total)+'/월':won(t.totT);
-    if(tl.length>1) sub.push('이후 '+won(tl[tl.length-1].total)+'/월');
-    if(a.cashCnt>0) sub.push('일시불 '+won(a.cashTotal));
-    if(a.ilsibl>0) sub.push('선납 '+won(a.ilsibl));
-    document.getElementById('bbMain').textContent=main;
-    document.getElementById('bbSub').textContent='합산 · 제품 '+cart.length+'개'+(sub.length?' · '+sub.join(' · '):'');
+    var S=betaSummary(t);
+    document.getElementById('bbMain').textContent=won(S.month)+'/월';
+    document.getElementById('bbSub').textContent='월 청구액'+(S.multi?'(첫 구간)':'')+' · 초기 '+won(S.init)+' · 총 '+won(S.total);
     document.getElementById('bBar').style.display='flex';
     document.body.classList.add('has-bbar');
   })();
@@ -2593,7 +2638,10 @@ function updateTotalBar(){
   }).join('');
   var totalRow='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)"><span style="font-size:13px;font-weight:700">합산 총액</span><span style="font-size:19px;font-weight:800;color:#60a5fa">'+won(t.totT)+'</span></div>';
 
-  totalBar.innerHTML='<div class="total-bar"><p class="tl">합산 견적 ('+cart.length+'개 제품)</p>'+rowsHtml+totalRow+notes+'</div>';
+  var S=betaSummary(t);
+  var sum3='<div class="sum3"><div><small>월 청구액'+(S.multi?' (첫 구간)':'')+'</small><b>'+won(S.month)+'</b></div><div><small>초기 납부액</small><b>'+won(S.init)+'</b></div><div><small>총 납부액</small><b>'+won(S.total)+'</b></div></div>'
+    +'<p class="snote" style="margin:0 0 10px">산정 범위: 품목별 약정기간 합계 · 초기 납부액은 총 납부액에 포함 · 약정 종료 후 비용과 예상 카드 혜택은 미포함</p>';
+  totalBar.innerHTML='<div class="total-bar"><p class="tl">합산 견적 ('+cart.length+'개 제품)</p>'+sum3+rowsHtml+notes+'</div>';
   totalBar.style.display='block';
   if (ab) ab.style.display='block';
 }
@@ -4299,8 +4347,11 @@ function _renderQuoteNoticeContent(){
     fab.style.left=Math.min(Math.max(l,4),W-58)+'px'; fab.style.top=Math.min(Math.max(t,4),H-58)+'px';
   }
   var saved=null; try{ saved=JSON.parse(localStorage.getItem('betaFab')||'null'); }catch(e){}
-  placeFab(saved?saved.l:Math.min(window.innerWidth,(window.innerWidth+480)/2)-70, saved?saved.t:window.innerHeight-170);
-  window.addEventListener('resize',function(){ placeFab(fab.offsetLeft,fab.offsetTop); });
+  var userPlaced=!!saved;
+  function defaultFab(){ placeFab(Math.min(window.innerWidth,(window.innerWidth+480)/2)-70, window.innerHeight-170); }
+  if(saved) placeFab(saved.l,saved.t); else defaultFab();
+  window.addEventListener('load',function(){ if(!userPlaced) defaultFab(); });
+  window.addEventListener('resize',function(){ if(userPlaced) placeFab(fab.offsetLeft,fab.offsetTop); else defaultFab(); });
   var fx,fy,ol,ot,moved=false,down=false;
   fab.addEventListener('pointerdown',function(e){ down=true; moved=false; fx=e.clientX; fy=e.clientY; ol=fab.offsetLeft; ot=fab.offsetTop; fab.setPointerCapture(e.pointerId); e.stopPropagation(); });
   fab.addEventListener('pointermove',function(e){
@@ -4311,7 +4362,7 @@ function _renderQuoteNoticeContent(){
   });
   fab.addEventListener('pointerup',function(e){
     down=false; fab.classList.remove('drag'); e.stopPropagation();
-    if(moved){ try{ localStorage.setItem('betaFab',JSON.stringify({l:fab.offsetLeft,t:fab.offsetTop})); }catch(er){} }
+    if(moved){ userPlaced=true; try{ localStorage.setItem('betaFab',JSON.stringify({l:fab.offsetLeft,t:fab.offsetTop})); }catch(er){} }
     else { var b=fab.getBoundingClientRect(); openWheel(b.left+b.width/2,b.top+b.height/2,false); }
   });
 })();

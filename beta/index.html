@@ -316,6 +316,13 @@ input:focus, select:focus { border-color:var(--brass); }
 .modal-title { color:var(--ink); }
 .modal-sheet { border:1px solid var(--line); }
 .btn-quote { background:var(--brassF); box-shadow:0 4px 14px rgba(143,109,43,.3); }
+/* 평면 리스트 행: 카드 테두리/둥근 모서리 제거, 구분선만 */
+.cart-list { gap:0 !important; background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.cart-card { border:0 !important; border-bottom:1px solid var(--line) !important; border-radius:0 !important; box-shadow:none !important; padding:10px 12px 9px !important; }
+.cart-card:last-child { border-bottom:0 !important; }
+.cart-card > div > div > div:last-child { gap:2px; }
+.cart-card span[style*='border-radius:6px'] { background:transparent !important; border:0 !important; padding:0 !important; font-weight:600 !important; font-size:11.5px !important; color:var(--sub) !important; }
+.cart-card span[style*='border-radius:6px']:not(:last-child)::after { content:'·'; margin-left:5px; color:#C9C3B3; }
 .dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
 .dsheet-head .delta b { font-weight:800; }
 .dsheet-head .delta .up { color:#B45309; }

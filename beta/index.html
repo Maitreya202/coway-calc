@@ -440,6 +440,40 @@ body.has-bbar .wrap { padding-bottom:0; }
 .ben-item .d { font-size:12px; color:var(--sub); margin-top:3px; line-height:1.55; }
 .ben-sep { border-top:1px dashed var(--line); margin:6px 0; }
 .ben-tag { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:5px; background:#E8EDF4; color:var(--navy2); margin-left:6px; }
+.dsheet { background:#fff; }
+.dsheet-body { background:#fff; padding:2px 16px 16px; }
+.dsheet-body .box-panel { background:transparent; border:0; border-bottom:1px solid var(--line); border-radius:0; padding:16px 0; margin:0; }
+.og { padding:16px 0; border-bottom:1px solid var(--line); }
+.og h4 { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 10px; }
+.ogh { display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.ogh h4 { margin:0; }
+.ogh small, .og .sub { font-size:12px; color:var(--sub); }
+.og .sub { margin:13px 0 8px; }
+.seg { display:flex; gap:7px; }
+.seg button { flex:1; min-height:44px; padding:9px 4px; font:inherit; font-size:13px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+.seg button.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+.terms { display:grid; grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); gap:6px; }
+.terms button { min-height:44px; min-width:0; padding:10px 2px; font:inherit; font-size:12px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+.terms button strong { display:block; font-size:14px; font-weight:700; margin-top:5px; font-variant-numeric:tabular-nums; }
+.terms button small { font-size:11px; color:var(--sub); }
+.terms button.on { background:var(--brassL); border-color:var(--brass); color:var(--brassD); box-shadow:inset 0 0 0 1px var(--brass); }
+.terms button.on small { color:var(--brassD); }
+.dsheet-head .pr { display:flex; justify-content:space-between; align-items:flex-end; gap:10px; margin-top:10px; }
+.dsheet-head .old { display:block; font-size:12px; color:var(--sub); }
+.dsheet-head .price { margin-top:0; font-size:28px; font-weight:800; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
+.dbadge { font-size:12px; font-weight:700; padding:5px 8px; border-radius:6px; background:var(--brassL); color:var(--brassD); white-space:nowrap; margin-bottom:4px; }
+.dbadge.down { background:#E7F5EC; color:#15803D; }
+.dbadge.up { background:#FDEFE0; color:#B45309; }
+.dsheet-foot { display:block !important; padding:12px 16px max(14px, env(safe-area-inset-bottom)); }
+.dsheet-foot .fsum { margin-bottom:12px; }
+.dsheet-foot .chg { background:var(--paper); border-radius:10px; padding:10px 12px; font-size:12px; color:var(--ink); margin-bottom:10px; }
+.dsheet-foot .trow { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.dsheet-foot .trow small { font-size:12px; color:var(--sub); }
+.dsheet-foot .trow b { font-size:16px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+.dsheet-foot .tdiff { font-size:12px; color:var(--sub); margin:4px 0 0; }
+.dsheet-foot button.dlink { width:auto !important; flex:none; background:none !important; color:#B91C1C !important; border:0 !important; padding:8px 0 0 !important; font-size:12px !important; font-weight:600 !important; }
+.dsheet-foot .facts { display:grid; grid-template-columns:1fr 2fr; gap:9px; }
+.dsheet-foot .facts button { width:100%; }
 .dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
 .dsheet-head .delta b { font-weight:800; }
 .dsheet-head .delta .up { color:#B45309; }
@@ -765,12 +799,19 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="dsheet-grab"></div>
   <div class="dsheet-head">
     <div class="row"><div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span></div><button onclick="closeDetail()" aria-label="닫기">&#10005;</button></div>
-    <div class="price" id="dSheetPrice"></div>
-    <div class="delta" id="dSheetDelta" style="display:none"></div>
+    <div class="pr"><div><small class="old" id="dSheetOld"></small><div class="price" id="dSheetPrice"></div></div><span class="dbadge" id="dSheetDelta"></span></div>
   </div>
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
-  <div class="dsheet-foot"><button class="ghost del" onclick="deleteFromSheet()">삭제</button><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
+  <div class="dsheet-foot">
+    <div class="fsum">
+      <div class="chg" id="dSheetChg"></div>
+      <div class="trow"><small id="dSheetTotLbl"></small><b id="dSheetTot"></b></div>
+      <p class="tdiff" id="dSheetTotDiff"></p>
+      <button type="button" class="dlink" onclick="deleteFromSheet()">이 제품 삭제</button>
+    </div>
+    <div class="facts"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">변경 적용</button></div>
+  </div>
 </div>
 <div class="cmp-page" id="benPage">
   <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>결합 · 납부 혜택</b></div>
@@ -1450,46 +1491,63 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   window._sheetPrice = _sumPrice; window._sheetPm = pmLabel; // 베타: 가격은 시트 헤더에 표시
   var h = '';
 
-  // 구매방법 + 제품변경 패널
+  // 구매방법 (균등 분할 버튼)
   var pmOpts = [['rental', '신규(렌탈)']];
   if (item.재렌탈 > 0 && item.재렌탈사용 !== false) pmOpts.push(['rerental', '재렌탈']);
   if (item.일시불 > 0) pmOpts.push(['cash', '일시불']);
-  h += '<div class="box-panel"><span class="sec-label" style="margin-top:0">구매방법</span>'
-    + '<div class="pill-group" style="margin-bottom:10px">';
+  h += '<div class="og"><h4>구매방법</h4><div class="seg">';
   pmOpts.forEach(function(o) {
-    h += '<button class="pill' + ((o[0]==="rental" ? (!item.isRerental&&item.구매방법!=="cash") : o[0]==="rerental" ? item.isRerental : item.구매방법===o[0]) ? ' active' : '') + '" onclick="setPurchaseMode(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
-  });
-  h += '</div>';
-  h += '</div>';
-
-  if (isCashMode) return h;
-
-  // 약정 패널
-  h += '<div class="box-panel"><span class="sec-label" style="margin-top:0">약정기간</span><div class="pill-group">';
-  cYaks.forEach(function(y) {
-    h += '<button class="pill' + (item.약정년 === y ? ' active' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + yakjLabel(y) + '</button>';
+    var on = (o[0]==="rental" ? (!item.isRerental&&item.구매방법!=="cash") : o[0]==="rerental" ? item.isRerental : item.구매방법===o[0]);
+    h += '<button class="' + (on ? 'on' : '') + '" onclick="setPurchaseMode(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
   });
   h += '</div></div>';
 
-  // 관리방법 패널
-  h += '<div class="box-panel">';
+  if (isCashMode) return h;
+
+  // 약정기간 (버튼마다 해당 약정의 요금 표시)
+  h += '<div class="og"><div class="ogh"><h4>약정기간</h4><small>' + pmLabel + ' · 현재 관리조건 기준</small></div><div class="terms" style="margin-top:10px">';
+  cYaks.forEach(function(y) {
+    var pr = _termPrice(item, y);
+    h += '<button class="' + (item.약정년 === y ? 'on' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + yakjLabel(y)
+      + '<strong>' + (pr ? Math.round(pr.n).toLocaleString('ko-KR') : '-') + '</strong><small>' + (pr && pr.kind === 'sunap' ? '원 선납' : '원/월') + '</small></button>';
+  });
+  h += '</div></div>';
+
+  // 관리방법 · 주기
+  h += '<div class="og">';
   if (cMeths.length > 1) {
-    h += '<span class="sec-label" style="margin-top:0">관리방법</span><div class="pill-group">';
+    h += '<h4>관리방법</h4><div class="seg">';
     cMeths.forEach(function(m) {
-      h += '<button class="pill' + (item.관리방법 === m ? ' active' : '') + '" onclick="setCartMgmt(' + idx + ',\'' + m + '\')">' + m + '</button>';
+      h += '<button class="' + (item.관리방법 === m ? 'on' : '') + '" onclick="setCartMgmt(' + idx + ',\'' + m + '\')">' + m + '</button>';
     });
     h += '</div>';
   }
   if (cJugis.length > 1) {
-    h += '<span class="sec-label">' + (isSelfMgmt(item.관리방법) ? '키트주기' : '관리주기') + '</span><div class="pill-group">';
+    h += (cMeths.length > 1 ? '<div class="sub">' : '<h4>') + (isSelfMgmt(item.관리방법) ? '키트주기' : '관리주기') + (cMeths.length > 1 ? '</div>' : '</h4>') + '<div class="seg">';
     cJugis.forEach(function(j) {
-      h += '<button class="pill' + (item.관리주기 === j ? ' active' : '') + '" onclick="setCartJugi(' + idx + ',\'' + j + '\')">' + j + '</button>';
+      h += '<button class="' + (item.관리주기 === j ? 'on' : '') + '" onclick="setCartJugi(' + idx + ',\'' + j + '\')">' + j + '</button>';
     });
     h += '</div>';
   }
-  if (cMeths.length <= 1 && cJugis.length <= 1) h += '<p style="font-size:12px;color:#94a3b8">이 제품은 관리방법 선택 옵션이 없습니다.</p>';
+  if (cMeths.length <= 1 && cJugis.length <= 1) h += '<h4>관리방법</h4><p style="font-size:12px;color:#7B8190;margin:0">이 제품은 관리방법 선택 옵션이 없습니다.</p>';
   h += '</div>';
   return h;
+}
+
+// 약정별 요금 미리보기: 제품을 복제해 해당 약정 행의 가격을 적용한 뒤 계산 (원본 변경 없음)
+function _termPrice(item, y) {
+  try {
+    var o = JSON.parse(JSON.stringify(item)); delete o._calcSnap;
+    o.약정년 = y;
+    if (y === 3 && o.선납 === '선납2') { o.선납 = 'none'; var d0 = o.discounts || {}; d0.동시구매 = false; d0.결합 = false; o.discounts = d0; }
+    var row = PRODUCTS.find(function(r) {
+      return r.제품명 === o.제품명 && r.모델명 === o.모델명 && (!o.관리방법 || r.관리방법 === o.관리방법) && (!o.관리주기 || r.관리주기 === o.관리주기) && r.약정년 === y;
+    });
+    if (!row) return null;
+    ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'].forEach(function(k) { o[k] = row[k] || 0; });
+    o.프로모션사용 = row.프로모션사용; o.타사보상사용 = row.타사보상사용; o.재렌탈사용 = row.재렌탈사용; o.타사보상일시불사용 = row.타사보상일시불사용;
+    return betaPriceNum(o);
+  } catch (e) { return null; }
 }
 
 // ── 할인/반값/코라솔 패널 ──────────────────────────────────────
@@ -2086,6 +2144,42 @@ function cancelDetail(){
   cart.forEach(function(it){ it._detailOpen=false; delete it._new; });
   renderCart();
 }
+function _itemTotal(it){
+  try{
+    var o=JSON.parse(JSON.stringify(it)); delete o._calcSnap;
+    if(o.구매방법==='cash') return {n:calcItem(o).cashFinal,months:0,cash:true};
+    return {n:calcTotals([o]).totT,months:(o.약정년||0)*12,cash:false};
+  }catch(e){ return {n:0,months:0,cash:false}; }
+}
+function _sgn(n){ return (n>0?'+':(n<0?'−':''))+Math.abs(Math.round(n)).toLocaleString('ko-KR')+'원'; }
+function _deltaInfo(idx){
+  var cur=cart[idx];
+  if(!cur||!_dSnap||_dSnap.idx!==idx) return {old:'',badge:'',cls:''};
+  var p0=_dSnap.price, unit=p0.kind==='month'?'월 ':'';
+  var old='현재 '+unit+won(p0.n)+' →';
+  if(_itemJson(cur)===_dSnap.json) return {old:old,badge:'변경 없음',cls:''};
+  if(cur.모델명!==_dSnap.obj.모델명) return {old:old,badge:'제품 변경됨',cls:''};
+  var p1=betaPriceNum(cur);
+  if(p0.kind!==p1.kind) return {old:old,badge:p0.label+' → '+p1.label,cls:''};
+  var diff=p1.n-p0.n;
+  return {old:old,badge:diff?unit+_sgn(diff):'금액 동일',cls:diff>0?'up':(diff<0?'down':'')};
+}
+function _chgText(cur){
+  var o=(_dSnap&&_dSnap.idx===_dSheetIdx)?_dSnap.obj:null;
+  var mode=function(it){return it.구매방법==='cash'?'일시불':(it.isRerental?'재렌탈':'신규');};
+  var mg=function(it){return (it.관리방법||'')+((it.관리주기&&it.관리주기!=='-')?' '+it.관리주기:'');};
+  var base=mode(cur)+(cur.구매방법==='cash'?'':' · '+yakjLabel(cur.약정년)+' · '+mg(cur));
+  if(!o||_itemJson(cur)===_dSnap.json) return base;
+  var parts=[];
+  if(mode(o)!==mode(cur)) parts.push(mode(o)+' → '+mode(cur));
+  if(o.구매방법!=='cash'&&cur.구매방법!=='cash'){
+    if(o.약정년!==cur.약정년) parts.push(yakjLabel(o.약정년)+' → '+yakjLabel(cur.약정년));
+    if(mg(o)!==mg(cur)) parts.push(mg(o)+' → '+mg(cur));
+  }
+  var d0=bulkDesc(o,'disc'), d1=bulkDesc(cur,'disc');
+  if(d0!==d1) parts.push('할인 '+d0+' → '+d1);
+  return parts.length?parts.join(' · '):'그 밖의 옵션이 변경됩니다';
+}
 function _deltaHtml(idx){
   var cur=cart[idx]; if(!cur||!_dSnap||_dSnap.idx!==idx) return '';
   if(_itemJson(cur)===_dSnap.json) return '';
@@ -2101,14 +2195,24 @@ function setDetailTab(t){ _dTab=t; renderCart(); }
 function syncDetailSheet(s){
   var sh=document.getElementById('dSheet'), dim=document.getElementById('dSheetDim'), body=document.getElementById('dSheetBody');
   if(!s){ sh.classList.remove('on'); dim.classList.remove('on'); document.body.style.overflow=''; _dSheetIdx=-1; _dTab='buy'; _dShownTab=''; _dSnap=null; return; }
-  if(_dSheetIdx!==s.idx){ _dTab='buy'; _dSnap={idx:s.idx,json:_itemJson(cart[s.idx]),obj:JSON.parse(JSON.stringify(cart[s.idx])),price:betaPriceNum(cart[s.idx])}; }
+  if(_dSheetIdx!==s.idx){ _dTab='buy'; _dSnap={idx:s.idx,json:_itemJson(cart[s.idx]),obj:JSON.parse(JSON.stringify(cart[s.idx])),price:betaPriceNum(cart[s.idx]),tot:_itemTotal(cart[s.idx])}; }
   var st=(_dSheetIdx===s.idx && _dShownTab===_dTab)?body.scrollTop:0;
   document.getElementById('dSheetTitle').textContent=s.name;
   document.getElementById('dSheetSub').textContent=s.model+' · '+s.pm;
   document.getElementById('dSheetPrice').innerHTML=s.price;
-  var _dh=_deltaHtml(s.idx), _de=document.getElementById('dSheetDelta');
-  _de.innerHTML=_dh; _de.style.display=_dh?'block':'none';
-  var T=[['buy','구매'],['disc','할인'],['bmp','별매품'],['res','계산내역']];
+  var _di=_deltaInfo(s.idx), _de=document.getElementById('dSheetDelta');
+  document.getElementById('dSheetOld').textContent=_di.old;
+  _de.textContent=_di.badge; _de.className='dbadge '+_di.cls; _de.style.display=_di.badge?'':'none';
+  var _cur=cart[s.idx], _tt=_itemTotal(_cur), _t0=_dSnap?_dSnap.tot:_tt;
+  document.getElementById('dSheetChg').textContent=_chgText(_cur);
+  document.getElementById('dSheetTotLbl').textContent=_tt.cash?'일시불 결제금액':'선택기간 총 납부액 · '+_tt.months+'개월';
+  document.getElementById('dSheetTot').textContent=Math.round(_tt.n).toLocaleString('ko-KR')+'원';
+  var _td=document.getElementById('dSheetTotDiff');
+  if(_dSnap&&_itemJson(_cur)!==_dSnap.json){
+    _td.textContent='기존'+(_t0.cash?' 일시불':' '+_t0.months+'개월')+' 총액 대비 '+_sgn(_tt.n-_t0.n)+((!_tt.cash&&!_t0.cash&&_tt.months!==_t0.months)?' · 비교기간 다름':'');
+    _td.style.display='';
+  } else { _td.style.display='none'; }
+  var T=[['buy','계약·관리'],['disc','할인'],['bmp','별매품'],['res','계산내역']];
   document.getElementById('dSheetTabs').innerHTML=T.map(function(t){
     return '<div class="tab'+(_dTab===t[0]?' on':'')+((t[0]==='bmp'&&!s.tabs.bmp)?' dim':'')+'" onclick="setDetailTab(\''+t[0]+'\')">'+t[1]+'</div>';
   }).join('');

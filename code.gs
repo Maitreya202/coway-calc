@@ -1604,4 +1604,666 @@ function diagSheets() {
   Logger.log('스프레드시트 이름: ' + ss.getName());
   Logger.log('전체 시트 목록 (' + names.length + '개): ' + names.join(', '));
   Logger.log('제품DB 존재 여부: ' + (names.indexOf('제품DB') >= 0 ? '✅ 있음' : '❌ 없음'));
+}function updateCardDataNov2026() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  var baseRows = [
+    ['카드ID','카드명','문의번호','프로모션여부','혜택개월수','기간','대상','프로모션제목','특이사항','연회비','신청안내','신청URL'],
+    ['shinhan','코웨이 신한카드','1833-6013','Y',60,'2026.11.1 ~ 11.30','직전 6개월간 신한카드(신용카드) 청구 및 사용 이력이 없는 고객','60개월간 최대 7천원 추가 청구할인','','국내전용 27,000원 / 해외겸용(Master) 30,000원','QR코드 또는 ☎ 1833-6013','https://shcard.io/coway'],
+    ['hyundai','코웨이 현대카드','1677-0443','N',60,'','','','전국 코스트코에서 결제 가능, 애플페이 이용 가능','국내외 겸용 20,000원','☎ 1677-0443',''],
+    ['woori','코웨이 ICON 우리카드','1800-0859','Y',60,'2026.11.1 ~ 11.30','직전 6개월간 우리카드(신용카드) 청구 및 사용 이력이 없는 고객','60개월간 최대 7천원 추가 청구할인','','국내외 겸용 25,000원','☎ 1800-0859',''],
+    ['samsung','코웨이 삼성카드','1588-7540','Y',60,'2026.11.1 ~ 11.30','직전 6개월간 삼성카드(신용카드) 청구 및 사용 이력이 없는 고객','60개월간 최대 1만 1천원 추가 청구할인','본인/가족 통신비·아파트 관리비·4대 사회보험 등 생활 요금 정기 결제 시, 결제 건별 월 1,000원(최대 3,000원) 추가 할인','국내외 겸용 15,000원','☎ 1588-7540',''],
+    ['loca','코웨이 X LOCA (롯데카드)','1577-5208','Y',60,'2026.11.1 ~ 11.30','직전 6개월간 롯데카드(신용카드) 청구 및 사용 이력이 없는 고객','60개월간 최대 1만 5천원 추가 청구할인','','20,000원','6개월 무실적 대상 확인 및 카드 발급 페이지 · ☎ 1577-5208','https://m.lottecard.co.kr/app/LPBNFDA_V580.lc?evnBultSeq=1&ccoEvnGubun=coway'],
+    ['kb','KB국민 코웨이Ⅱ카드','1644-8388','Y',36,'2026.11.1 ~ 11.30','직전 6개월간 KB국민카드(KB BC카드 포함) 청구 및 사용 이력이 없는 고객','36개월간 최대 1만 1천원 추가 청구할인','','국내외 겸용 30,000원','카드 신청 페이지(QR코드) · ☎ 1644-8388',''],
+    ['nhbank','코웨이 NH올원카드','1644-2866 → 6#','Y',60,'2026.11.1 ~ 11.30','직전 6개월간 NH올원카드(신용카드) 청구 및 사용 이력이 없는 고객','60개월간 1만원 추가 캐시백 프로모션','','국내외 겸용 10,000원 / 국내외 겸용 12,000원','☎ 1644-2866 → 6#(코웨이 NH올원카드)','https://go.nhcard.com/GscljMo'],
+    ['hana','마이 코웨이 하나카드','1588-1771','N',60,'','','','','국내외 겸용 25,000원','☎ 1588-1771',''],
+    ['ibk','코웨이 IBK카드','1566-0088 → 14#','N',60,'','','','','국내전용 12,000원 / 국내외 겸용 15,000원','☎ 1566-0088 → 14#(코웨이 IBK제휴카드)',''],
+    ['nhall1','코웨이 NH올원카드','1644-2866 → 6#','N',60,'','','','','','☎ 1644-2866 → 6#',''],
+    ['hyundaiM','코웨이 현대카드 M Edition3','02-2655-5003','Y',36,'2026.11.1 ~ 11.30','직전 6개월간 현대카드(신용카드) 청구 및 사용 이력이 없는 고객','36개월간 최대 2만 5천원 추가 청구할인','전국 코스트코에서 결제 가능, 애플페이 이용 가능','국내외 겸용 30,000원','QR코드 또는 ☎ 02-2655-5003',''],
+    ['locaSE','LOCA X Special SE','1522-2800','N',60,'','','','','국내전용 20,000원 / 국내외 겸용 20,000원','☎ 1522-2800',''],
+    ['shinhanLife','코웨이라이프솔루션 신한카드','1544-7000','N',60,'','','','','국내전용 20,000원 / 국내외 겸용 23,000원','☎ 1544-7000',''],
+    ['hanaLife','코웨이라이프솔루션 하나카드','1800-1111','N',60,'','','','','국내전용 23,000원 / 국내외 겸용 23,000원','☎ 1800-1111',''],
+  ];
+
+  var tierRows = [
+    ['카드ID','실적기준','기본청구할인','프로모션추가할인','프로모션라벨'],
+    ['shinhan','30만원 이상',13000,7000,''], ['shinhan','70만원 이상',17000,4000,''], ['shinhan','150만원 이상',30000,'',''],
+    ['hyundai','40만원 이상',8000,'',''], ['hyundai','80만원 이상',12000,'',''], ['hyundai','120만원 이상',16000,'',''],
+    ['woori','30만원 이상',13000,7000,''], ['woori','80만원 이상',17000,5000,''], ['woori','150만원 이상',23000,7000,''],
+    ['samsung','30만원 이상',7000,11000,''], ['samsung','70만원 이상',10000,11000,''], ['samsung','120만원 이상',13000,11000,''],
+    ['loca','40만원 이상',8000,15000,''], ['loca','80만원 이상',12000,13000,''], ['loca','160만원 이상',24000,3000,''],
+    ['kb','40만원 이상',15000,11000,''], ['kb','80만원 이상',20000,10000,''],
+    ['nhbank','30만원 이상',10000,10000,'캐시백'], ['nhbank','100만원 이상',15000,10000,'캐시백'], ['nhbank','200만원 이상',30000,10000,'캐시백'],
+    ['hana','30만원 이상',13000,'',''], ['hana','80만원 이상',18000,'',''], ['hana','150만원 이상',25000,'',''],
+    ['ibk','30만원 이상',13000,'',''], ['ibk','70만원 이상',17000,'',''], ['ibk','120만원 이상',23000,'',''],
+    ['nhall1','30만원 이상',10000,'',''], ['nhall1','100만원 이상',15000,'',''], ['nhall1','200만원 이상',30000,'',''],
+    ['hyundaiM','50만원 이상',15000,5000,''], ['hyundaiM','100만원 이상',20000,5000,''],
+    ['locaSE','30만원 이상',13000,'',''], ['locaSE','70만원 이상',15000,'',''], ['locaSE','150만원 이상',25000,'',''],
+    ['shinhanLife','30만원 이상',7000,'',''], ['shinhanLife','50만원 이상',12000,'',''], ['shinhanLife','120만원 이상',30000,'',''],
+    ['hanaLife','30만원 이상',8000,'',''], ['hanaLife','80만원 이상',15000,'',''], ['hanaLife','150만원 이상',25000,'',''],
+  ];
+
+  var noteRows = [
+    ['카드ID','순번','내용'],
+    ['shinhan',1,'코웨이 렌탈/멤버십료 자동이체 필수 (자동이체 결제가 아닌 경우 카드 할인 및 프로모션 적용 불가)'],
+    ['shinhan',2,'카드 발급 후 카드 이용 실적 충족 및 자동납부 매출 발생 필수'],
+    ['shinhan',3,'60개월간(카드 유효기간까지) 최대 추가 7,000원 청구할인 제공'],
+    ['shinhan',4,'신한카드 신규 발급 고객 대상 (재발급, 기보유 회원, 해지 후 1년 미경과 회원 제외 · 본인 카드만, 가족카드 제외)'],
+    ['shinhan',5,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 혜택 미적용'],
+    ['woori',1,'코웨이 렌탈/멤버십료 자동이체 필수'],
+    ['woori',2,'렌탈료 자동이체 매입 시 추가 청구할인 최대 60회 제공 (해당 월 실적 구간 미충족 시 횟수 차감)'],
+    ['woori',3,'우리카드 신규/추가/교체 발급 고객 대상 (재발급, 기보유 회원, 해지 후 1년 미경과 회원 제외 · 본인 카드만)'],
+    ['woori',4,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 혜택 미적용'],
+    ['samsung',1,'코웨이 렌탈/멤버십료 자동이체 필수'],
+    ['samsung',2,'카드 발급 후 카드 이용실적 충족 및 자동납부 매출발생 필수'],
+    ['samsung',3,'60개월간(카드 유효기간까지) 최대 1만 1천원 추가 청구할인 제공'],
+    ['samsung',4,'삼성카드 신규 발급 고객 대상 (재발급, 기보유 회원, 해지 후 1년 미경과 회원 제외 · 본인 카드만)'],
+    ['samsung',5,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 혜택 미적용'],
+    ['loca',1,'코웨이 렌탈/멤버십료 자동이체 필수'],
+    ['loca',2,'카드 발급 후 카드 이용실적 충족 및 자동납부 매출발생 필수'],
+    ['loca',3,'60개월간(카드 유효기간까지) 최대 1만 5천원 청구할인 제공'],
+    ['loca',4,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 혜택 미적용'],
+    ['kb',1,'코웨이 렌탈/멤버십료 자동이체 필수'],
+    ['kb',2,'자동납부 건당 결제금액이 전월실적 40만원 구간은 15,000원 이상, 80만원 구간은 20,000원 이상 결제 시 프로모션 적용 가능'],
+    ['kb',3,'렌탈료 면제 프로모션 고객도 혜택 적용 가능 (렌탈료가 발생하는 월부터 청구할인 적용되며, 자동납부 매출 발생 시 36개월간 적용)'],
+    ['kb',5,'전월 이용실적 80만원 이상 충족 & 렌탈료 2만 3천원 승인 시 3천원 추가 청구할인'],
+    ['kb',4,'할인 기간은 39개월(전월실적 조건 충족 시) 중 36개월만 추가 할인 적용, 종료 후 추가 할인 미적용'],
+    ['nhbank',1,'렌탈 자동이체 매출 발생 필수'],
+    ['nhbank',2,'프로모션 캐시백은 전월 실적 충족 시 제공 (단, 1회차는 미충족 시에도 제공)'],
+    ['nhbank',3,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 및 캐시백이 미적용'],
+    ['hyundaiM',1,'코웨이 렌탈/멤버십료 자동이체 필수'],
+    ['hyundaiM',2,'카드 발급 후 카드 이용실적 충족 및 자동납부 매출발생 필수'],
+    ['hyundaiM',3,'첫 자동이체 발생 월부터 36개월간 렌탈료 지원(청구할인) 혜택 제공'],
+    ['hyundaiM',4,'현대카드 신규 발급 고객 대상 (재발급, 기보유 회원, 해지 후 1년 미경과 회원 제외 · 본인 카드만)'],
+    ['hyundaiM',5,'코웨이 렌탈료 면제 프로모션 고객은 면제 회차에 청구할인 혜택 미적용'],
+    ['hyundaiM',6,'우측 QR코드 카드 신청 시에만 혜택 적용'],
+  ];
+
+  [[COND_SHEETS.CARD_BASE, baseRows], [COND_SHEETS.CARD_TIER, tierRows], [COND_SHEETS.CARD_NOTE, noteRows]].forEach(function(pair) {
+    var name = pair[0], rows = pair[1];
+    var ws = ss.getSheetByName(name);
+    if (!ws) ws = ss.insertSheet(name);
+    ws.clear();
+    ws.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+    ws.getRange(1, 1, 1, rows[0].length).setFontWeight('bold');
+  });
+
+  CacheService.getScriptCache().remove('appData');
+  return '제휴카드 11월 데이터 갱신 완료 (기본/구간/유의사항 3개 탭 재작성)';
 }
+
+// ----------------------------------------------------------------
+// getConditions() — 조건 시트를 읽어 반환
+// ----------------------------------------------------------------
+function getConditions() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var result = {};
+
+  // 선납2
+  var s2Sheet = ss.getSheetByName(COND_SHEETS.SUNAP2);
+  if (s2Sheet) {
+    var s2Data = s2Sheet.getDataRange().getValues().slice(1); // 헤더 제외
+    var s2Map = {};
+    s2Data.forEach(function(r) {
+      var grade = String(r[0]).trim();
+      if (!grade) return;
+      if (!s2Map[grade]) s2Map[grade] = { label: String(r[1]).trim(), opts: [] };
+      s2Map[grade].opts.push({ amt: Number(r[2]), disc: Number(r[3]) });
+    });
+    result.sunap2 = s2Map;
+  }
+
+  // 타사보상조건
+  var tasabSheet = ss.getSheetByName(COND_SHEETS.TASAB);
+  if (tasabSheet) {
+    var tasabData = tasabSheet.getDataRange().getValues().slice(1);
+    var tasabMap = {};
+    tasabData.forEach(function(r) {
+      var yr = Number(r[0]);
+      if (!yr) return;
+      tasabMap[yr] = {
+        base:  Number(r[1]),
+        결합:  Number(r[2]),
+        동시구매: Number(r[3])
+      };
+    });
+    result.tasab = tasabMap;
+  }
+
+  // 헤드보드: 제품DB에 편입됨 — 별매품가 필드로 직접 사용
+
+  // 코라솔 — 3개 시트에서 구조화하여 파싱
+  var korBase = ss.getSheetByName(COND_SHEETS.KOR_BASE);
+  var korSup  = ss.getSheetByName(COND_SHEETS.KOR_SUP);
+  var korPbk  = ss.getSheetByName(COND_SHEETS.KOR_PBK);
+  if (korBase && korSup && korPbk) {
+    var korMap = {};
+    // 기본정보
+    korBase.getDataRange().getValues().slice(1).forEach(function(r) {
+      var key = String(r[0]).trim();
+      if (!key) return;
+      korMap[key] = { name:String(r[1]), 납부금:Number(r[3]), 납부회차:Number(r[4]), 만기환급금:Number(r[5]),
+        마지막회차납부금:(r[6]===''||r[6]==null)?null:Number(r[6]), 지원:[], 페이백:{} };
+    });
+    // 지원금
+    korSup.getDataRange().getValues().slice(1).forEach(function(r) {
+      var key = String(r[0]).trim();
+      if (!key || !korMap[key]) return;
+      korMap[key].지원.push({ months:Number(r[1]), total:Number(r[2]), monthly:Number(r[3]),
+        last:(r[4]===''||r[4]==null)?null:Number(r[4]) });
+    });
+    // 페이백
+    korPbk.getDataRange().getValues().slice(1).forEach(function(r) {
+      var key = String(r[0]).trim();
+      if (!key || !korMap[key]) return;
+      korMap[key].페이백[String(r[1])] = Number(r[2]);
+    });
+    result.korasol = korMap;
+  }
+
+  // 멤버십요금 (일시불 비교용) — "일시불 멤버십" 표만 파싱
+  var memSheet = ss.getSheetByName(COND_SHEETS.MEMBERSHIP);
+  if (memSheet) {
+    result.membershipCash = _parseMembershipCash(memSheet);
+  }
+
+  // 제휴카드
+  var cardBaseSheet = ss.getSheetByName(COND_SHEETS.CARD_BASE);
+  var cardTierSheet = ss.getSheetByName(COND_SHEETS.CARD_TIER);
+  var cardNoteSheet = ss.getSheetByName(COND_SHEETS.CARD_NOTE);
+  if (cardBaseSheet) {
+    var cardMap = {};
+    var cardOrder = [];
+    cardBaseSheet.getDataRange().getValues().slice(1).forEach(function(r) {
+      var id = String(r[0]).trim();
+      if (!id) return;
+      cardOrder.push(id);
+      cardMap[id] = {
+        id: id,
+        name: String(r[1] || '').trim(),
+        contact: String(r[2] || '').trim(),
+        promo: String(r[3] || '').trim().toUpperCase() === 'Y',
+        months: Number(r[4]) || 60,
+        period: String(r[5] || '').trim(),
+        target: String(r[6] || '').trim(),
+        promoTitle: String(r[7] || '').trim(),
+        extra: String(r[8] || '').trim(),
+        fee: String(r[9] || '').trim(),
+        issue: String(r[10] || '').trim(),
+        url: String(r[11] || '').trim(),
+        tiers: [],
+        notes: []
+      };
+    });
+    if (cardTierSheet) {
+      cardTierSheet.getDataRange().getValues().slice(1).forEach(function(r) {
+        var id = String(r[0]).trim();
+        if (!id || !cardMap[id]) return;
+        var base = toNum(r[2]);
+        var promoAmt = (r[3] === '' || r[3] === null) ? null : toNum(r[3]);
+        cardMap[id].tiers.push({
+          th: String(r[1] || '').trim(),
+          base: base,
+          promo: promoAmt,
+          total: base + (promoAmt || 0),
+          promoLabel: String(r[4] || '').trim() || undefined
+        });
+      });
+    }
+    if (cardNoteSheet) {
+      cardNoteSheet.getDataRange().getValues().slice(1).forEach(function(r) {
+        var id = String(r[0]).trim();
+        if (!id || !cardMap[id]) return;
+        cardMap[id].notes.push(String(r[2] || '').trim());
+      });
+    }
+    result.cards = cardOrder.map(function(id) { return cardMap[id]; });
+  }
+
+  // 별매품페어링 — 제품(모델명)당 여러 개 붙을 수 있는 별매품 옵션 (약정년별 가격 상이)
+  var bmpSheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (bmpSheet) {
+    result.bmpPairings = _parseBmpPairings(bmpSheet);
+  }
+
+  return result;
+}
+
+// 별매품페어링 시트 파싱 — 1행 헤더 텍스트로 컬럼을 찾음(제품DB와 별개로 이 시트는 헤더가 1행)
+// 2026-08-04부터 가격 컬럼은 시트에 없음 — 별매품은 제품DB에 제품군(s)="별매품"으로 정식 등록된 행이고,
+// 이 시트는 "메인 모델 ↔ 별매품 모델" 연결 관계만 저장함. 가격은 index.html에서 PRODUCTS를 그 별매품 모델명 +
+// 카트 아이템의 약정년으로 조회해서 매번 최신값을 가져옴(정상가/프로모션가/재렌탈가 등 중복 저장 방지).
+// 렌탈허용여부: 별매품 자신은 렌탈가격표가 있어도, "이 메인제품과의 연결"에서 렌탈로 팔지는 페어링별로 다를 수 있어서
+// (예: 같은 P-3150C도 아이콘3에선 렌탈 가능, 아이콘 얼음정수기에선 일시불만) 페어링 단위 플래그로 따로 둠.
+// 할인적용여부: "일시불 구매"로 이 별매품을 살 때만 의미 있는 플래그 — Y면 메인 제품과 같은 -10%/-15%/-10%+10% 할인이
+// 그 별매품 줄에도 적용됨(index.html의 discountableCash). 렌탈 별매품은 이 값과 무관하게 항상 동시구매/결합 등
+// %할인 스택에 포함됨(calcItem()에 하드코딩) — 렌탈 쪽은 현재 페어링 단위로 껐다 켰다 할 수 없음.
+// 헤더가 없거나 셀이 비어있으면 "미설정"(null)이고, 일시불 문맥에서는 미설정=할인 미적용(false)으로 처리됨.
+var BMP_PAIR_HEADERS = { 모델명: '대상모델명', 별매품모델명: '별매품모델명', 개당여부: '1개당여부', 렌탈허용: '렌탈허용여부', 할인적용: '할인적용여부' };
+
+function _bmpColMap(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var header = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var colMap = {};
+  header.forEach(function(h, i) {
+    var t = _norm(h);
+    Object.keys(BMP_PAIR_HEADERS).forEach(function(f) {
+      if (_norm(BMP_PAIR_HEADERS[f]) === t) colMap[f] = i;
+    });
+  });
+  return colMap;
+}
+
+function _parseBmpPairings(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {};
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) return {};
+
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var map = {};
+  raw.forEach(function(row) {
+    var model = String(row[colMap.모델명] || '').trim();
+    var bmpModel = String(row[colMap.별매품모델명] || '').trim();
+    if (!model || !bmpModel) return;
+    if (!map[model]) map[model] = [];
+    var 할인적용Raw = colMap.할인적용 !== undefined ? String(row[colMap.할인적용] || '').trim().toUpperCase() : '';
+    map[model].push({
+      모델명: bmpModel,
+      개당: colMap.개당여부 !== undefined ? (String(row[colMap.개당여부] || 'N').trim().toUpperCase() === 'Y') : false,
+      렌탈허용: colMap.렌탈허용 !== undefined ? (String(row[colMap.렌탈허용] || 'N').trim().toUpperCase() === 'Y') : false,
+      할인적용: 할인적용Raw === 'Y' ? true : (할인적용Raw === 'N' ? false : null)
+    });
+  });
+  return map;
+}
+
+// ----------------------------------------------------------------
+// admin.html "별매품 연결" UI 전용 — 별매품페어링 시트에 연결 행 추가/삭제
+// ----------------------------------------------------------------
+function _addBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  var 개당 = body.개당 ? 'Y' : 'N';
+  var 렌탈허용 = body.렌탈허용 ? 'Y' : 'N';
+  var 할인적용 = body.할인적용 ? 'Y' : 'N';
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    var lastCol = sheet.getLastColumn();
+    var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    for (var i = 0; i < raw.length; i++) {
+      if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+          String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+        return {error: '이미 연결되어 있습니다'};
+      }
+    }
+  }
+
+  var newRow = [];
+  var lastCol2 = Math.max(
+    sheet.getLastColumn(), colMap.모델명 + 1, colMap.별매품모델명 + 1,
+    (colMap.개당여부 !== undefined ? colMap.개당여부 + 1 : 0),
+    (colMap.렌탈허용 !== undefined ? colMap.렌탈허용 + 1 : 0),
+    (colMap.할인적용 !== undefined ? colMap.할인적용 + 1 : 0)
+  );
+  for (var c = 0; c < lastCol2; c++) newRow.push('');
+  newRow[colMap.모델명] = 모델명;
+  newRow[colMap.별매품모델명] = 별매품모델명;
+  if (colMap.개당여부 !== undefined) newRow[colMap.개당여부] = 개당;
+  if (colMap.렌탈허용 !== undefined) newRow[colMap.렌탈허용] = 렌탈허용;
+  if (colMap.할인적용 !== undefined) newRow[colMap.할인적용] = 할인적용;
+
+  sheet.appendRow(newRow);
+  CacheService.getScriptCache().remove('appData');
+  return {ok: true};
+}
+
+// 기존 연결의 1개당여부/렌탈허용여부만 바꿀 때(재연결 없이 in-place로 수정) — admin.html 목록의 토글 스위치에서 호출
+function _updateBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {error: '연결된 행이 없습니다'};
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  for (var i = 0; i < raw.length; i++) {
+    if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+        String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+      var sheetRow = i + 2;
+      if (body.개당 !== undefined && colMap.개당여부 !== undefined) {
+        sheet.getRange(sheetRow, colMap.개당여부 + 1).setValue(body.개당 ? 'Y' : 'N');
+      }
+      if (body.렌탈허용 !== undefined && colMap.렌탈허용 !== undefined) {
+        sheet.getRange(sheetRow, colMap.렌탈허용 + 1).setValue(body.렌탈허용 ? 'Y' : 'N');
+      }
+      if (body.할인적용 !== undefined && colMap.할인적용 !== undefined) {
+        sheet.getRange(sheetRow, colMap.할인적용 + 1).setValue(body.할인적용 ? 'Y' : 'N');
+      }
+      CacheService.getScriptCache().remove('appData');
+      return {ok: true};
+    }
+  }
+  return {error: '일치하는 연결을 찾지 못했습니다'};
+}
+
+function _removeBmpPairing(body) {
+  if (!_checkAdminPassword(body.password)) return {error: '비밀번호가 올바르지 않습니다'};
+  var 모델명 = String(body.모델명 || '').trim();
+  var 별매품모델명 = String(body.별매품모델명 || '').trim();
+  if (!모델명 || !별매품모델명) return {error: '대상모델명/별매품모델명이 필요합니다'};
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(COND_SHEETS.BMP_PAIR);
+  if (!sheet) return {error: '별매품페어링 시트를 찾을 수 없음'};
+
+  var colMap = _bmpColMap(sheet);
+  if (colMap.모델명 === undefined || colMap.별매품모델명 === undefined) {
+    return {error: '별매품페어링 시트 헤더(대상모델명/별매품모델명)를 찾지 못했습니다'};
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {error: '연결된 행이 없습니다'};
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  for (var i = 0; i < raw.length; i++) {
+    if (String(raw[i][colMap.모델명] || '').trim() === 모델명 &&
+        String(raw[i][colMap.별매품모델명] || '').trim() === 별매품모델명) {
+      sheet.deleteRow(i + 2);
+      CacheService.getScriptCache().remove('appData');
+      return {ok: true};
+    }
+  }
+  return {error: '일치하는 연결을 찾지 못했습니다'};
+}
+
+// 멤버십요금 시트에서 "【 일시불 멤버십 】" 표만 파싱
+// 결과 형태: { "정수기": { "일반": {2개월:.., 4개월:.., 6개월:.., 자가관리:..}, "얼음/탄산/이온/커피": {...}, ... }, "공기청정기": {...}, ... }
+function _parseMembershipCash(sheet) {
+  var values = sheet.getDataRange().getValues();
+  var startIdx = -1;
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0]).indexOf('일시불 멤버십') >= 0) { startIdx = i; break; }
+  }
+  if (startIdx < 0) return {};
+
+  var map = {};
+  // startIdx = 섹션 제목 행, startIdx+1 = 헤더 행(제품/기능구조/2개월/4개월/6개월/자가관리), startIdx+2부터 데이터
+  for (var r = startIdx + 2; r < values.length; r++) {
+    var row = values[r];
+    var prod = String(row[0] || '').trim();
+    if (!prod) break; // 빈 행 = 표 끝
+    var feat = String(row[1] || '').trim();
+    if (!map[prod]) map[prod] = {};
+    map[prod][feat] = {
+      '2개월':   _memNum(row[2]),
+      '4개월':   _memNum(row[3]),
+      '6개월':   _memNum(row[4]),
+      '자가관리': _memNum(row[5])
+    };
+  }
+  return map;
+}
+function _memNum(v) {
+  if (v === null || v === undefined || v === '' || v === '-' || v === '–') return 0;
+  var n = Number(v); return isNaN(n) ? 0 : n;
+}
+
+// ----------------------------------------------------------------
+// getData() — 제품 데이터 + 조건 데이터 한번에 반환
+// ----------------------------------------------------------------
+function getData() {
+  var cached = _cacheGetData();
+  if (cached) return cached;
+  var data = _fetchData();
+  _cachePutData(data);
+  return data;
+}
+
+// CacheService는 키 하나당 100KB 제한이라 데이터가 커지면(제품 ~2천 행, 약 300KB) 통째로 put이 조용히 실패해서
+// 캐시가 한 번도 안 먹고 매 요청마다 시트를 다시 읽게 됨(응답 5~9초) — 조각으로 나눠 저장.
+// 'appData' 키는 조각 개수만 담은 목록(manifest)이고, 기존 코드의 remove('appData')로 무효화하면 조각은 더 이상 안 읽혀서 그대로 호환됨.
+// 한글은 UTF-8로 글자당 3바이트라 글자 수 기준 30000자 = 최대 90KB(제한 100KB는 바이트 기준)
+var _CACHE_CHUNK = 30000;
+function _cachePutData(data) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var json = JSON.stringify(data);
+    var n = Math.ceil(json.length / _CACHE_CHUNK);
+    var ver = String(new Date().getTime());
+    var all = {};
+    for (var i = 0; i < n; i++) all['appData_' + ver + '_' + i] = json.substr(i * _CACHE_CHUNK, _CACHE_CHUNK);
+    cache.putAll(all, 21600);
+    cache.put('appData', JSON.stringify({chunks: n, ver: ver}), 21600);
+  } catch(e) {}
+}
+function _cacheGetData() {
+  try {
+    var cache = CacheService.getScriptCache();
+    var m = cache.get('appData');
+    if (!m) return null;
+    var meta = JSON.parse(m);
+    if (!meta || !meta.chunks) return meta; // 구 버전 형식(통째로 저장) 호환
+    var keys = [];
+    for (var i = 0; i < meta.chunks; i++) keys.push('appData_' + meta.ver + '_' + i);
+    var got = cache.getAll(keys);
+    var json = '';
+    for (var j = 0; j < keys.length; j++) {
+      if (!got[keys[j]]) return null; // 조각 하나라도 만료/유실이면 캐시 미스
+      json += got[keys[j]];
+    }
+    return JSON.parse(json);
+  } catch(e) { return null; }
+}
+
+// ----------------------------------------------------------------
+// 헤더 텍스트 기반 컬럼 매핑 — 위치(번호) 대신 3행 헤더 텍스트로 컬럼을 찾는다.
+// 컬럼을 나중에 추가/삭제/재배치해도 헤더 텍스트만 유지되면 코드가 안 깨짐.
+// ----------------------------------------------------------------
+
+// 내부 필드명 → 실제 시트 헤더 텍스트. 시트 헤더를 바꾸면 이 표만 고치면 됨.
+var FIELD_HEADERS = {
+  s: '제품군', 분류: '분류', 모델명: '모델명', 제품명: '제품명',
+  관리방법: '관리방법', 관리주기: '관리주기', 약정년: '약정(년)',
+  정상가: '월렌탈료(정상)', 프로모션: '월렌탈료(프로모션)', 재렌탈: '재렌탈료(프로모션)', 일시불: '일시불가',
+  타사보상렌탈: '타사보상_렌탈', 타사보상일시불: '타사보상_일시불',
+  프로모션사용: '프로모션사용', 타사보상사용: '타사보상사용', 재렌탈사용: '재렌탈사용',
+  타사보상일시불사용: '타사보상일시불사용'
+};
+
+function _norm(s) { return String(s || '').replace(/\s+/g, '').trim(); }
+
+// 헤더 행을 읽어 {필드명: 1-based 컬럼번호} 맵을 만든다. 헤더에 없는 필드는 맵에서 빠짐(호출 쪽에서 처리).
+function _headerColMap(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var header = sheet.getRange(HEADER_ROW, 1, 1, lastCol).getValues()[0];
+  var textToCol = {};
+  header.forEach(function(h, i) {
+    var t = _norm(h);
+    if (t) textToCol[t] = i + 1;
+  });
+  var colMap = {};
+  Object.keys(FIELD_HEADERS).forEach(function(field) {
+    var col = textToCol[_norm(FIELD_HEADERS[field])];
+    if (col) colMap[field] = col;
+  });
+  return colMap;
+}
+
+// Apps Script 편집기에서 수동 실행 → 실행 로그(보기 → 로그)로 매핑 결과 확인용.
+// 시트 헤더 문구를 바꿨을 때 코드가 제대로 컬럼을 찾는지 배포 전에 확인하는 용도.
+function _testHeaderMap() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var colMap = _headerColMap(sheet);
+  var missing = Object.keys(FIELD_HEADERS).filter(function(f) { return !colMap[f]; });
+  Logger.log('찾은 컬럼: ' + JSON.stringify(colMap));
+  Logger.log('못 찾은 필드(헤더 텍스트 확인 필요): ' + JSON.stringify(missing));
+  var sample = sheet.getRange(HEADER_ROW + 1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  Object.keys(colMap).forEach(function(f) {
+    Logger.log(f + ' = ' + sample[colMap[f] - 1]);
+  });
+  return {colMap: colMap, missing: missing};
+}
+
+function _fetchData() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error('시트를 찾을 수 없음: "' + SHEET_NAME + '"');
+
+  var colMap = _headerColMap(sheet);
+  if (!colMap.제품명 || !colMap.약정년) {
+    throw new Error('필수 헤더("' + FIELD_HEADERS.제품명 + '", "' + FIELD_HEADERS.약정년 + '")를 시트에서 찾지 못했습니다. 3행 헤더 텍스트를 확인해주세요');
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < HEADER_ROW + 1) return { products: [], conditions: getConditions() };
+
+  var lastCol = sheet.getLastColumn();
+  var raw = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, lastCol).getValues();
+  var products = [];
+  function cellAt(row, field) { var c = colMap[field]; return c ? row[c - 1] : ''; }
+
+  raw.forEach(function(row) {
+    var prodName = String(cellAt(row, '제품명') || '').trim();
+    if (!prodName) return;
+    var yakjRaw = Number(cellAt(row, '약정년'));
+    var hasYakj = yakjRaw && !isNaN(yakjRaw) && yakjRaw > 0;
+    // 약정(년)이 없는 행은 "약정 없이 일시불로만 구매하는 제품"(예: 수압펌프 등 부속품)으로 간주 —
+    // 일시불가가 있으면 약정년=0(termless 표식)으로 포함, 둘 다 없으면 가격 정보가 아예 없는 행이라 제외
+    var cashOnly = !hasYakj && toNum(cellAt(row, '일시불')) > 0;
+    if (!hasYakj && !cashOnly) return;
+    var yakj = hasYakj ? yakjRaw : 0;
+
+    var bunryu = String(cellAt(row, '분류') || '').trim();
+    if (!bunryu || bunryu === '분류' || bunryu === '-') bunryu = String(cellAt(row, 's') || '').trim();
+    var promoOn = String(cellAt(row, '프로모션사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var tasabOn = String(cellAt(row, '타사보상사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var rerentalOn = String(cellAt(row, '재렌탈사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+    var tasabCashOn = String(cellAt(row, '타사보상일시불사용') || 'Y').trim().toUpperCase() !== 'N' ? 'Y' : 'N';
+
+    products.push([
+      String(cellAt(row, 's') || '').trim(), bunryu,
+      String(cellAt(row, '모델명') || '').trim(), prodName,
+      String(cellAt(row, '관리방법') || '').trim(), String(cellAt(row, '관리주기') || '').trim(),
+      yakj,
+      toNum(cellAt(row, '정상가')), toNum(cellAt(row, '프로모션')), toNum(cellAt(row, '재렌탈')), toNum(cellAt(row, '일시불')),
+      toNum(cellAt(row, '타사보상렌탈')), toNum(cellAt(row, '타사보상일시불')),
+      promoOn, tasabOn, rerentalOn, tasabCashOn
+    ]);
+  });
+
+  return { products: products, conditions: getConditions() };
+}
+
+
+function toNum(v) {
+  if (v === null || v === undefined || v === '' || v === '-' || v === '–') return 0;
+  var n = Number(v); return isNaN(n) ? 0 : n;
+}
+
+// ----------------------------------------------------------------
+// testMailPermission()
+// ----------------------------------------------------------------
+function testMailPermission() {
+  var me = Session.getActiveUser().getEmail();
+  return 'Mail 권한 OK, 발송 계정: ' + me + ', 잔여: ' + MailApp.getRemainingDailyQuota() + '건';
+}
+
+
+
+// ----------------------------------------------------------------
+// _submitLead() ← promo/*.html 상담 신청 폼 전용 (2026-09-17~)
+// 네이버 블로그 → 정적 모델별 견적 페이지 → 이 액션으로 상담 신청 접수
+// ----------------------------------------------------------------
+var LEAD_NOTIFY_EMAIL = '60001075@cowaygallery.com';
+
+function _submitLead(body) {
+  var name    = String(body.name || '').trim();
+  var phone   = String(body.phone || '').trim();
+  var time    = String(body.time || '').trim();
+  var memo    = String(body.memo || '').trim();
+  var model   = String(body.model || '').trim();
+  var page    = String(body.page || '').trim();
+
+  if (!phone) return {error: '연락처를 입력해주세요.'};
+
+  var subject = '[상담신청] ' + (model || '견적 페이지') + (name ? ' - ' + name : '');
+  var lines = [
+    '모델: ' + (model || '-'),
+    '이름: ' + (name || '-'),
+    '연락처: ' + phone,
+    '편한 연락 시간: ' + (time || '-'),
+    '메모: ' + (memo || '-'),
+    '유입 페이지: ' + (page || '-'),
+    '접수 시각: ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss')
+  ];
+
+  MailApp.sendEmail(LEAD_NOTIFY_EMAIL, subject, lines.join('\n'));
+  return {ok: true};
+}
+
+// ----------------------------------------------------------------
+// clearCache() ← 제품/가격 수정 후 앱 UI에서 호출
+// ----------------------------------------------------------------
+function clearCache() {
+  CacheService.getScriptCache().remove('appData');
+  return 'cache_cleared';
+}
+
+// ----------------------------------------------------------------
+// onEdit() ← 제품DB 시트 수정 시 자동 캐시 삭제
+// ----------------------------------------------------------------
+function onEdit(e) {
+  try {
+    var sheet = e.source.getActiveSheet();
+    if (sheet.getName() === SHEET_NAME) {
+      CacheService.getScriptCache().remove('appData');
+    }
+  } catch(err) {}
+}
+
+// ----------------------------------------------------------------
+// warmUpCache() ← 시간 트리거 등록 권장 (5시간마다)
+// ----------------------------------------------------------------
+function warmUpCache() {
+  var data = _fetchData();
+  _cachePutData(data);
+}
+// ----------------------------------------------------------------
+// diagSheets() ← Apps Script 에디터에서 실행 후 로그 확인
+// ----------------------------------------------------------------
+function diagSheets() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var names = ss.getSheets().map(function(s){ return s.getName(); });
+  Logger.log('스프레드시트 ID: ' + SPREADSHEET_ID);
+  Logger.log('스프레드시트 이름: ' + ss.getName());
+  Logger.log('전체 시트 목록 (' + names.length + '개): ' + names.join(', '));
+  Logger.log('제품DB 존재 여부: ' + (names.indexOf('제품DB') >= 0 ? '✅ 있음' : '❌ 없음'));
+}
+
+

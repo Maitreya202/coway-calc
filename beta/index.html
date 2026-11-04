@@ -418,10 +418,16 @@ input:focus, select:focus { border-color:var(--brass); }
         </div>
       </div>
     </div>
-    <div id="masterCheckBar" style="display:none;align-items:center;gap:8px;padding:6px 4px;margin-bottom:4px">
-      <input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:16px;height:16px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
-      <label for="masterChk" style="font-size:12px;font-weight:600;color:#64748b;cursor:pointer" id="masterChkLabel">전체 선택</label>
-      <span style="font-size:11px;color:#94a3b8;margin-left:auto" id="masterChkCount"></span>
+    <div id="masterCheckBar" style="display:none;align-items:center;gap:8px;padding:6px 4px;margin-bottom:6px">
+      <span id="masterChkWrap" style="display:none;align-items:center;gap:8px">
+        <input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0">
+        <label for="masterChk" style="font-size:12px;font-weight:600;color:#64748b;cursor:pointer" id="masterChkLabel">전체 선택</label>
+      </span>
+      <span id="masterChkTitle" style="font-size:12px;font-weight:700;color:#64748b;min-width:0"></span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:11px;color:#94a3b8" id="masterChkCount"></span>
+        <button type="button" id="selModeBtn" onclick="toggleSelectMode()" style="background:#fff;border:1.5px solid #E6E0D2;color:#10223A;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;min-height:34px">선택 편집</button>
+      </span>
     </div>
     <div id="cartArea"></div>
     <div id="actionBtns" style="display:none"></div>
@@ -586,6 +592,13 @@ input:focus, select:focus { border-color:var(--brass); }
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
   <div class="dsheet-foot"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
+</div>
+<div class="modal-bg" id="bulkResultModal" onclick="if(event.target===this)closeBulkResult()">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:380px;padding-top:20px">
+    <p class="modal-title" id="brTitle" style="margin-bottom:12px"></p>
+    <div id="brBody"></div>
+    <button onclick="closeBulkResult()" style="width:100%;margin-top:14px;background:#1D4ED8;color:white;border:none;padding:13px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">확인</button>
+  </div>
 </div>
 <div id="quoteGenOverlay"style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:14px">
   <div class="spinner"></div>
@@ -1205,7 +1218,7 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
 
   var h = '';
   h += '<div style="display:flex;align-items:flex-start;gap:6px;cursor:pointer" onclick="toggleDetail('+idx+')">';
-  h += '<input type="checkbox" ' + (cartSel[idx] ? 'checked' : '') + ' onchange="event.stopPropagation();toggleCartSel(' + idx + ',this.checked)" style="accent-color:#2563eb;width:15px;height:15px;flex-shrink:0;margin-top:3px" onclick="event.stopPropagation()">';
+  if (selectMode) h += '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;min-width:30px;min-height:38px;margin:-6px 0 -6px -4px;flex-shrink:0"><input type="checkbox" ' + (cartSel[idx] ? 'checked' : '') + ' onchange="event.stopPropagation();toggleCartSel(' + idx + ',this.checked)" style="accent-color:#8F6D2B;width:18px;height:18px" onclick="event.stopPropagation()"></label>';
 
   h += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">';
 
@@ -1223,7 +1236,8 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   tags.filter(Boolean).forEach(function(tag) {
     h += badgeHtml(tag, 'blue');
   });
-  if (tags.filter(Boolean).length === 0) {
+  if (item._bulkSkip) h += badgeHtml('일괄변경 제외 · 재검토', 'amber');
+  if (tags.filter(Boolean).length === 0 && !item._bulkSkip) {
     h += '<span style="font-size:11px;color:#94a3b8">탭하여 설정</span>';
   }
   h += '</div>';
@@ -1237,9 +1251,9 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
 }
 
 function badgeHtml(text, color) {
-  var bg = color === 'green' ? '#ECFDF5' : '#F3EAD6';
-  var border = color === 'green' ? '#86EFAC' : '#E6D6B0';
-  var fg = color === 'green' ? '#15803D' : '#6E5420';
+  var bg = color === 'green' ? '#ECFDF5' : color === 'amber' ? '#FFF7ED' : '#F3EAD6';
+  var border = color === 'green' ? '#86EFAC' : color === 'amber' ? '#FED7AA' : '#E6D6B0';
+  var fg = color === 'green' ? '#15803D' : color === 'amber' ? '#9A3412' : '#6E5420';
   return '<span style="display:inline-block;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:' + fg + ';white-space:nowrap">' + text + '</span>';
 }
 
@@ -1880,7 +1894,7 @@ function setCartMgmt(idx,method){
   refreshCartItemRow(idx);renderCart();
 }
 function toggleDetail(idx){
-  var open=!cart[idx]._detailOpen;
+  var open=!cart[idx]._detailOpen; delete cart[idx]._bulkSkip;
   cart.forEach(function(it){ it._detailOpen=false; });
   cart[idx]._detailOpen=open;
   renderCart();
@@ -1961,7 +1975,9 @@ function confirmRemoveCart(idx){
 }
 function removeCart(idx){
   _undoDel={item:cart[idx],idx:idx,sel:Object.assign({},cartSel)};
-  cart.splice(idx,1);delete cartSel[idx];renderCart();
+  cart.splice(idx,1);
+  var _ns={}; Object.keys(cartSel).forEach(function(k){ var n=Number(k); if(n<idx) _ns[n]=cartSel[k]; else if(n>idx) _ns[n-1]=cartSel[k]; }); cartSel=_ns;
+  renderCart();
   var t=document.getElementById('undoToast');
   if(!t){
     t=document.createElement('div');t.id='undoToast';
@@ -2037,13 +2053,18 @@ function toggleAllCart(checked){
   if(!checked) cartSel={};
   renderCart();
 }
+var selectMode=false;
+function toggleSelectMode(){ selectMode=!selectMode; cartSel={}; renderCart(); }
 function updateMasterChk(){
   var bar=document.getElementById('masterCheckBar');
   var chk=document.getElementById('masterChk');
   var lbl=document.getElementById('masterChkLabel');
   var cnt=document.getElementById('masterChkCount');
+  var wrap=document.getElementById('masterChkWrap');
+  var ttl=document.getElementById('masterChkTitle');
+  var btn=document.getElementById('selModeBtn');
   if(!bar) return;
-  if(cart.length===0){ bar.style.display='none'; return; }
+  if(cart.length===0){ selectMode=false; bar.style.display='none'; return; }
   bar.style.display='flex';
   var selCnt=Object.keys(cartSel).filter(function(k){return cart[k];}).length;
   var allSel=selCnt===cart.length&&cart.length>0;
@@ -2051,7 +2072,13 @@ function updateMasterChk(){
   chk.checked=allSel;
   chk.indeterminate=someSel;
   lbl.textContent=allSel?'전체 해제':'전체 선택';
-  cnt.textContent=cart.length+'개 중 '+selCnt+'개 선택';
+  wrap.style.display=selectMode?'flex':'none';
+  var tc={}; cart.forEach(function(it){ if(it.구매방법!=='cash') tc[it.약정년]=(tc[it.약정년]||0)+1; });
+  var ks=Object.keys(tc).map(Number).sort(function(a,b){return a-b;});
+  var mix=ks.length>1?' · 약정 혼합 '+ks.map(function(k){return yakjLabel(k)+' '+tc[k];}).join(' · '):'';
+  ttl.textContent=selectMode?'':cart.length+'개 제품'+mix;
+  cnt.textContent=selectMode?(cart.length+'개 중 '+selCnt+'개 선택'):'';
+  btn.textContent=selectMode?'선택 완료':'선택 편집';
 }
 
 function addToQuoteBasket(){
@@ -2219,13 +2246,16 @@ function bulkCanApply(item,field,val){
 function applyBulk(){
   var field=document.getElementById('bulkField').value;
   var val=document.getElementById('bulkVal').value;
-  var okCnt=0, skipNames=[];
+  var okCnt=0, skipNames=[], applied=[], skipped=[];
+  var _vo=document.getElementById('bulkVal').selectedOptions[0], valLabel=_vo?_vo.text:val;
+  cart.forEach(function(it){ delete it._bulkSkip; });
   Object.keys(cartSel).forEach(function(k){
     var idx=Number(k);
     var item=cart[idx];
     if (!item) return;
-    if (!bulkCanApply(item,field,val)){ skipNames.push(item.제품명); return; }
+    if (!bulkCanApply(item,field,val)){ var _rs=bulkReason(item,field,val); item._bulkSkip=_rs; skipNames.push(item.제품명); skipped.push({name:item.제품명,model:item.모델명,reason:_rs,cur:bulkDesc(item,field)}); return; }
     okCnt++;
+    applied.push({idx:idx,name:item.제품명,b:bulkDesc(item,field)});
     if (field==='method') {
       if (val==='cash'){ item.구매방법='cash'; item.isRerental=false; }
       else if (val==='rerental'){ item.구매방법='rental'; item.isRerental=true; }
@@ -2269,11 +2299,60 @@ function applyBulk(){
       }
     }
   });
+  applied.forEach(function(a){ a.a=bulkDesc(cart[a.idx],field); });
   renderCart();
-  if (skipNames.length>0){
-    alert(okCnt+'건 적용되었습니다.\n\n다음 '+skipNames.length+'건은 해당 옵션이 없어 적용 불가:\n- '+skipNames.join('\n- '));
-  }
+  showBulkResult(field,valLabel,applied,skipped);
 }
+
+function bulkDesc(item,field){
+  var d=item.discounts||{};
+  if(field==='term') return yakjLabel(item.약정년);
+  if(field==='method') return item.구매방법==='cash'?'일시불':(item.isRerental?'재렌탈':'신규');
+  if(field==='mgmt') return item.관리방법||'-';
+  if(field==='disc') return item.선납==='선납2'?'선납2':item.tasabosangOn?'타사보상':d.동시결합?'동시결합':d.동시구매?'동시구매':d.결합?'결합':d.페스타?'페스타':'없음';
+  if(field==='half') return (d.반값||item.재렌탈1년on)?'적용':'미적용';
+  if(field==='manwon') return d.만원?'적용':'미적용';
+  return '';
+}
+function bulkReason(item,field,val){
+  if(field==='term'){
+    var ys=getYakjs(item.제품명,item.모델명,item.관리방법,item.관리주기).map(yakjLabel).join('·');
+    return yakjLabel(Number(val))+' 약정 없음 (지원: '+(ys||'-')+')';
+  }
+  if(field==='method'){
+    if(val==='cash') return '일시불가 없음';
+    if(val==='rerental') return item.재렌탈사용===false?'재렌탈 사용 안 함':'재렌탈가 없음';
+  }
+  if(field==='mgmt') return item.구매방법==='cash'?'일시불은 관리방법 변경 불가':'해당 관리방법 없음';
+  if(field==='disc'){
+    if(val==='선납2'&&item.약정년===3) return '3년 약정은 선납2 불가';
+    return item.구매방법==='cash'?'일시불에는 할인 선택 없음':'재렌탈에는 해당 할인 없음';
+  }
+  return '현재 구매방식에는 적용 불가';
+}
+function showBulkResult(field,valLabel,applied,skipped){
+  var def=BULK_FIELD_DEFS[field]||{label:''};
+  document.getElementById('brTitle').textContent=def.label+' '+valLabel+' 변경 결과';
+  var h='';
+  if(!applied.length&&!skipped.length){ h='<p style="font-size:13px;color:#94a3b8;padding:12px 0">선택된 제품이 없습니다.</p>'; }
+  else {
+    h+='<div style="display:flex;gap:8px;margin:2px 0 14px"><div style="flex:1;background:#ECFDF5;color:#15803D;border-radius:10px;padding:10px;text-align:center;font-weight:800;font-size:14px">'+applied.length+'개 적용</div>'
+      +'<div style="flex:1;background:'+(skipped.length?'#FFF7ED':'#F6F4EF')+';color:'+(skipped.length?'#9A3412':'#7B8190')+';border-radius:10px;padding:10px;text-align:center;font-weight:800;font-size:14px">'+skipped.length+'개 기존 유지</div></div>';
+    if(skipped.length){
+      h+='<p class="sec-label" style="margin-top:0">기존 유지 · 재검토 필요</p>'+skipped.map(function(x){
+        return '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:9px 11px;margin-bottom:6px"><div style="font-size:13px;font-weight:700;color:#9A3412">'+esc(x.name)+' <span style="font-weight:500;font-size:11px">(현재 '+esc(x.cur)+')</span></div><div style="font-size:12px;color:#9A3412;margin-top:2px">'+esc(x.reason)+'</div></div>';
+      }).join('');
+    }
+    if(applied.length){
+      h+='<p class="sec-label"'+(skipped.length?'':' style="margin-top:0"')+'>변경됨</p>'+applied.map(function(x){
+        return '<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 2px;border-bottom:1px solid #F1EDE3;font-size:13px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.name)+'</span><span style="flex-shrink:0;color:#6E5420;font-weight:700">'+esc(x.b)+' → '+esc(x.a)+'</span></div>';
+      }).join('');
+    }
+  }
+  document.getElementById('brBody').innerHTML=h;
+  document.getElementById('bulkResultModal').classList.add('show');
+}
+function closeBulkResult(){ document.getElementById('bulkResultModal').classList.remove('show'); }
 
 function setDisc(idx,opt){
   var d=cart[idx].discounts||{};
@@ -4281,8 +4360,8 @@ function _renderQuoteNoticeContent(){
     {ic:'&#128226;',lb:'고객안내문',run:function(){switchMainTab('notice');}},
     {ic:'&#10133;',lb:'제품추가',run:function(){switchMainTab('estimate');openSearchModal();}},
     {ic:'&#129534;',lb:'견적서생성',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} openQuoteInfoModal('all'); }},
-    {ic:'&#9745;&#65039;',lb:'전체선택',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} var all=cart.every(function(_,i){return cartSel[i];}); toggleAllCart(!all); flash(all?'선택 해제':'전체 선택'); }},
-    {ic:'&#9998;&#65039;',lb:'일괄변경',run:function(){ if(!selCnt()){flash('먼저 제품을 선택하세요 (전체선택 가능)');return;} openBulkChangeModal(); }},
+    {ic:'&#9745;&#65039;',lb:'전체선택',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} selectMode=true; var all=cart.every(function(_,i){return cartSel[i];}); toggleAllCart(!all); flash(all?'선택 해제':'전체 선택'); }},
+    {ic:'&#9998;&#65039;',lb:'일괄변경',run:function(){ if(!selCnt()){ if(!selectMode){ selectMode=true; renderCart(); } flash('선택 편집을 켰어요. 제품을 선택하세요'); return; } openBulkChangeModal(); }},
     {ic:'&#128260;',lb:'데이터갱신',run:function(){ openUpdateConfirm(); }}
   ];
   var R=104;

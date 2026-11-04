@@ -385,7 +385,7 @@ body.has-bbar .wrap { padding-bottom:0; }
 .dsheet-foot button.del { flex:0 0 auto; background:#fff !important; color:#B91C1C; border:1.5px solid #F3C6C6; padding-left:14px; padding-right:14px; }
 .cmp-head { background:var(--navy) !important; }
 .bflash { top:auto; bottom:130px; }
-#updateBtn { display:none !important; }
+#updateBtn, #bulkBar { display:none !important; }
 .dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
 .dsheet-head .delta b { font-weight:800; }
 .dsheet-head .delta .up { color:#B45309; }
@@ -693,7 +693,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="console-content">
     <form id="cmdForm" class="console-input"><input id="cmdInput" aria-label="빠른 명령 입력" placeholder="전체 7년" autocomplete="off"><button class="qd-btn primary" type="submit">확인</button></form>
     <div class="console-hint">정해진 명령으로 빠르게 조작 · Ctrl / ⌘ + K</div>
-    <div class="console-chips"><button type="button" class="qd-btn sm" data-cmd="전체 7년">전체 7년</button><button type="button" class="qd-btn sm" data-cmd="선택 5년">선택 5년</button><button type="button" class="qd-btn sm" data-cmd="견적 복제">견적 복제</button><button type="button" class="qd-btn sm" data-cmd="비교">차이 비교</button><button type="button" class="qd-btn sm" data-cmd="제품 추가">제품 추가</button><button type="button" class="qd-btn sm" data-cmd="혜택">결합·납부</button><button type="button" class="qd-btn sm" data-cmd="견적서">견적서</button><button type="button" class="qd-btn sm" data-cmd="전체 선택">전체 선택</button><button type="button" class="qd-btn sm" data-cmd="견적안 삭제">견적안 삭제</button><button type="button" class="qd-btn sm" data-cmd="안내문">고객 안내문</button><button type="button" class="qd-btn sm" data-cmd="데이터 갱신">데이터 갱신</button></div>
+    <div class="console-chips"><button type="button" class="qd-btn sm" data-cmd="전체 7년">전체 7년</button><button type="button" class="qd-btn sm" data-cmd="선택 5년">선택 5년</button><button type="button" class="qd-btn sm" data-cmd="견적 복제">견적 복제</button><button type="button" class="qd-btn sm" data-cmd="비교">차이 비교</button><button type="button" class="qd-btn sm" data-cmd="제품 추가">제품 추가</button><button type="button" class="qd-btn sm" data-cmd="혜택">결합·납부</button><button type="button" class="qd-btn sm" data-cmd="견적서">견적서</button><button type="button" class="qd-btn sm" data-cmd="전체 선택">전체 선택</button><button type="button" class="qd-btn sm" data-cmd="일괄변경">일괄변경</button><button type="button" class="qd-btn sm" data-cmd="선택 복사">선택 복사</button><button type="button" class="qd-btn sm" data-cmd="견적 담기">견적 담기</button><button type="button" class="qd-btn sm" data-cmd="선택 견적서">선택 견적서</button><button type="button" class="qd-btn sm" data-cmd="견적안 삭제">견적안 삭제</button><button type="button" class="qd-btn sm" data-cmd="안내문">고객 안내문</button><button type="button" class="qd-btn sm" data-cmd="데이터 갱신">데이터 갱신</button></div>
     <div id="cmdResult" role="status" aria-live="polite">명령을 입력하거나 빠른 버튼을 눌러 주세요.</div>
     <div class="console-actions"><button type="button" id="cmdApply" class="qd-btn primary" hidden>변경 적용</button><button type="button" id="cmdUndo" class="qd-btn" disabled>실행 취소</button></div>
     <div class="console-hint" style="margin-top:12px;margin-bottom:0">최근 실행</div><div id="cmdRecent"></div>
@@ -4713,6 +4713,12 @@ function renderCompare(){
       goEstimate();
       if(cmd==='전체 선택'){ selectMode=true; toggleAllCart(true); } else { cartSel={}; renderCart(); }
       ctx(); remember(cmd); msg(cmd==='전체 선택'?cart.length+'개 제품을 선택했습니다.':'선택을 해제했습니다.'); return;
+    }
+    if(cmd==='일괄변경'||cmd==='선택 복사'||cmd==='견적 담기'||cmd==='선택 견적서'){
+      if(!selIdx().length){ msg('선택한 제품이 없습니다.\n명령창을 닫고 ‘선택 편집’에서 제품을 골라 주세요.'); return; }
+      remember(cmd); close(); goEstimate();
+      if(cmd==='일괄변경') openBulkChangeModal(); else if(cmd==='선택 복사') copySelectedItems(); else if(cmd==='견적 담기') addToQuoteBasket(); else openQuoteInfoModal('selected');
+      return;
     }
     if(cmd==='제품 추가'){ remember(cmd); close(); goEstimate(); openSearchModal(); return; }
     if(cmd==='혜택'||cmd==='결합·납부'){ remember('혜택'); close(); switchMainTab('card'); return; }

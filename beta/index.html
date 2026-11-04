@@ -386,6 +386,22 @@ body.has-bbar .wrap { padding-bottom:0; }
 .cmp-head { background:var(--navy) !important; }
 .bflash { top:auto; bottom:130px; }
 #updateBtn, #bulkBar { display:none !important; }
+#searchModal { background:#fff; padding:0; z-index:70; align-items:stretch; justify-content:center; }
+#searchModal .modal-sheet { max-width:480px; width:100%; height:100%; max-height:none; border-radius:0; border:0; padding:16px 16px 40px; background:#fff; }
+.sp-title { font-size:15px; font-weight:800; color:var(--ink); margin:0 0 14px; }
+.sp-label { display:block; font-size:12px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+#searchModal .search-wrap { margin-bottom:0; }
+#searchModal .search-box { box-shadow:none; border:1px solid var(--line); border-radius:8px; padding:0 4px 0 12px; }
+#searchModal .search-box.active { border-color:var(--brass); }
+#searchModal .search-box input { border:0 !important; box-shadow:none !important; background:transparent !important; border-radius:0 !important; outline:none; padding:0; min-height:48px; font-size:16px; color:var(--ink); }
+#searchModal .dropdown { position:static; box-shadow:none; border:0; border-radius:0; max-height:none; overflow:visible; margin-top:10px; background:transparent; }
+#searchModal .drop-item { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; padding:11px 12px; background:#fff; }
+#searchModal .drop-item:active { background:var(--brassL); }
+#searchModal .drop-item .dn { min-width:0; }
+#searchModal .drop-name { font-size:14px; font-weight:600; color:var(--ink); }
+#searchModal .drop-sub { font-size:11px; color:var(--sub); margin-top:2px !important; }
+#searchModal .drop-item .plus { color:var(--sub); font-size:16px; flex-shrink:0; }
+.sp-empty { font-size:12px; color:var(--sub); text-align:center; padding:28px 8px; margin:0; }
 #loadingScreen { background:radial-gradient(120% 80% at 50% 0%, #1E3452 0%, #10223A 60%, #0B172A 100%) !important; color:#fff; padding:24px; text-align:center; }
 #loadingScreen .ls-mark { font-size:22px; font-weight:800; letter-spacing:6px; color:#fff; padding-left:6px; animation:lsIn .8s ease both; }
 #loadingScreen .ls-rule { width:44px; height:1px; background:#D9BC7C; margin:16px 0 12px; animation:lsIn .8s .15s ease both; }
@@ -491,18 +507,17 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
 
 <div id="app" style="display:none">
   <div class="modal-bg" id="searchModal">
-    <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-top:12px">
-      <div style="display:flex;align-items:center;margin-bottom:12px">
-        <p class="modal-title" style="margin:0;flex:1">제품 검색</p>
-        <button class="icon-btn" style="font-size:18px;color:#94a3b8" onclick="closeSearchModal()">&#10005;</button>
-      </div>
-      <div class="search-wrap" style="margin-bottom:0">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <button type="button" class="qd-back" onclick="closeSearchModal()">&#8249; 견적으로</button>
+      <h3 class="sp-title" id="spTitle">제품 추가</h3>
+      <label class="sp-label" for="searchInput">모델 검색</label>
+      <div class="search-wrap">
         <div class="search-box" id="searchBox">
-          <span class="ico">&#128269;</span>
-          <input type="text" id="searchInput" placeholder="제품명 또는 모델명 검색...">
+          <input type="text" id="searchInput" placeholder="제품명 또는 모델명" autocomplete="off">
           <button class="clr" id="clearBtn" style="display:none" onclick="clearSearch()">&#10005;</button>
         </div>
-        <div class="dropdown" id="dropdown" style="position:static;box-shadow:none;border:none;max-height:50vh;margin-top:8px"></div>
+        <div class="dropdown" id="dropdown"></div>
+        <p class="sp-empty" id="spEmpty">제품명이나 모델명을 입력하면 결과가 나옵니다.</p>
       </div>
     </div>
   </div>
@@ -1255,7 +1270,8 @@ var searchBox=document.getElementById('searchBox');
 searchInput.addEventListener('input',function(){
   var q=this.value.trim().toLowerCase();
   document.getElementById('clearBtn').style.display=q?'block':'none';
-  if (!q){dropdown.classList.remove('show');searchBox.classList.remove('active');return;}
+  var _se=document.getElementById('spEmpty');
+  if (!q){dropdown.classList.remove('show');searchBox.classList.remove('active'); if(_se){_se.style.display='block'; _se.textContent='제품명이나 모델명을 입력하면 결과가 나옵니다.';} return;}
   searchBox.classList.add('active');
   var tokens=q.split(/[\s\-\.]+/).filter(Boolean);
   function matchAll(str){
@@ -1282,10 +1298,11 @@ searchInput.addEventListener('input',function(){
   var res=exactName.concat(exactModel).concat(others);
   var MAX=40,show=res.slice(0,MAX);
   dropdown.innerHTML=show.map(function(p,i){
-    return '<button class="drop-item" onclick="openConfig('+i+')"><p class="drop-name">'+p.제품명+'</p><p class="drop-sub">'+p.모델명+' &middot; '+p.s+'</p></button>';
+    return '<button class="drop-item" onclick="openConfig('+i+')"><span class="dn"><p class="drop-name">'+p.제품명+'</p><p class="drop-sub">'+p.모델명+' &middot; '+p.s+'</p></span><span class="plus">'+(searchTargetIdx===null?'＋':'›')+'</span></button>';
   }).join('')+(res.length>MAX?'<p style="text-align:center;font-size:11px;color:#94a3b8;padding:10px">검색어를 더 구체적으로 입력하세요</p>':'');
   dropdown._data=show;
   dropdown.classList.toggle('show',show.length>0);
+  if(_se){ _se.style.display=show.length?'none':'block'; _se.textContent='검색 결과가 없습니다.'; }
 });
 
 function clearSearch(){
@@ -1293,6 +1310,7 @@ function clearSearch(){
   var cb=document.getElementById('clearBtn'); if(cb) cb.style.display='none';
   if(dropdown) dropdown.classList.remove('show');
   if(searchBox) searchBox.classList.remove('active');
+  var _se2=document.getElementById('spEmpty'); if(_se2){ _se2.style.display='block'; _se2.textContent='제품명이나 모델명을 입력하면 결과가 나옵니다.'; }
 }
 function openSearchModal(idx){
   searchTargetIdx = (typeof idx === 'number') ? idx : null;
@@ -1307,7 +1325,7 @@ function closeSearchModal(){
 }
 document.getElementById('searchModal').addEventListener('click',function(e){ if (e.target===this) closeSearchModal(); });
 document.addEventListener('click',function(e){
-  if (!searchBox.contains(e.target)){dropdown.classList.remove('show');searchBox.classList.remove('active');}
+  /* 전체 화면 검색: 바깥 클릭으로 결과를 닫지 않음 */
 });
 
 function openConfig(idx){

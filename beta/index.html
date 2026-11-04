@@ -320,9 +320,72 @@ input:focus, select:focus { border-color:var(--brass); }
 .cart-list { gap:0 !important; background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .cart-card { border:0 !important; border-bottom:1px solid var(--line) !important; border-radius:0 !important; box-shadow:none !important; padding:10px 12px 9px !important; }
 .cart-card:last-child { border-bottom:0 !important; }
-.cart-card > div > div > div:last-child { gap:2px; }
-.cart-card span[style*='border-radius:6px'] { background:transparent !important; border:0 !important; padding:0 !important; font-weight:600 !important; font-size:11.5px !important; color:var(--sub) !important; }
-.cart-card span[style*='border-radius:6px']:not(:last-child)::after { content:'·'; margin-left:5px; color:#C9C3B3; }
+/* ===== 콘솔 UI (QUOTE DESK 목업 기준) ===== */
+.fab, .wveil, .wheel, .bbar, .beta-head, .plan-bar { display:none !important; }
+body { padding-bottom:84px; }
+body.has-bbar .wrap { padding-bottom:0; }
+.qd-head { background:var(--navy); color:#fff; padding:max(16px, env(safe-area-inset-top)) 18px 16px; font-weight:700; letter-spacing:1px; }
+.qd-head .in { max-width:480px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+.qd-head small { font-size:11px; font-weight:500; letter-spacing:0; color:#C9D3E0; }
+.qd-head .sec { font-weight:500; letter-spacing:0; font-size:12px; color:#D9BC7C; margin-left:8px; }
+#tabPanelEstimate { padding:0 !important; background:#fff; }
+.bar { padding:12px 16px; border-bottom:1px solid var(--line); background:#fff; }
+.bar.row, .bar .row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.bar h2 { font-size:20px; margin:0; font-weight:800; color:var(--ink); }
+.bar small { font-size:11px; color:var(--sub); }
+.qd-btn { font:inherit; font-size:14px; font-weight:600; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:7px; min-height:44px; padding:8px 12px; cursor:pointer; }
+.qd-btn.sm { min-height:34px; font-size:12px; padding:6px 9px; }
+.qd-btn.primary { background:var(--brassF); color:#fff; border:0; }
+.qd-btn[aria-pressed=true] { background:var(--brassL); border-color:var(--brass); color:var(--brassD); }
+.qd-btn:disabled { opacity:.45; cursor:default; }
+.qd-tabs { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+.qd-tabs .qd-btn { flex:1; }
+#masterCheckBar { gap:8px; }
+#masterChkTitle { font-size:14px; color:var(--ink); min-width:0; }
+#masterChkTitle strong { font-weight:800; }
+#masterChkTitle small { display:block; margin-top:1px; }
+#masterChkWrap { align-items:center; justify-content:space-between; }
+#masterChkWrap label { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer; }
+.cart-list { border:0 !important; background:#fff; }
+.cart-card { padding:0 8px !important; border-left:0 !important; }
+.cart-card[style*="#15803D"] { box-shadow:inset 3px 0 0 #15803D !important; }
+.it { display:flex; align-items:center; gap:6px; min-height:58px; padding:9px 6px 9px 8px; cursor:pointer; }
+.it-main { flex:1; min-width:0; }
+.it-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.it-name { font-size:14px; font-weight:700; color:var(--ink); min-width:0; }
+.it-price { font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.it-desc { display:block; margin-top:3px; font-size:11.5px; color:var(--sub); }
+.it-skip { color:#9A3412; font-weight:700; }
+.benefit-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:15px 16px; background:#fff; border-bottom:1px solid var(--line); cursor:pointer; color:var(--ink); font-size:14px; }
+.benefit-row small { font-size:11px; color:var(--sub); }
+.qd-foot { background:var(--paper); padding:14px 16px; }
+.qd-foot .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; padding:2px 0; font-size:14px; color:var(--ink); }
+.qd-foot .big { font-size:23px; font-weight:800; color:var(--navy); }
+.qd-foot .note { font-size:11px; color:var(--sub); margin:10px 0; }
+.qd-foot details { margin-top:6px; }
+.qd-foot summary { font-size:12px; color:var(--sub); cursor:pointer; padding:4px 0; }
+.qd-foot .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.qd-back { font:inherit; font-size:14px; font-weight:600; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:7px; min-height:44px; padding:8px 12px; cursor:pointer; margin:0 0 12px; }
+.console-dock { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; z-index:50; display:flex; justify-content:flex-end; padding:10px 16px max(10px, env(safe-area-inset-bottom)); pointer-events:none; }
+#consoleLaunch { pointer-events:auto; border:0; border-radius:24px; background:var(--navy); color:#fff; font:inherit; font-size:14px; font-weight:700; box-shadow:0 4px 16px rgba(16,34,58,.3); padding:11px 18px; cursor:pointer; }
+#consolePanel { position:fixed; left:50%; transform:translateX(-50%); bottom:72px; width:min(460px, calc(100% - 20px)); z-index:51; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 12px 40px rgba(16,34,58,.28); overflow:hidden; max-height:calc(100vh - 100px); overflow-y:auto; }
+#consolePanel[hidden] { display:none; }
+.console-top { padding:14px; background:var(--paper); }
+.console-top .row { display:flex; justify-content:space-between; align-items:center; }
+#cmdContext { font-size:12px; color:var(--sub); margin-top:4px; }
+.console-content { padding:14px; }
+.console-hint { font-size:12px; color:var(--sub); margin:6px 0 12px; }
+.console-input { display:flex; gap:6px; }
+#cmdInput { flex:1; width:100%; min-width:0; font-family:ui-monospace,Consolas,monospace; font-size:16px; border:1px solid var(--line); border-radius:7px; padding:8px 10px; min-height:44px; color:var(--ink); background:#fff; }
+.console-chips { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+#cmdResult { background:var(--paper); border-radius:10px; padding:12px; font-size:13px; white-space:pre-line; overflow-wrap:anywhere; color:var(--ink); }
+.console-actions { display:flex; gap:6px; margin-top:10px; }
+.console-actions [hidden] { display:none; }
+#cmdRecent { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.dsheet-foot button.del { flex:0 0 auto; background:#fff !important; color:#B91C1C; border:1.5px solid #F3C6C6; padding-left:14px; padding-right:14px; }
+.cmp-head { background:var(--navy) !important; }
+.bflash { top:auto; bottom:130px; }
+#updateBtn { display:none !important; }
 .dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
 .dsheet-head .delta b { font-weight:800; }
 .dsheet-head .delta .up { color:#B45309; }
@@ -402,7 +465,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       </div>
     </div>
   </div>
-  <div class="beta-head"><div class="bh-in"><div class="bh-title"><span>코웨이 갤러리 견적<span class="sec" id="bhSec"></span></span><small>BETA</small></div><div class="bh-search" onclick="openSearchModal()">&#128269; 모델명 · 제품명 검색</div></div></div>
+  <header class="qd-head"><div class="in"><span>QUOTE DESK<span class="sec" id="bhSec"></span></span><small>업무용 / 모바일</small></div></header>
   <div class="main-tabbar" style="max-width:480px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px 0;display:flex;gap:6px">
     <button type="button" id="mtabEstimate" onclick="switchMainTab('estimate')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff">📄 견적서</button>
     <button type="button" id="mtabCard" onclick="switchMainTab('card')" style="flex:1;border:none;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:#f1f5f9;color:#64748b">💳 제휴카드</button>
@@ -468,18 +531,17 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       </div>
     </div>
     <div id="planBar" style="display:none"></div>
-    <div id="masterCheckBar" style="display:none;align-items:center;gap:8px;padding:6px 4px;margin-bottom:6px">
-      <span id="masterChkWrap" style="display:none;align-items:center;gap:8px">
-        <input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0">
-        <label for="masterChk" style="font-size:12px;font-weight:600;color:#64748b;cursor:pointer" id="masterChkLabel">전체 선택</label>
-      </span>
-      <span id="masterChkTitle" style="font-size:12px;font-weight:700;color:#64748b;min-width:0"></span>
-      <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-size:11px;color:#94a3b8" id="masterChkCount"></span>
-        <button type="button" id="selModeBtn" onclick="toggleSelectMode()" style="background:#fff;border:1.5px solid #E6E0D2;color:#10223A;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;min-height:34px">선택 편집</button>
-      </span>
+    <div id="masterCheckBar" class="bar row" style="display:none">
+      <span id="masterChkTitle"></span>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button type="button" id="selModeBtn" class="qd-btn" onclick="toggleSelectMode()">선택 편집</button><button type="button" class="qd-btn primary" onclick="switchMainTab('estimate');openSearchModal()">＋ 추가</button></span>
+    </div>
+    <div id="masterChkWrap" class="bar" style="display:none">
+      <label for="masterChk"><input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0"><span id="masterChkLabel">전체 선택</span></label>
+      <span id="masterChkCount" style="font-size:11px;color:#7B8190;flex:1;text-align:right;margin-right:8px"></span>
+      <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
+    <div class="benefit-row" onclick="switchMainTab('card')"><span>코라솔 · 카드 · 선납</span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -501,6 +563,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
 
   <div class="wrap" id="tabPanelCard" style="display:none">
+    <button type="button" class="qd-back" onclick="switchMainTab('estimate')">‹ 견적으로</button>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <label style="font-size:12px;font-weight:700;color:#334155;white-space:nowrap">카드 선택</label>
       <select id="cardSelect" onchange="cardOnSelectChange(this.value)" style="flex:1;padding:9px 10px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;font-family:inherit;background:#fff"></select>
@@ -516,6 +579,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
 
   <div class="wrap" id="tabPanelNotice" style="display:none">
+    <button type="button" class="qd-back" onclick="switchMainTab('estimate')">‹ 견적으로</button>
     <div id="noticeMain"></div>
   </div>
 </div>
@@ -623,9 +687,18 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
 </div>
 
 <!-- 이미지 생성 중 전체화면 로딩 -->
-<div class="fab" id="fab" title="명령 휠">&#8982;</div>
-<div class="wveil" id="wveil"></div>
-<div class="wheel" id="wheel"><div class="core" id="wcore"></div></div>
+<div class="console-dock"><button type="button" id="consoleLaunch" aria-expanded="false" aria-controls="consolePanel">⌘ 빠른 명령</button></div>
+<section id="consolePanel" aria-label="빠른 명령 콘솔" hidden>
+  <div class="console-top"><div class="row"><strong>⌘ 빠른 명령</strong><button type="button" id="cmdClose" class="qd-btn sm" aria-label="명령창 닫기">닫기</button></div><div id="cmdContext"></div></div>
+  <div class="console-content">
+    <form id="cmdForm" class="console-input"><input id="cmdInput" aria-label="빠른 명령 입력" placeholder="전체 7년" autocomplete="off"><button class="qd-btn primary" type="submit">확인</button></form>
+    <div class="console-hint">정해진 명령으로 빠르게 조작 · Ctrl / ⌘ + K</div>
+    <div class="console-chips"><button type="button" class="qd-btn sm" data-cmd="전체 7년">전체 7년</button><button type="button" class="qd-btn sm" data-cmd="선택 5년">선택 5년</button><button type="button" class="qd-btn sm" data-cmd="견적 복제">견적 복제</button><button type="button" class="qd-btn sm" data-cmd="비교">차이 비교</button><button type="button" class="qd-btn sm" data-cmd="제품 추가">제품 추가</button><button type="button" class="qd-btn sm" data-cmd="혜택">결합·납부</button><button type="button" class="qd-btn sm" data-cmd="견적서">견적서</button><button type="button" class="qd-btn sm" data-cmd="전체 선택">전체 선택</button><button type="button" class="qd-btn sm" data-cmd="견적안 삭제">견적안 삭제</button><button type="button" class="qd-btn sm" data-cmd="안내문">고객 안내문</button><button type="button" class="qd-btn sm" data-cmd="데이터 갱신">데이터 갱신</button></div>
+    <div id="cmdResult" role="status" aria-live="polite">명령을 입력하거나 빠른 버튼을 눌러 주세요.</div>
+    <div class="console-actions"><button type="button" id="cmdApply" class="qd-btn primary" hidden>변경 적용</button><button type="button" id="cmdUndo" class="qd-btn" disabled>실행 취소</button></div>
+    <div class="console-hint" style="margin-top:12px;margin-bottom:0">최근 실행</div><div id="cmdRecent"></div>
+  </div>
+</section>
 <div class="bflash" id="bflash"></div>
 <div class="bbar" id="bBar" style="display:none">
   <div class="sum"><small id="bbSub"></small><b id="bbMain"></b></div>
@@ -641,7 +714,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
-  <div class="dsheet-foot"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
+  <div class="dsheet-foot"><button class="ghost del" onclick="deleteFromSheet()">삭제</button><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
 </div>
 <div class="cmp-page" id="cmpPage">
   <div class="cmp-head"><button type="button" onclick="closeCompare()">&#8249; 견적으로</button><b>견적 차이 비교</b></div>
@@ -1255,9 +1328,9 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   // 능동형 태그: 의미있는 값만 수집
   var tags = [];
   if (!isCashMode) {
-    tags.push(yakjLabel(item.약정년));
     var mgmt = getMgmtLabel(item);
     tags.push(mgmt + (item.관리주기 && item.관리주기 !== '-' ? ' · ' + item.관리주기 : ''));
+    tags.push(yakjLabel(item.약정년));
   }
   if (!isCashMode && item.tasabosangOn) tags.push('타사보상' + (c.discLabel ? ' · ' + c.discLabel : ''));
   else if (c.discLabel) tags.push(c.discLabel);
@@ -1269,38 +1342,15 @@ function renderBoxRow(item, idx, c, isCashMode, isSunap2, _isOpen) {
   }
   var korCnt = (item.kors || []).filter(function(k) { return k.on; }).length;
   if (korCnt > 0) tags.push('코라솔 ' + korCnt + '건');
+  if (isCashMode) tags.unshift('일시불'); else if (item.isRerental) tags.unshift('재렌탈');
 
   var h = '';
-  h += '<div style="display:flex;align-items:flex-start;gap:6px;cursor:pointer" onclick="toggleDetail('+idx+')">';
+  h += '<div class="it" onclick="toggleDetail('+idx+')">';
   if (selectMode) h += '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;min-width:30px;min-height:38px;margin:-6px 0 -6px -4px;flex-shrink:0"><input type="checkbox" ' + (cartSel[idx] ? 'checked' : '') + ' onchange="event.stopPropagation();toggleCartSel(' + idx + ',this.checked)" style="accent-color:#8F6D2B;width:18px;height:18px" onclick="event.stopPropagation()"></label>';
-
-  h += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">';
-
-  // 1줄: 제품명(타이틀) + 가격, 모델명은 그 아래 보조 텍스트
-  h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
-    + '<div style="min-width:0">'
-    + '<div style="font-size:15px;font-weight:800;color:#14202F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.제품명 + (_inQ ? ' 📌' : '') + '</div>'
-    + '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + item.모델명 + ' (' + _pmTxt + ')' + '</div>'
-    + '</div>'
-    + '<div style="font-size:17px;font-weight:800;color:#10223A;white-space:nowrap;flex-shrink:0">' + compactPrice + '</div>'
-    + '</div>';
-
-  // 2줄: 능동형 태그들 — 파란색
-  h += '<div style="display:flex;flex-wrap:wrap;gap:3px">';
-  tags.filter(Boolean).forEach(function(tag) {
-    h += badgeHtml(tag, 'blue');
-  });
-  if (item._bulkSkip) h += badgeHtml('일괄변경 제외 · 재검토', 'amber');
-  if (tags.filter(Boolean).length === 0 && !item._bulkSkip) {
-    h += '<span style="font-size:11px;color:#94a3b8">탭하여 설정</span>';
-  }
-  h += '</div>';
-
-  h += '</div>'; // 뱃지 컬럼
-
-  h += '<button onclick="event.stopPropagation();toggleDetail(' + idx + ')" style="flex-shrink:0;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;color:' + (_isOpen ? '#2563eb' : '#94a3b8') + '">' + '&#8250;' + '</button>';
-  h += '<button class="icon-btn" title="삭제" onclick="event.stopPropagation();confirmRemoveCart(' + idx + ')" style="flex-shrink:0;font-size:15px;color:#cbd5e1">&#10005;</button>';
-  h += '</div>'; // 한 줄
+  h += '<div class="it-main"><div class="it-row"><strong class="it-name">' + item.제품명 + (_inQ ? ' 📌' : '') + '</strong><strong class="it-price">' + compactPrice + ' ›</strong></div>';
+  h += '<small class="it-desc">' + (tags.filter(Boolean).join(' · ') || (item._bulkSkip ? '' : '탭하여 설정'));
+  if (item._bulkSkip) h += (tags.filter(Boolean).length ? ' · ' : '') + '<span class="it-skip">일괄변경 제외 · 재검토</span>';
+  h += '</small></div></div>';
   return h;
 }
 
@@ -1838,8 +1888,7 @@ function renderCart() {
     html += '</div></div>';
   });
 
-  area.innerHTML = '<div class="cart-list">' + html + '</div>'
-    + '<div style="text-align:center;margin-top:10px;margin-bottom:16px"><button onclick="openSearchModal()" style="background:#eff6ff;color:#2563eb;border:1.5px dashed #93c5fd;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ 제품 추가</button></div>';
+  area.innerHTML = '<div class="cart-list">' + html + '</div>';
 
   syncDetailSheet(_sheet);
   window.scrollTo(0, _scrollY);
@@ -1953,6 +2002,7 @@ function toggleDetail(idx){
   cart[idx]._detailOpen=open;
   renderCart();
 }
+function deleteFromSheet(){ var i=_dSheetIdx; if(i>=0&&cart[i]) confirmRemoveCart(i); }
 function closeDetail(){ cart.forEach(function(it){ it._detailOpen=false; delete it._new; }); renderCart(); }
 // 베타: 시트를 열 때 스냅샷을 저장해 두고, '취소'하면 그 상태로 복원 / 변경 전후 금액 표시
 var _dSnap=null;
@@ -2118,8 +2168,9 @@ function updateMasterChk(){
   var ttl=document.getElementById('masterChkTitle');
   var btn=document.getElementById('selModeBtn');
   if(!bar) return;
-  if(cart.length===0){ selectMode=false; bar.style.display='none'; return; }
   bar.style.display='flex';
+  if(cart.length===0){ selectMode=false; btn.style.display='none'; wrap.style.display='none'; ttl.innerHTML='<strong>0개 제품</strong>'; return; }
+  btn.style.display='';
   var selCnt=Object.keys(cartSel).filter(function(k){return cart[k];}).length;
   var allSel=selCnt===cart.length&&cart.length>0;
   var someSel=selCnt>0&&!allSel;
@@ -2129,9 +2180,9 @@ function updateMasterChk(){
   wrap.style.display=selectMode?'flex':'none';
   var tc={}; cart.forEach(function(it){ if(it.구매방법!=='cash') tc[it.약정년]=(tc[it.약정년]||0)+1; });
   var ks=Object.keys(tc).map(Number).sort(function(a,b){return a-b;});
-  var mix=ks.length>1?' · 약정 혼합 '+ks.map(function(k){return yakjLabel(k)+' '+tc[k];}).join(' · '):'';
-  ttl.textContent=selectMode?'':cart.length+'개 제품'+mix;
-  cnt.textContent=selectMode?(cart.length+'개 중 '+selCnt+'개 선택'):'';
+  var mix=ks.length>1?'약정 혼합 '+ks.map(function(k){return yakjLabel(k)+' '+tc[k];}).join(' · '):'';
+  ttl.innerHTML='<strong>'+cart.length+'개 제품</strong>'+(selectMode?' <small>· '+selCnt+'개 선택</small>':(mix?'<small>'+mix+'</small>':''));
+  cnt.textContent='';
   btn.textContent=selectMode?'선택 완료':'선택 편집';
 }
 
@@ -2773,9 +2824,12 @@ function updateTotalBar(){
   var totalRow='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)"><span style="font-size:13px;font-weight:700">합산 총액</span><span style="font-size:19px;font-weight:800;color:#60a5fa">'+won(t.totT)+'</span></div>';
 
   var S=betaSummary(t);
-  var sum3='<div class="sum3"><div><small>월 청구액'+(S.multi?' (첫 구간)':'')+'</small><b>'+won(S.month)+'</b></div><div><small>초기 납부액</small><b>'+won(S.init)+'</b></div><div><small>총 납부액</small><b>'+won(S.total)+'</b></div></div>'
-    +'<p class="snote" style="margin:0 0 10px">산정 범위: 품목별 약정기간 합계 · 초기 납부액은 총 납부액에 포함 · 약정 종료 후 비용과 예상 카드 혜택은 미포함</p>';
-  totalBar.innerHTML='<div class="total-bar"><p class="tl">합산 견적 ('+cart.length+'개 제품)</p>'+sum3+rowsHtml+notes+'</div>';
+  totalBar.innerHTML='<div class="qd-foot"><div class="row"><span>월 합계'+(S.multi?' <small>(첫 구간)</small>':'')+'</span><strong class="big">'+won(S.month)+'</strong></div>'
+    +'<div class="row"><small>초기 납부액</small><strong>'+won(S.init)+'</strong></div>'
+    +'<div class="row"><small>품목별 약정 총액 (총 납부액)</small><strong>'+won(S.total)+'</strong></div>'
+    +'<div class="note">산정 범위: 품목별 약정기간 합계 · 초기 납부액은 총 납부액에 포함 · 약정 종료 후 비용과 예상 카드 혜택은 미포함</div>'
+    +'<details><summary>합산 상세 보기</summary>'+rowsHtml+notes+'</details>'
+    +'<div class="actions"><button type="button" class="qd-btn" onclick="footCompare()">차이 비교</button><button type="button" class="qd-btn primary" onclick="openQuoteInfoModal(\'all\')">견적서</button></div></div>';
   totalBar.style.display='block';
   if (ab) ab.style.display='block';
 }
@@ -4411,16 +4465,17 @@ function syncActivePlan(){ plans[activePlan].items=cart; }
 function renderPlanBar(){
   var el=document.getElementById('planBar'); if(!el) return;
   syncActivePlan();
-  if(cart.length===0 && plans.length===1){ el.style.display='none'; return; }
-  var h='<div class="plan-bar">';
+  var h='<div class="bar"><div class="row"><h2>고객 견적</h2><small>'+esc(plans[activePlan].name)+' · 실시간 계산</small></div><div class="qd-tabs">';
   plans.forEach(function(p,i){
-    h+='<button type="button" class="plan-chip'+(i===activePlan?' on':'')+'" onclick="switchPlan('+i+')">'+esc(p.name)+(p.items.length?' <small>'+p.items.length+'</small>':'')+'</button>';
+    h+='<button type="button" class="qd-btn" aria-pressed="'+(i===activePlan)+'" onclick="switchPlan('+i+')">'+esc(p.name)+'</button>';
   });
-  if(plans.length<5) h+='<button type="button" class="plan-chip add" onclick="clonePlan()">＋ 복제</button>';
-  h+='<span class="plan-sp"></span>';
-  if(plans.length>1) h+='<button type="button" class="plan-act" onclick="openCompare()">비교</button><button type="button" class="plan-act" onclick="deletePlan()">삭제</button>';
-  h+='</div>';
+  if(plans.length<5) h+='<button type="button" class="qd-btn" aria-label="견적안 복제" onclick="clonePlan()">＋</button>';
+  h+='</div></div>';
   el.innerHTML=h; el.style.display='block';
+}
+function footCompare(){
+  if(plans.length<2){ betaConsole.msg('비교할 견적안이 없습니다.\n‘견적 복제’ 후 조건을 바꿔 보세요.'); return; }
+  openCompare();
 }
 function clonePlan(){
   if(plans.length>=5) return;
@@ -4577,103 +4632,121 @@ function renderCompare(){
   body.innerHTML=h;
 }
 
-/* ===== 베타: 플로팅 명령 휠 (상단 탭 기능 이관) ===== */
+/* ===== 베타: 빠른 명령 콘솔 (플로팅 휠 대체) ===== */
 (function(){
-  var fab=document.getElementById('fab'), wveil=document.getElementById('wveil'), wheel=document.getElementById('wheel'), wcore=document.getElementById('wcore'), fl=document.getElementById('bflash');
-  var flT;
+  var $=function(id){ return document.getElementById(id); };
+  var panel=$('consolePanel'), launch=$('consoleLaunch'), input=$('cmdInput'), resEl=$('cmdResult');
+  var applyBtn=$('cmdApply'), undoBtn=$('cmdUndo'), recentEl=$('cmdRecent'), ctxEl=$('cmdContext');
+  var pending=null, undoSnap=null, hist=[];
+  var fl=$('bflash'), flT;
   function flash(m){ fl.textContent=m; fl.classList.add('on'); clearTimeout(flT); flT=setTimeout(function(){fl.classList.remove('on');},1800); }
-  function selCnt(){ return Object.keys(cartSel).filter(function(k){return cart[k];}).length; }
-  var ACTIONS=[
-    {ic:'&#128196;',lb:'견적서',run:function(){switchMainTab('estimate');}},
-    {ic:'&#128179;',lb:'제휴카드',run:function(){switchMainTab('card');}},
-    {ic:'&#128226;',lb:'고객안내문',run:function(){switchMainTab('notice');}},
-    {ic:'&#10133;',lb:'제품추가',run:function(){switchMainTab('estimate');openSearchModal();}},
-    {ic:'&#129534;',lb:'견적서생성',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} openQuoteInfoModal('all'); }},
-    {ic:'&#9745;&#65039;',lb:'전체선택',run:function(){ if(!cart.length){flash('담긴 제품이 없습니다');return;} selectMode=true; var all=cart.every(function(_,i){return cartSel[i];}); toggleAllCart(!all); flash(all?'선택 해제':'전체 선택'); }},
-    {ic:'&#9998;&#65039;',lb:'일괄변경',run:function(){ if(!selCnt()){ if(!selectMode){ selectMode=true; renderCart(); } flash('선택 편집을 켰어요. 제품을 선택하세요'); return; } openBulkChangeModal(); }},
-    {ic:'&#128260;',lb:'데이터갱신',run:function(){ openUpdateConfirm(); }}
-  ];
-  var R=104;
-  ACTIONS.forEach(function(a,i){
-    var d=document.createElement('div'); d.className='w';
-    var ang=i*Math.PI/4;
-    d.style.setProperty('--x',(R*Math.sin(ang)).toFixed(1)+'px');
-    d.style.setProperty('--y',(-R*Math.cos(ang)).toFixed(1)+'px');
-    d.innerHTML='<span>'+a.ic+'</span>'+a.lb;
-    d.addEventListener('click',function(e){ e.stopPropagation(); pick(i); });
-    wheel.appendChild(d);
-  });
-  var els=[].slice.call(wheel.querySelectorAll('.w'));
-  var wOpen=false, hot=-1, cx=0, cy=0, pressMode=false;
-  function setHot(i){ hot=i; els.forEach(function(e,k){e.classList.toggle('hot',k===i);}); wcore.innerHTML=i>=0?'<span>'+ACTIONS[i].ic+'<br>'+ACTIONS[i].lb+'</span>':'<span>끌어서<br>선택</span>'; }
-  function openWheel(x,y,press){
-    var m=140, W=window.innerWidth, H=window.innerHeight;
-    cx=Math.min(Math.max(x,m),Math.max(W-m,m)); cy=Math.min(Math.max(y,m+10),Math.max(H-m-10,m+10));
-    wheel.style.left=cx+'px'; wheel.style.top=cy+'px';
-    wOpen=true; pressMode=press; setHot(-1);
-    wveil.classList.add('on'); wheel.classList.add('on');
-    if(navigator.vibrate){ try{navigator.vibrate(15);}catch(e){} }
+  function selIdx(){ return Object.keys(cartSel).map(Number).filter(function(i){return cart[i];}); }
+  function msg(t){ resEl.textContent=t; }
+  function ctx(){ syncActivePlan(); ctxEl.textContent=plans[activePlan].name+' · '+cart.length+'개 제품 · '+selIdx().length+'개 선택'; }
+  function isOpen(){ return !panel.hidden; }
+  function open(){ panel.hidden=false; launch.setAttribute('aria-expanded','true'); ctx(); input.focus(); }
+  function close(){ panel.hidden=true; launch.setAttribute('aria-expanded','false'); }
+  function remember(cmd){
+    hist=[cmd].concat(hist.filter(function(x){return x!==cmd;})).slice(0,3);
+    recentEl.innerHTML='';
+    hist.forEach(function(c){ var b=document.createElement('button'); b.type='button'; b.className='qd-btn sm'; b.textContent=c; b.onclick=function(){ input.value=c; run(c); }; recentEl.appendChild(b); });
   }
-  function closeWheel(){ wOpen=false; wveil.classList.remove('on'); wheel.classList.remove('on'); setHot(-1); }
-  function pick(i){ closeWheel(); ACTIONS[i].run(); }
-  function track(x,y){
-    var dx=x-cx, dy=y-cy;
-    if(Math.hypot(dx,dy)<34){ setHot(-1); return; }
-    var a=Math.atan2(dx,-dy)*180/Math.PI; if(a<0)a+=360;
-    setHot(Math.round(a/45)%8);
+  function snapshot(){
+    syncActivePlan();
+    return JSON.stringify({plans:plans,activePlan:activePlan,planSeq:planSeq});
   }
-  /* 길게 누르기(빈 영역) / 마우스 휠 클릭 */
-  var lp=null, sx=0, sy=0;
-  var BLOCK='button,input,select,textarea,a,label,.cart-card,.dsheet,.modal-bg,.quote-modal,.fab,.wheel,.bbar,.total-bar,.box-panel,.check-row';
-  document.addEventListener('pointerdown',function(e){
-    if(wOpen) return;
-    if(e.target.closest(BLOCK)) { if(!(e.pointerType==='mouse'&&e.button===1)) return; }
-    if(e.pointerType==='mouse'&&e.button===1){ if(e.target.closest('input,textarea,select')) return; e.preventDefault(); openWheel(e.clientX,e.clientY,true); return; }
-    if(e.pointerType==='mouse'&&e.button!==0) return;
-    sx=e.clientX; sy=e.clientY;
-    lp=setTimeout(function(){ lp=null; openWheel(sx,sy,true); },500);
-  });
-  document.addEventListener('mousedown',function(e){ if(e.button===1&&!e.target.closest('input,textarea,select')) e.preventDefault(); });
-  document.addEventListener('pointermove',function(e){
-    if(lp&&Math.hypot(e.clientX-sx,e.clientY-sy)>10){ clearTimeout(lp); lp=null; }
-    if(wOpen&&pressMode) track(e.clientX,e.clientY);
-  });
-  function release(){
-    if(lp){ clearTimeout(lp); lp=null; }
-    if(wOpen&&pressMode){ if(hot>=0) pick(hot); else pressMode=false; }
+  function restore(js){
+    var o=JSON.parse(js);
+    plans=o.plans; activePlan=o.activePlan; planSeq=o.planSeq; cart=plans[activePlan].items;
+    cartSel={}; selectMode=false; renderCart();
   }
-  document.addEventListener('pointerup',release);
-  document.addEventListener('pointercancel',function(){ if(lp){clearTimeout(lp);lp=null;} });
-  document.addEventListener('touchmove',function(e){ if(wOpen&&pressMode) e.preventDefault(); },{passive:false});
-  document.addEventListener('contextmenu',function(e){ if(wOpen||lp) e.preventDefault(); });
-  wveil.addEventListener('click',function(){ if(!pressMode) closeWheel(); });
-  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeWheel(); });
+  function setUndo(js){ undoSnap=js; undoBtn.disabled=!js; }
+  function clearPending(){ pending=null; applyBtn.hidden=true; }
+  function goEstimate(){ switchMainTab('estimate'); }
 
-  /* 드래그 가능한 플로팅 버튼 */
-  function placeFab(l,t){
-    var W=window.innerWidth,H=window.innerHeight;
-    fab.style.left=Math.min(Math.max(l,4),W-58)+'px'; fab.style.top=Math.min(Math.max(t,4),H-58)+'px';
+  function run(raw){
+    var cmd=String(raw||'').trim().replace(/\s+/g,' ');
+    clearPending(); ctx();
+    if(!cmd){ msg('명령을 입력하거나 빠른 버튼을 눌러 주세요.'); return; }
+    var m=cmd.match(/^(전체|선택)\s*([3-9])년$/);
+    if(m){
+      goEstimate();
+      var all=m[1]==='전체', N=+m[2];
+      var idxs=all?cart.map(function(_,i){return i;}):selIdx();
+      if(!idxs.length){ msg(all?'담긴 제품이 없습니다.':'선택한 제품이 없습니다.\n명령창을 닫고 ‘선택 편집’에서 제품을 골라 주세요.'); return; }
+      var ok=idxs.filter(function(i){return bulkCanApply(cart[i],'term',N);});
+      var bad=idxs.filter(function(i){return ok.indexOf(i)<0;});
+      msg(plans[activePlan].name+' · '+idxs.length+'개 대상\n'+ok.length+'개 → '+N+'년 적용 가능'
+        +(bad.length?'\n'+bad.length+'개 기존 유지: '+bad.map(function(i){return cart[i].제품명+' ('+yakjLabel(cart[i].약정년)+')';}).join(', '):'')
+        +'\n다른 견적안은 변경되지 않습니다.');
+      if(ok.length){
+        pending=function(){
+          var snap=snapshot();
+          cart.forEach(function(it){ delete it._bulkSkip; });
+          ok.forEach(function(i){ cart[i].약정년=N; refreshCartItemRow(i); });
+          bad.forEach(function(i){ cart[i]._bulkSkip=bulkReason(cart[i],'term',N); });
+          renderCart(); ctx(); setUndo(snap); remember(cmd);
+          msg(ok.length+'개 제품에 '+N+'년 적용 완료'+(bad.length?' · '+bad.length+'개 기존 유지(목록에 표시됨)':'')+'\n월 합계 '+won(betaSummary(calcTotals()).month));
+        };
+        applyBtn.hidden=false;
+      }
+      return;
+    }
+    if(cmd==='견적 복제'){
+      if(plans.length>=5){ msg('견적안은 최대 5개까지 만들 수 있습니다.'); return; }
+      var s1=snapshot(); goEstimate(); clonePlan(); ctx(); setUndo(s1); remember(cmd);
+      msg(plans[activePlan].name+'을 만들었습니다.\n원본 견적은 유지됩니다.'); return;
+    }
+    if(cmd==='견적안 삭제'){
+      if(plans.length<2){ msg('삭제할 견적안이 없습니다. (견적안이 1개뿐입니다)'); return; }
+      var s2=snapshot(); var before=plans.length; deletePlan();
+      if(plans.length<before){ ctx(); setUndo(s2); remember(cmd); msg('견적안을 삭제했습니다. 실행 취소로 되돌릴 수 있습니다.'); }
+      else msg('삭제를 취소했습니다.');
+      return;
+    }
+    if(cmd==='비교'||cmd==='차이 비교'){
+      if(plans.length<2){ msg('비교할 견적안이 없습니다.\n‘견적 복제’ 후 조건을 바꿔 보세요.'); return; }
+      remember('비교'); close(); openCompare(); return;
+    }
+    if(cmd==='전체 선택'||cmd==='선택 해제'){
+      if(!cart.length){ msg('담긴 제품이 없습니다.'); return; }
+      goEstimate();
+      if(cmd==='전체 선택'){ selectMode=true; toggleAllCart(true); } else { cartSel={}; renderCart(); }
+      ctx(); remember(cmd); msg(cmd==='전체 선택'?cart.length+'개 제품을 선택했습니다.':'선택을 해제했습니다.'); return;
+    }
+    if(cmd==='제품 추가'){ remember(cmd); close(); goEstimate(); openSearchModal(); return; }
+    if(cmd==='혜택'||cmd==='결합·납부'){ remember('혜택'); close(); switchMainTab('card'); return; }
+    if(cmd==='견적서'){
+      if(!cart.length){ msg('담긴 제품이 없습니다.'); return; }
+      remember(cmd); close(); goEstimate(); openQuoteInfoModal('all'); return;
+    }
+    if(cmd==='안내문'||cmd==='고객안내문'){ remember('안내문'); close(); switchMainTab('notice'); return; }
+    if(cmd==='데이터 갱신'){ remember(cmd); close(); openUpdateConfirm(); return; }
+    msg('지원하지 않는 명령입니다.\n예: 전체 7년, 선택 5년, 견적 복제, 비교, 제품 추가, 혜택, 견적서\n자유로운 문장 해석은 연결되지 않았습니다.');
   }
-  var saved=null; try{ saved=JSON.parse(localStorage.getItem('betaFab')||'null'); }catch(e){}
-  var userPlaced=!!saved;
-  function defaultFab(){ placeFab(Math.min(window.innerWidth,(window.innerWidth+480)/2)-70, window.innerHeight-170); }
-  if(saved) placeFab(saved.l,saved.t); else defaultFab();
-  window.addEventListener('load',function(){ if(!userPlaced) defaultFab(); });
-  window.addEventListener('resize',function(){ if(userPlaced) placeFab(fab.offsetLeft,fab.offsetTop); else defaultFab(); });
-  var fx,fy,ol,ot,moved=false,down=false;
-  fab.addEventListener('pointerdown',function(e){ down=true; moved=false; fx=e.clientX; fy=e.clientY; ol=fab.offsetLeft; ot=fab.offsetTop; fab.setPointerCapture(e.pointerId); e.stopPropagation(); });
-  fab.addEventListener('pointermove',function(e){
-    if(!down) return;
-    if(!moved && Math.hypot(e.clientX-fx,e.clientY-fy)>6){ moved=true; fab.classList.add('drag'); }
-    if(moved) placeFab(ol+e.clientX-fx, ot+e.clientY-fy);
-    e.stopPropagation();
+  launch.onclick=function(){ isOpen()?close():open(); };
+  $('cmdClose').onclick=close;
+  $('cmdForm').onsubmit=function(e){ e.preventDefault(); run(input.value); };
+  input.oninput=clearPending;
+  [].forEach.call(document.querySelectorAll('#consolePanel [data-cmd]'),function(b){ b.onclick=function(){ input.value=b.dataset.cmd; run(b.dataset.cmd); }; });
+  applyBtn.onclick=function(){ if(pending) pending(); clearPending(); };
+  undoBtn.onclick=function(){
+    if(!undoSnap) return;
+    restore(undoSnap); setUndo(null); clearPending(); ctx();
+    msg('마지막 명령 실행 전으로 되돌렸습니다.');
+  };
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); open(); }
+    if(e.key==='Escape'&&isOpen()) close();
   });
-  fab.addEventListener('pointerup',function(e){
-    down=false; fab.classList.remove('drag'); e.stopPropagation();
-    if(moved){ userPlaced=true; try{ localStorage.setItem('betaFab',JSON.stringify({l:fab.offsetLeft,t:fab.offsetTop})); }catch(er){} }
-    else { var b=fab.getBoundingClientRect(); openWheel(b.left+b.width/2,b.top+b.height/2,false); }
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#consolePanel')||e.target.closest('#consoleLaunch')||e.target.closest('[data-console-open]')) return;
+    clearPending();
+    if(isOpen()) close();
   });
+  window.betaConsole={ open:open, msg:function(t){ open(); msg(t); }, prefill:function(t){ open(); input.value=t; input.focus(); }, flash:flash };
 })();
+
 </script>
 
 </html>

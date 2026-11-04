@@ -1846,8 +1846,8 @@ function renderCart() {
   var actionBtns = document.getElementById('actionBtns');
   if (cart.length === 0) {
     syncDetailSheet(null);
-    area.innerHTML = ''; empty.style.display = 'block'; totalBar.style.display = 'none'; actionBtns.style.display = 'none';
-    var _mcb=document.getElementById('masterCheckBar'); if(_mcb) _mcb.style.display='none';
+    area.innerHTML = '<p style="text-align:center;color:#7B8190;font-size:13px;padding:36px 16px;margin:0;border-bottom:1px solid #E6E0D2">담긴 제품이 없습니다.<br>＋ 추가로 제품을 담아 주세요.</p>'; empty.style.display = 'none'; totalBar.style.display = 'none'; actionBtns.style.display = 'none';
+    updateMasterChk();
     var _ub=document.getElementById('updateBtn'); if(_ub) _ub.style.display='none';
     updateQuoteBasketBar(); // 담아둔 견적(quoteBasket)은 cart와 별개이므로 남아있으면 계속 표시
     return;
@@ -4825,6 +4825,7 @@ function renderCompare(){
     clearPending();
     if(isOpen()) close();
   });
+  try{ renderCart(); }catch(e){} // 첫 화면: 빈 견적에서도 견적안 탭/개수 바 표시
   window.betaConsole={ open:open, msg:function(t){ open(); msg(t); }, prefill:function(t){ open(); input.value=t; input.focus(); }, flash:flash };
 })();
 

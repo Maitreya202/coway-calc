@@ -386,6 +386,17 @@ body.has-bbar .wrap { padding-bottom:0; }
 .cmp-head { background:var(--navy) !important; }
 .bflash { top:auto; bottom:130px; }
 #updateBtn, #bulkBar { display:none !important; }
+#loadingScreen { background:radial-gradient(120% 80% at 50% 0%, #1E3452 0%, #10223A 60%, #0B172A 100%) !important; color:#fff; padding:24px; text-align:center; }
+#loadingScreen .ls-mark { font-size:22px; font-weight:800; letter-spacing:6px; color:#fff; padding-left:6px; animation:lsIn .8s ease both; }
+#loadingScreen .ls-rule { width:44px; height:1px; background:#D9BC7C; margin:16px 0 12px; animation:lsIn .8s .15s ease both; }
+#loadingScreen .ls-sub { font-size:12px; letter-spacing:3px; color:#D9BC7C; margin-bottom:44px; animation:lsIn .8s .3s ease both; }
+#loadingScreen .ls-bar { width:120px; height:2px; background:rgba(255,255,255,.14); border-radius:2px; overflow:hidden; margin-bottom:18px; }
+#loadingScreen .ls-bar i { display:block; width:40%; height:100%; background:linear-gradient(90deg,transparent,#D9BC7C,transparent); animation:lsBar 1.3s ease-in-out infinite; }
+#loadingScreen p { color:#E8EDF4 !important; font-weight:600 !important; font-size:14px !important; letter-spacing:.3px; margin-bottom:6px !important; }
+#loadingScreen small { color:#8FA0B8 !important; font-size:12px !important; line-height:1.6; }
+#loadingScreen button { background:var(--brassF) !important; border-radius:7px !important; }
+@keyframes lsBar { 0% { transform:translateX(-120%); } 100% { transform:translateX(320%); } }
+@keyframes lsIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 #benPage { z-index:70; }
 .ben-sec { font-size:11px; font-weight:800; color:var(--sub); letter-spacing:.3px; margin:16px 2px 6px; }
 .ben-item { padding:9px 0; border-bottom:1px solid #F1EDE3; }
@@ -452,7 +463,10 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
 <body>
 
 <div id="loadingScreen">
-  <div class="spinner"></div>
+  <div class="ls-mark">QUOTE DESK</div>
+  <div class="ls-rule"></div>
+  <div class="ls-sub">코웨이 갤러리 견적</div>
+  <div class="ls-bar"><i></i></div>
   <p>가격표 불러오는 중...</p>
   <small>구글 시트 연결 중</small>
 </div>

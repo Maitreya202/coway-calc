@@ -1424,7 +1424,6 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
     h += '<button class="pill' + ((o[0]==="rental" ? (!item.isRerental&&item.구매방법!=="cash") : o[0]==="rerental" ? item.isRerental : item.구매방법===o[0]) ? ' active' : '') + '" onclick="setPurchaseMode(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
   });
   h += '</div>';
-  h += '<button onclick="openSearchModal(' + idx + ')" style="width:100%;background:#eff6ff;color:#2563eb;border:1.5px dashed #93c5fd;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">&#128269; 제품 변경</button>';
   h += '</div>';
 
   if (isCashMode) return h;

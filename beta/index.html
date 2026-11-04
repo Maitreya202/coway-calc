@@ -1527,9 +1527,12 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   // 관리방법 · 주기
   h += '<div class="og">';
   if (cMeths.length > 1) {
-    h += '<h4>관리방법</h4><div class="seg">';
+    h += '<h4>관리방법 <span class="jnote">증감은 직전 방법 대비</span></h4><div class="seg jseg">';
+    var _prevM = null;
     cMeths.forEach(function(m) {
-      h += '<button class="' + (item.관리방법 === m ? 'on' : '') + '" onclick="setCartMgmt(' + idx + ',\'' + m + '\')">' + m + '</button>';
+      var pm = _variantPrice(item, null, null, m);
+      h += '<button class="' + (item.관리방법 === m ? 'on' : '') + '" onclick="setCartMgmt(' + idx + ',\'' + m + '\')"><span>' + m + '</span>' + (_prevM ? _stepDiff(pm, _prevM) : '') + '</button>';
+      if (pm) _prevM = pm;
     });
     h += '</div>';
   }
@@ -1553,13 +1556,14 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
 // 약정별 요금 미리보기: 제품을 복제해 해당 약정 행의 가격을 적용한 뒤 계산 (원본 변경 없음)
 function _termPrice(item, y) { return _variantPrice(item, null, y); }
 // 관리주기(jg)·약정(y)을 바꿔본 가격 (jg가 null이면 현재 주기 유지). 해당 주기에 현재 약정이 없으면 setCartJugi와 같은 규칙으로 대체
-function _variantPrice(item, jg, y) {
+function _variantPrice(item, jg, y, mth) {
   try {
     var o = JSON.parse(JSON.stringify(item)); delete o._calcSnap;
+    if (mth) { o.관리방법 = mth; var aj = getJugis(o.제품명, o.모델명, mth); jg = aj.length ? aj[0] : o.관리주기; if (y == null) y = -1; }
     if (jg) {
       o.관리주기 = jg;
       var ys = getYakjs(o.제품명, o.모델명, o.관리방법, jg);
-      if (y == null) y = ys.indexOf(o.약정년) >= 0 ? o.약정년 : (ys.indexOf(5) >= 0 ? 5 : ys[0]);
+      if (y == null || y === -1) y = ys.indexOf(o.약정년) >= 0 ? o.약정년 : (ys.indexOf(5) >= 0 ? 5 : ys[0]);
     }
     if (y == null) y = o.약정년;
     o.약정년 = y;

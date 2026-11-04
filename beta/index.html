@@ -4627,7 +4627,11 @@ function benInit(){
          sun:{type:(function(){var b=top(sc); return !b?'none':(b==='선납2'?'선납2':'period');})(),period:(function(){var b=top(sc); return (b==='36'||b==='24'||b==='60')?b:'36';})(),grade:s2?s2.grade:'A',oi:s2?s2.oi:0,kind:s2?s2.kind:'half',sel:{}}, msg:{} };
   benPre('kor'); benPre('sun');
 }
-function benPre(kind){ benS[kind].sel={}; cart.forEach(function(it,i){ if(!benElig(kind,it)&&benHas(kind,it)) benS[kind].sel[i]=true; }); }
+function benAny(kind,it){ return kind==='kor'?(it.kors||[]).some(function(k){return k.on;}):(!!it.선납&&it.선납!=='none'); }
+function benPre(kind){
+  var rel=(kind==='kor')?!benS.kor.prod:benS.sun.type==='none'; // 미적용 선택 = 해제 모드: 현재 적용 중인 제품을 미리 체크
+  benS[kind].sel={}; cart.forEach(function(it,i){ if(!benElig(kind,it)&&(rel?benAny(kind,it):benHas(kind,it))) benS[kind].sel[i]=true; });
+}
 function benElig(kind,it){
   if(it.구매방법==='cash') return '일시불은 적용 불가';
   var plain=['36','24','60'].indexOf(it.선납)>=0;

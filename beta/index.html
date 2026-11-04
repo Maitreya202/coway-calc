@@ -386,6 +386,15 @@ body.has-bbar .wrap { padding-bottom:0; }
 .cmp-head { background:var(--navy) !important; }
 .bflash { top:auto; bottom:130px; }
 #updateBtn, #bulkBar { display:none !important; }
+#benPage { z-index:70; }
+.ben-sec { font-size:11px; font-weight:800; color:var(--sub); letter-spacing:.3px; margin:16px 2px 6px; }
+.ben-item { padding:9px 0; border-bottom:1px solid #F1EDE3; }
+.ben-item:last-child { border-bottom:none; }
+.ben-item .t { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; font-weight:700; color:var(--ink); }
+.ben-item .t button { font:inherit; font-size:12px; font-weight:700; color:var(--brassD); background:var(--brassL); border:0; border-radius:6px; padding:5px 9px; cursor:pointer; flex-shrink:0; }
+.ben-item .d { font-size:12px; color:var(--sub); margin-top:3px; line-height:1.55; }
+.ben-sep { border-top:1px dashed var(--line); margin:6px 0; }
+.ben-tag { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:5px; background:#E8EDF4; color:var(--navy2); margin-left:6px; }
 .dsheet-head .delta { margin-top:4px; font-size:12px; color:var(--sub); }
 .dsheet-head .delta b { font-weight:800; }
 .dsheet-head .delta .up { color:#B45309; }
@@ -541,7 +550,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
-    <div class="benefit-row" onclick="switchMainTab('card')"><span>코라솔 · 카드 · 선납</span><small>설정 ›</small></div>
+    <div class="benefit-row" onclick="openBenefits()"><span>코라솔 · 카드 · 선납</span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -715,6 +724,10 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
   <div class="dsheet-foot"><button class="ghost del" onclick="deleteFromSheet()">삭제</button><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
+</div>
+<div class="cmp-page" id="benPage">
+  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>결합 · 납부 혜택</b></div>
+  <div class="cmp-body" id="benBody"></div>
 </div>
 <div class="cmp-page" id="cmpPage">
   <div class="cmp-head"><button type="button" onclick="closeCompare()">&#8249; 견적으로</button><b>견적 차이 비교</b></div>
@@ -4555,6 +4568,68 @@ function planStats(items){
   return {T:T,S:S,tl:tl,months:tl.length?tl[tl.length-1].to:0,first:tl.length?tl[0].total:0,last:tl.length?tl[tl.length-1].total:0};
 }
 function tlLabel(seg){ return seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월'; }
+/* ===== 베타: 결합·납부 혜택 화면 (라이프솔루션·카드·선납 분리 표시) ===== */
+function openBenefits(){ switchMainTab('estimate'); renderBenefits(); document.getElementById('benPage').classList.add('on'); }
+function closeBenefits(){ document.getElementById('benPage').classList.remove('on'); }
+function openItemTab(idx,tab){
+  closeBenefits(); if(!cart[idx]) return;
+  cart.forEach(function(it){ it._detailOpen=false; });
+  cart[idx]._detailOpen=true; renderCart(); setDetailTab(tab);
+}
+function renderBenefits(){
+  var body=document.getElementById('benBody');
+  if(!cart.length){ body.innerHTML='<div class="cmp-card"><p class="cmp-note" style="margin:4px 0">담긴 제품이 없습니다. 제품을 추가하면 적용 현황이 표시됩니다.</p></div>'; return; }
+  var t=calcTotals(), a=t.agg, S=betaSummary(t);
+  var kor=[], sun=[];
+  cart.forEach(function(it,i){
+    var c=calcItem(it), ki=itemKorCalc(it,c);
+    if(ki) kor.push({i:i,it:it,c:c,ki:ki});
+    if(c.sunap && it.구매방법!=='cash') sun.push({i:i,it:it,c:c});
+  });
+  var h='';
+  // 1) 금액 구분
+  h+='<div class="cmp-card"><h4>금액 구분 · '+esc(plans[activePlan].name)+'</h4>'
+    +'<div class="cmp-row"><span>렌탈 계약 청구액'+(S.multi?' (첫 구간)':'')+'</span><span>'+won(S.month)+'/월</span></div>'
+    +'<div class="cmp-row"><span>초기 납부액</span><span>'+won(S.init)+'</span></div>'
+    +(a.ilsibl>0?'<div class="cmp-row"><span>　· 선납금</span><span>'+won(a.ilsibl)+'</span></div>':'')
+    +(a.cashTotal>0?'<div class="cmp-row"><span>　· 일시불 구매</span><span>'+won(a.cashTotal)+'</span></div>':'')
+    +(a.bmpOneTime>0?'<div class="cmp-row"><span>　· 별매품(일시불)</span><span>'+won(a.bmpOneTime)+'</span></div>':'')
+    +'<div class="cmp-row"><span>라이프솔루션 별도 납입금</span><span>'+(a.hasKor?'월 '+won(a.korNabM)+' · 총 '+won(a.korNabTotal):'해당 없음')+'</span></div>'
+    +'<div class="cmp-row"><span>예상 카드 혜택</span><span>합계에 미반영</span></div>'
+    +'<p class="cmp-note">렌탈 계약 청구액에는 라이프솔루션 별도 납입금과 예상 카드 혜택이 들어 있지 않습니다. 선납금은 할인액이 아니라 초기 납부액으로 따로 표시합니다.</p></div>';
+
+  // 2) 라이프솔루션(코라솔)
+  h+='<div class="ben-sec">코웨이 라이프솔루션 (코라솔)</div><div class="cmp-card">';
+  if(!kor.length) h+='<p class="cmp-note" style="margin:4px 0">적용된 제품이 없습니다. 제품 설정의 할인 탭에서 추가할 수 있습니다.</p>';
+  kor.forEach(function(r){
+    h+='<div class="ben-item"><div class="t"><span>'+esc(r.it.제품명)+'</span><button type="button" onclick="openItemTab('+r.i+',\'disc\')">설정 ›</button></div>';
+    r.ki.lines.forEach(function(l){
+      h+='<div class="d"><b>'+esc(l.k.name||l.prod)+'</b> · '+l.cnt+'구좌 · 지원 '+l.sup.months+'개월<br>'
+        +'렌탈료 감액 월 '+won(l.supM)+' <span class="ben-tag">렌탈 할인</span><br>'
+        +'별도 납입금 월 '+won(l.nabM)+' × '+l.k.납부회차+'회 = '+won(l.nabTotal)+' <span class="ben-tag">별도 납입</span>'
+        +(l.refund>0?'<br>만기 환급금 '+won(l.refund):'')+'</div>';
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // 3) 제휴카드
+  var card=(typeof CARDS!=='undefined'&&CARDS.length)?CARDS.find(function(c){return c.id===cardCurrentId;})||CARDS[0]:null;
+  h+='<div class="ben-sec">제휴카드</div><div class="cmp-card"><div class="ben-item"><div class="t"><span>'+(card?esc(card.name):'제휴카드 데이터 없음')+'</span><button type="button" onclick="closeBenefits();switchMainTab(\'card\')">카드 상세 ›</button></div>'
+    +'<div class="d">카드 실적별 청구할인은 렌탈 계약 청구액과 분리해 안내만 하며, 견적 합계에는 반영하지 않습니다.</div></div></div>';
+
+  // 4) 선납
+  h+='<div class="ben-sec">선납</div><div class="cmp-card">';
+  if(!sun.length) h+='<p class="cmp-note" style="margin:4px 0">적용된 제품이 없습니다. 제품 설정의 할인 탭에서 선택할 수 있습니다.</p>';
+  sun.forEach(function(r){
+    var sn=r.c.sunap, s2=r.it.선납==='선납2';
+    var rest=s2?('남은 월 납부액 '+won(sn.인하후)+(sn.월인하>0?' (월 '+won(sn.월인하)+' 인하)':'')):(r.it.선납==='60'?'월 청구 없음 (상담 안내)':sn.label+' 기간 동안 월 청구 없음');
+    h+='<div class="ben-item"><div class="t"><span>'+esc(r.it.제품명)+'<span class="ben-tag">'+esc(sn.label)+'</span></span><button type="button" onclick="openItemTab('+r.i+',\'disc\')">설정 ›</button></div>'
+      +'<div class="d">선납금 '+won(sn.amt)+' (초기 납부)<br>'+rest+'</div></div>';
+  });
+  h+='</div>';
+  body.innerHTML=h;
+}
 function openCompare(){
   syncActivePlan();
   if(plans.length<2) return;
@@ -4721,7 +4796,7 @@ function renderCompare(){
       return;
     }
     if(cmd==='제품 추가'){ remember(cmd); close(); goEstimate(); openSearchModal(); return; }
-    if(cmd==='혜택'||cmd==='결합·납부'){ remember('혜택'); close(); switchMainTab('card'); return; }
+    if(cmd==='혜택'||cmd==='결합·납부'){ remember('혜택'); close(); openBenefits(); return; }
     if(cmd==='견적서'){
       if(!cart.length){ msg('담긴 제품이 없습니다.'); return; }
       remember(cmd); close(); goEstimate(); openQuoteInfoModal('all'); return;

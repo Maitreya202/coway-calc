@@ -326,6 +326,48 @@ input:focus, select:focus { border-color:var(--brass); }
 .sum3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
 .sum3 small { display:block; font-size:11px; opacity:.7; margin-bottom:2px; }
 .sum3 b { font-size:15px; font-weight:800; color:#D9BC7C; white-space:nowrap; }
+.plan-bar { display:flex; align-items:center; gap:6px; margin:0 0 10px; overflow-x:auto; scrollbar-width:none; }
+.plan-bar::-webkit-scrollbar { display:none; }
+.plan-chip { flex:none; border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:18px; padding:7px 14px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; min-height:38px; }
+.plan-chip.on { background:var(--navy); border-color:var(--navy); color:#fff; }
+.plan-chip small { font-size:11px; opacity:.75; margin-left:2px; }
+.plan-chip.add { border-style:dashed; color:var(--brassD); background:var(--brassL); border-color:#D9C79B; }
+.plan-sp { flex:1; }
+.plan-act { flex:none; border:none; background:none; color:var(--brassD); font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; padding:8px 6px; min-height:38px; }
+.cmp-page { position:fixed; top:0; bottom:0; left:50%; width:100%; max-width:480px; transform:translateX(-50%); background:var(--paper); z-index:70; display:none; flex-direction:column; }
+.cmp-page.on { display:flex; }
+.cmp-head { display:flex; align-items:center; gap:10px; background:var(--navy); color:#fff; padding:max(12px, env(safe-area-inset-top)) 14px 12px; flex-shrink:0; }
+.cmp-head button { background:none; border:none; color:#D9BC7C; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; padding:6px 4px; min-height:38px; }
+.cmp-head b { font-size:16px; }
+.cmp-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 14px 40px; }
+.cmp-sel { display:flex; gap:8px; margin-bottom:12px; }
+.cmp-sel label { flex:1; font-size:12px; color:var(--sub); font-weight:700; }
+.cmp-sel select { margin-top:4px; width:100%; font-size:16px; padding:10px; border-radius:10px; }
+.cmp-hl { background:var(--navy); color:#fff; border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+.cmp-hl .dir { font-size:11px; opacity:.7; margin-bottom:8px; }
+.cmp-hl .r { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; }
+.cmp-hl .r span { font-size:12px; opacity:.85; }
+.cmp-hl .r b { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; }
+.cmp-hl .up { color:#F5B76A; } .cmp-hl .down { color:#7FE0A8; } .cmp-hl .zero { color:#D9BC7C; }
+.cmp-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:10px; }
+.cmp-card h4 { font-size:12px; color:var(--sub); font-weight:700; margin:0 0 8px; }
+.cmp-row { display:flex; justify-content:space-between; gap:8px; padding:5px 0; font-size:13px; border-bottom:1px solid #F1EDE3; font-variant-numeric:tabular-nums; }
+.cmp-row:last-child { border-bottom:none; }
+.cmp-row span:first-child { color:var(--sub); flex-shrink:0; }
+.cmp-row span:last-child { text-align:right; font-weight:700; }
+.cmp-tl { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cmp-tl h5 { font-size:12px; margin:0 0 4px; color:var(--ink); }
+.cmp-tl div div { font-size:12px; color:#5A6275; padding:2px 0; font-variant-numeric:tabular-nums; }
+.cmp-note { font-size:11px; color:var(--sub); line-height:1.55; margin:8px 2px; }
+.cmp-warn { background:#FFF7ED; border:1px solid #FED7AA; color:#9A3412; border-radius:10px; padding:9px 11px; font-size:12px; margin-bottom:10px; line-height:1.5; }
+.cmp-item { background:#fff; border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:8px; }
+.cmp-item .nm { font-size:14px; font-weight:800; color:var(--ink); display:flex; justify-content:space-between; gap:8px; }
+.cmp-item .nm small { font-size:11px; font-weight:700; padding:2px 7px; border-radius:8px; }
+.cmp-item .nm .add { background:#ECFDF5; color:#15803D; } .cmp-item .nm .del { background:#FFF7ED; color:#9A3412; }
+.cmp-item .ch { font-size:12px; color:#5A6275; margin-top:4px; line-height:1.5; }
+.cmp-item .ch b { color:var(--ink); }
+.cmp-item .px { font-size:12px; margin-top:6px; padding-top:6px; border-top:1px dashed var(--line); display:flex; justify-content:space-between; }
+details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD); padding:8px 2px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -418,6 +460,7 @@ input:focus, select:focus { border-color:var(--brass); }
         </div>
       </div>
     </div>
+    <div id="planBar" style="display:none"></div>
     <div id="masterCheckBar" style="display:none;align-items:center;gap:8px;padding:6px 4px;margin-bottom:6px">
       <span id="masterChkWrap" style="display:none;align-items:center;gap:8px">
         <input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0">
@@ -592,6 +635,10 @@ input:focus, select:focus { border-color:var(--brass); }
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
   <div class="dsheet-foot"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">적용하기</button></div>
+</div>
+<div class="cmp-page" id="cmpPage">
+  <div class="cmp-head"><button type="button" onclick="closeCompare()">&#8249; 견적으로</button><b>견적 차이 비교</b></div>
+  <div class="cmp-body" id="cmpBody"></div>
 </div>
 <div class="modal-bg" id="bulkResultModal" onclick="if(event.target===this)closeBulkResult()">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:380px;padding-top:20px">
@@ -2165,6 +2212,7 @@ function updateBasketTotalBar(){
   if(bl&&bl.style.display==='block') btb.style.display='block';
 }
 function updateQuoteBasketBar(){
+  if (typeof renderPlanBar==='function') renderPlanBar();
   var cnt=quoteBasket.length;
   var bar=document.getElementById('quoteBasketBar');
   if(bar){ bar.style.display=cnt>0?'flex':'none'; }
@@ -2696,7 +2744,7 @@ function updateTotalBar(){
     var tl=t.timeline, a=t.agg, sub=[];
     var S=betaSummary(t);
     document.getElementById('bbMain').textContent=won(S.month)+'/월';
-    document.getElementById('bbSub').textContent='월 청구액'+(S.multi?'(첫 구간)':'')+' · 초기 '+won(S.init)+' · 총 '+won(S.total);
+    document.getElementById('bbSub').textContent=(plans.length>1?plans[activePlan].name+' · ':'')+'월 청구액'+(S.multi?'(첫 구간)':'')+' · 초기 '+won(S.init)+' · 총 '+won(S.total);
     document.getElementById('bBar').style.display='flex';
     document.body.classList.add('has-bbar');
   })();
@@ -4347,6 +4395,180 @@ function _renderQuoteNoticeContent(){
   };
 }
 
+
+/* ===== 베타: 견적안(A/B) 복제·전환·차이 비교 ===== */
+var plans=[{name:'A안',items:cart}], activePlan=0, planSeq=1, cmpBase=0, cmpTarget=1, _keySeq=1;
+function _newKey(){ return 'k'+Date.now().toString(36)+(_keySeq++); }
+function ensureKeys(items){ items.forEach(function(it){ if(!it._key) it._key=_newKey(); }); }
+function syncActivePlan(){ plans[activePlan].items=cart; }
+function renderPlanBar(){
+  var el=document.getElementById('planBar'); if(!el) return;
+  syncActivePlan();
+  if(cart.length===0 && plans.length===1){ el.style.display='none'; return; }
+  var h='<div class="plan-bar">';
+  plans.forEach(function(p,i){
+    h+='<button type="button" class="plan-chip'+(i===activePlan?' on':'')+'" onclick="switchPlan('+i+')">'+esc(p.name)+(p.items.length?' <small>'+p.items.length+'</small>':'')+'</button>';
+  });
+  if(plans.length<5) h+='<button type="button" class="plan-chip add" onclick="clonePlan()">＋ 복제</button>';
+  h+='<span class="plan-sp"></span>';
+  if(plans.length>1) h+='<button type="button" class="plan-act" onclick="openCompare()">비교</button><button type="button" class="plan-act" onclick="deletePlan()">삭제</button>';
+  h+='</div>';
+  el.innerHTML=h; el.style.display='block';
+}
+function clonePlan(){
+  if(plans.length>=5) return;
+  syncActivePlan(); ensureKeys(cart);
+  var copy=JSON.parse(JSON.stringify(cart)).map(function(it,n){
+    it.id=Date.now()+Math.random()+n; it.inQuote=false;
+    delete it._detailOpen; delete it._new; delete it._bulkSkip;
+    return it;
+  });
+  planSeq++;
+  plans.push({name:String.fromCharCode(64+planSeq)+'안', items:copy});
+  switchPlan(plans.length-1);
+}
+function switchPlan(n){
+  if(n===activePlan||!plans[n]) return;
+  syncActivePlan();
+  cart.forEach(function(it){ it._detailOpen=false; delete it._new; });
+  activePlan=n; cart=plans[n].items;
+  cartSel={}; selectMode=false; _undoDel=null;
+  var t=document.getElementById('undoToast'); if(t) t.style.display='none';
+  renderCart();
+}
+function deletePlan(){
+  if(plans.length<2) return;
+  if(!confirm(plans[activePlan].name+'을 삭제할까요?\n이 안에 담긴 제품 설정이 사라집니다.')) return;
+  plans.splice(activePlan,1);
+  activePlan=Math.max(0,activePlan-1); cart=plans[activePlan].items;
+  cartSel={}; selectMode=false; _undoDel=null;
+  renderCart();
+}
+
+function dWon(n){ return (n>0?'+':n<0?'−':'±')+won(Math.abs(n)); }
+function dCls(n){ return n>0?'up':(n<0?'down':'zero'); }
+function itemFacts(it){
+  var d=it.discounts||{}, cash=it.구매방법==='cash';
+  var sel=it.별매품선택||{};
+  var bmp=Object.keys(sel).filter(function(k){return sel[k]&&sel[k].on;}).map(function(k){ return k+((sel[k].cnt>1)?'×'+sel[k].cnt:'')+(sel[k].mode==='cash'?'(일시불)':''); }).join(', ')||'없음';
+  var s2='없음'; if(it.선납==='선납2'&&it.s2){ s2='등급 '+it.s2.grade+' · 옵션 '+((it.s2.oi||0)+1)+' · '+(it.s2.kind==='manwon'?'1만원':'반값')+' '+(it.s2.반값월||0)+'개월'; }
+  var cashDisc={none:'없음','10':'-10%','15':'-15%','1010':'-10%+10%'}[it.일시불할인||'none']||'없음';
+  var rrDisc={none:'없음','3':'-3%','6':'-6%'}[it.재렌탈할인||'none']||'없음';
+  var pdM=function(m){ return m?(' '+m+'개월'):' 전기간'; };
+  return [
+    ['모델',it.모델명],
+    ['구매방법',cash?'일시불':(it.isRerental?'재렌탈':'신규')],
+    ['약정',cash?'-':yakjLabel(it.약정년)],
+    ['관리방법',cash?'-':(it.관리방법||'-')],
+    ['관리주기',cash?'-':((it.관리주기&&it.관리주기!=='-')?it.관리주기:'-')],
+    ['할인',cash?cashDisc:(it.isRerental?rrDisc:bulkDesc(it,'disc'))],
+    ['선납',(it.선납&&it.선납!=='none')?(it.선납==='선납2'?'선납2':it.선납+'선납'):'없음'],
+    ['선납2 설정',s2],
+    ['반값',(!cash&&d.반값)?('적용'+pdM(it.반값개월)):'없음'],
+    ['1만원 청구',(!cash&&d.만원)?('적용'+pdM(it.만원개월)):'없음'],
+    ['재렌탈 1년 할인',it.재렌탈1년on?'적용':'없음'],
+    ['타사보상',it.tasabosangOn?'적용':'없음'],
+    ['코라솔',((it.kors||[]).filter(function(k){return k.on;}).length)+'건'],
+    ['별매품',bmp],
+    ['지로납부',it.지로On?'적용':'없음']
+  ];
+}
+function diffPlans(A,B){
+  ensureKeys(A); ensureKeys(B);
+  var mapA={}, mapB={}; A.forEach(function(x){mapA[x._key]=x;}); B.forEach(function(x){mapB[x._key]=x;});
+  var changed=[], same=[], removed=[], added=[];
+  A.forEach(function(a){
+    var b=mapB[a._key];
+    if(!b){ removed.push(a); return; }
+    var fa=itemFacts(a), fb=itemFacts(b), ch=[];
+    fa.forEach(function(p,n){ if(p[1]!==fb[n][1]) ch.push([p[0],p[1],fb[n][1]]); });
+    var pa=betaPriceNum(a), pb=betaPriceNum(b);
+    if(ch.length||pa.kind!==pb.kind||pa.n!==pb.n) changed.push({a:a,b:b,ch:ch,pa:pa,pb:pb}); else same.push(a);
+  });
+  B.forEach(function(b){ if(!mapA[b._key]) added.push(b); });
+  return {changed:changed,same:same,removed:removed,added:added};
+}
+function planStats(items){
+  var T=calcTotals(items), S=betaSummary(T), tl=T.timeline;
+  return {T:T,S:S,tl:tl,months:tl.length?tl[tl.length-1].to:0,first:tl.length?tl[0].total:0,last:tl.length?tl[tl.length-1].total:0};
+}
+function tlLabel(seg){ return seg.from===seg.to?seg.from+'개월':seg.from+'~'+seg.to+'개월'; }
+function openCompare(){
+  syncActivePlan();
+  if(plans.length<2) return;
+  cmpBase=0; cmpTarget=(activePlan!==0)?activePlan:1;
+  var _ut=document.getElementById('undoToast'); if(_ut) _ut.style.display='none';
+  renderCompare();
+  document.getElementById('cmpPage').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeCompare(){
+  document.getElementById('cmpPage').classList.remove('on');
+  document.body.style.overflow='';
+}
+function renderCompare(){
+  var body=document.getElementById('cmpBody');
+  if(cmpBase>=plans.length) cmpBase=0; if(cmpTarget>=plans.length) cmpTarget=plans.length-1;
+  var A=plans[cmpBase], B=plans[cmpTarget];
+  var opt=function(sel){ return plans.map(function(p,i){ return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+esc(p.name)+'</option>'; }).join(''); };
+  var h='<div class="cmp-sel"><label>기준<select onchange="cmpBase=+this.value;renderCompare()">'+opt(cmpBase)+'</select></label><label>비교<select onchange="cmpTarget=+this.value;renderCompare()">'+opt(cmpTarget)+'</select></label></div>';
+  if(cmpBase===cmpTarget){ body.innerHTML=h+'<p class="cmp-note">기준과 비교가 같은 안입니다. 서로 다른 안을 선택해 주세요.</p>'; return; }
+  var sa=planStats(A.items), sb=planStats(B.items);
+  var dir=B.name+' − '+A.name;
+  var multi=sa.tl.length>1||sb.tl.length>1;
+  h+='<div class="cmp-hl"><div class="dir">차이 = '+esc(dir)+' (+ 는 '+esc(B.name)+'이 더 비쌈)</div>'
+    +'<div class="r"><span>월 청구액'+(multi?' (첫 구간)':'')+'</span><b class="'+dCls(sb.first-sa.first)+'">'+dWon(sb.first-sa.first)+'</b></div>'
+    +'<div class="r"><span>초기 납부액</span><b class="'+dCls(sb.S.init-sa.S.init)+'">'+dWon(sb.S.init-sa.S.init)+'</b></div>'
+    +'<div class="r"><span>총 납부액</span><b class="'+dCls(sb.S.total-sa.S.total)+'">'+dWon(sb.S.total-sa.S.total)+'</b></div></div>';
+  if(sa.months!==sb.months){
+    h+='<div class="cmp-warn">최장 약정기간이 달라서 총 납부액은 같은 기간 기준이 아닙니다 ('+esc(A.name)+' '+sa.months+'개월 · '+esc(B.name)+' '+sb.months+'개월). 각 안의 품목별 약정기간 전체 합계를 비교한 값입니다.</div>';
+  }
+  var row=function(l,x,y){ return '<div class="cmp-row"><span>'+l+'</span><span>'+won(x)+' → '+won(y)+'</span></div>'; };
+  h+='<div class="cmp-card"><h4>'+esc(A.name)+' → '+esc(B.name)+'</h4>'
+    +row('월 청구액'+(multi?' (첫 구간)':''),sa.first,sb.first)
+    +row('초기 납부액',sa.S.init,sb.S.init)
+    +row('총 납부액',sa.S.total,sb.S.total)+'</div>';
+  // 같은 개월 구간끼리 맞춰서 비교 (한쪽에 청구가 끝난 구간은 '종료'로 표시)
+  var ends={}; sa.tl.concat(sb.tl).forEach(function(seg){ ends[seg.to]=true; });
+  var bounds=Object.keys(ends).map(Number).sort(function(x,y){return x-y;});
+  var segAt=function(tl,m){ return tl.filter(function(g){return m>=g.from&&m<=g.to;})[0]; };
+  var rows=[], prevEnd=0;
+  bounds.forEach(function(e){
+    var start=prevEnd+1, ga=segAt(sa.tl,start), gb=segAt(sb.tl,start);
+    var va=ga?ga.total:null, vb=gb?gb.total:null;
+    var last=rows[rows.length-1];
+    if(last&&last.va===va&&last.vb===vb) last.to=e; else rows.push({from:start,to:e,va:va,vb:vb});
+    prevEnd=e;
+  });
+  h+='<div class="cmp-card"><h4>개월 구간별 월 청구액 ('+esc(A.name)+' → '+esc(B.name)+')</h4>'+(rows.length?rows.map(function(r){
+    var dv=(r.vb||0)-(r.va||0);
+    return '<div class="cmp-row"><span>'+tlLabel(r)+'</span><span>'+(r.va===null?'종료':won(r.va))+' → '+(r.vb===null?'종료':won(r.vb))+' <em style="font-style:normal;color:'+(dv>0?'#B45309':(dv<0?'#15803D':'#7B8190'))+'">('+dWon(dv)+')</em></span></div>';
+  }).join(''):'<p class="cmp-note">월 청구 구간이 없습니다.</p>')+'</div>';
+  h+='<p class="cmp-note">비교 범위: 각 안에 담긴 품목의 약정기간 전체 납부 스케줄 합계. 초기 납부액(일시불·선납금·별매품 일시불)은 총 납부액에 포함되어 있으며, 약정 종료 후 비용과 예상 카드 혜택은 포함하지 않습니다.</p>';
+  var D=diffPlans(A.items,B.items);
+  var nDiff=D.changed.length+D.added.length+D.removed.length;
+  h+='<h4 style="font-size:14px;margin:14px 2px 8px;color:var(--ink)">달라진 품목 '+nDiff+'개</h4>';
+  var priceTxt=function(p){ return p.kind==='cash'?'일시불 '+won(p.n):(p.kind==='sunap'?'선납 '+won(p.n):won(p.n)+'/월'); };
+  D.changed.forEach(function(c){
+    var line=c.pa.kind===c.pb.kind?(' <b>'+dWon(c.pb.n-c.pa.n)+(c.pa.kind==='month'?'/월':'')+'</b>'):'';
+    h+='<div class="cmp-item"><div class="nm"><span>'+esc(c.a.제품명)+'</span></div>'
+      +(c.ch.length?c.ch.map(function(x){ return '<div class="ch">'+esc(x[0])+': '+esc(x[1])+' → <b>'+esc(x[2])+'</b></div>'; }).join(''):'<div class="ch">금액 변경</div>')
+      +'<div class="px"><span>'+priceTxt(c.pa)+' → '+priceTxt(c.pb)+'</span><span>'+line+'</span></div></div>';
+  });
+  D.added.forEach(function(b){
+    h+='<div class="cmp-item"><div class="nm"><span>'+esc(b.제품명)+'</span><small class="add">'+esc(B.name)+'에 추가</small></div><div class="ch">'+esc(b.모델명)+'</div><div class="px"><span>'+priceTxt(betaPriceNum(b))+'</span><span></span></div></div>';
+  });
+  D.removed.forEach(function(a){
+    h+='<div class="cmp-item"><div class="nm"><span>'+esc(a.제품명)+'</span><small class="del">'+esc(B.name)+'에서 제외</small></div><div class="ch">'+esc(a.모델명)+'</div><div class="px"><span>'+esc(A.name)+' '+priceTxt(betaPriceNum(a))+'</span><span></span></div></div>';
+  });
+  if(!nDiff) h+='<p class="cmp-note">두 안의 품목과 조건이 모두 같습니다.</p>';
+  if(D.same.length){
+    h+='<details class="cmp-same"><summary>동일한 조건 '+D.same.length+'개 보기</summary>'+D.same.map(function(a){
+      return '<div class="cmp-item"><div class="nm"><span>'+esc(a.제품명)+'</span></div><div class="px" style="border:none;margin:0;padding:0"><span>'+priceTxt(betaPriceNum(a))+'</span><span></span></div></div>';
+    }).join('')+'</details>';
+  }
+  body.innerHTML=h;
+}
 
 /* ===== 베타: 플로팅 명령 휠 (상단 탭 기능 이관) ===== */
 (function(){

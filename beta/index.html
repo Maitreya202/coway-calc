@@ -673,7 +673,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
     <div id="planBar" style="display:none"></div>
     <div id="masterCheckBar" class="bar row" style="display:none">
       <span id="masterChkTitle"></span>
-      <span style="display:flex;gap:6px;flex-shrink:0"><button type="button" id="selModeBtn" class="qd-btn" onclick="toggleSelectMode()">선택 편집</button><button type="button" id="benBtn" class="qd-btn" onclick="openBenefitsFromBar()">혜택</button><button type="button" class="qd-btn primary" onclick="switchMainTab('estimate');openSearchModal()">＋ 추가</button></span>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button type="button" id="selModeBtn" class="qd-btn" onclick="toggleSelectMode()">선택</button><button type="button" id="benBtn" class="qd-btn" onclick="openBenefitsFromBar()">할인·결제</button><button type="button" class="qd-btn primary" onclick="switchMainTab('estimate');openSearchModal()">＋ 상품 추가</button></span>
     </div>
     <div id="masterChkWrap" class="bar" style="display:none">
       <label for="masterChk"><input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0"><span id="masterChkLabel">전체 선택</span></label>
@@ -681,7 +681,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
-    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>혜택</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
+    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>할인·결제</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -864,7 +864,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
 </div>
 <div class="cmp-page" id="benPage">
-  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>혜택 설정</b></div>
+  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>할인·결제 설정</b></div>
   <div class="cmp-body" id="benBody"></div>
   <div class="ben-bar" id="benBar" style="display:none"></div>
 </div>
@@ -1943,7 +1943,7 @@ function renderCart() {
   var actionBtns = document.getElementById('actionBtns');
   if (cart.length === 0) {
     syncDetailSheet(null);
-    area.innerHTML = '<p style="text-align:center;color:#7B8190;font-size:13px;padding:36px 16px;margin:0;border-bottom:1px solid #E6E0D2">담긴 제품이 없습니다.<br>＋ 추가로 제품을 담아 주세요.</p>'; empty.style.display = 'none'; totalBar.style.display = 'none'; actionBtns.style.display = 'none';
+    area.innerHTML = '<p style="text-align:center;color:#7B8190;font-size:13px;padding:36px 16px;margin:0;border-bottom:1px solid #E6E0D2">담긴 제품이 없습니다.<br>＋ 상품 추가로 제품을 담아 주세요.</p>'; empty.style.display = 'none'; totalBar.style.display = 'none'; actionBtns.style.display = 'none';
     updateMasterChk();
     var _ub=document.getElementById('updateBtn'); if(_ub) _ub.style.display='none';
     updateQuoteBasketBar(); // 담아둔 견적(quoteBasket)은 cart와 별개이므로 남아있으면 계속 표시
@@ -2322,8 +2322,8 @@ function updateBenRow(){
   cart.forEach(function(it){ itemBenChips(it).forEach(function(l){ if(!seen[l]){ seen[l]=1; a.push(l); } }); });
   var cid=(plans[activePlan]&&plans[activePlan].card)||'';
   if(cid&&typeof CARDS!=='undefined'){ var c=CARDS.filter(function(x){return x.id===cid;})[0]; if(c) a.push(c.name); }
-  el.textContent=a.length?a.join(' · '):'적용 중인 혜택 없음'; el.className=a.length?'on':'';
-  var bb=document.getElementById('benBtn'); if(bb){ bb.style.display=cart.length?'':'none'; bb.innerHTML='혜택'+(a.length?' <span class="bn">'+a.length+'</span>':''); }
+  el.textContent=a.length?a.join(' · '):'적용 없음'; el.className=a.length?'on':'';
+  var bb=document.getElementById('benBtn'); if(bb){ bb.style.display=cart.length?'':'none'; bb.innerHTML='할인·결제'+(a.length?' <span class="bn">'+a.length+'</span>':''); }
 }
 function updateMasterChk(){
   updateBenRow();
@@ -2350,7 +2350,7 @@ function updateMasterChk(){
   var mix=ks.length>1?'약정 혼합 '+ks.map(function(k){return yakjLabel(k)+' '+tc[k];}).join(' · '):'';
   ttl.innerHTML='<strong>'+cart.length+'개 제품</strong>'+(selectMode?' <small>· '+selCnt+'개 선택</small>':(mix?'<small>'+mix+'</small>':''));
   cnt.textContent='';
-  btn.textContent=selectMode?'선택 완료':'선택 편집';
+  btn.textContent=selectMode?'완료':'선택';
 }
 
 function addToQuoteBasket(){
@@ -5134,7 +5134,7 @@ function renderCompare(){
       goEstimate();
       var all=m[1]==='전체', N=+m[2];
       var idxs=all?cart.map(function(_,i){return i;}):selIdx();
-      if(!idxs.length){ msg(all?'담긴 제품이 없습니다.':'선택한 제품이 없습니다.\n명령창을 닫고 ‘선택 편집’에서 제품을 골라 주세요.'); return; }
+      if(!idxs.length){ msg(all?'담긴 제품이 없습니다.':'선택한 제품이 없습니다.\n명령창을 닫고 ‘선택’에서 제품을 골라 주세요.'); return; }
       var ok=idxs.filter(function(i){return bulkCanApply(cart[i],'term',N);});
       var bad=idxs.filter(function(i){return ok.indexOf(i)<0;});
       msg(plans[activePlan].name+' · '+idxs.length+'개 대상\n'+ok.length+'개 → '+N+'년 적용 가능'
@@ -5176,7 +5176,7 @@ function renderCompare(){
       ctx(); remember(cmd); msg(cmd==='전체 선택'?cart.length+'개 제품을 선택했습니다.':'선택을 해제했습니다.'); return;
     }
     if(cmd==='일괄변경'||cmd==='선택 복사'||cmd==='견적 담기'||cmd==='선택 견적서'){
-      if(!selIdx().length){ msg('선택한 제품이 없습니다.\n명령창을 닫고 ‘선택 편집’에서 제품을 골라 주세요.'); return; }
+      if(!selIdx().length){ msg('선택한 제품이 없습니다.\n명령창을 닫고 ‘선택’에서 제품을 골라 주세요.'); return; }
       remember(cmd); close(); goEstimate();
       if(cmd==='일괄변경') openBulkChangeModal(); else if(cmd==='선택 복사') copySelectedItems(); else if(cmd==='견적 담기') addToQuoteBasket(); else openQuoteInfoModal('selected');
       return;

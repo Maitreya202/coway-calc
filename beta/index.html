@@ -425,6 +425,32 @@ body.has-bbar .wrap { padding-bottom:0; }
 .ben-chk { display:flex; align-items:flex-start; gap:8px; margin-top:10px; font-size:13px; font-weight:600; color:var(--ink); }
 .ben-chk input { width:17px; height:17px; accent-color:var(--brassF); margin-top:1px; flex-shrink:0; }
 .ben-chk small { font-weight:400; color:var(--sub); font-size:11px; }
+.ben-card { background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:8px; }
+.ben-card.open { border-color:var(--brass); }
+.ben-ch { display:flex; align-items:center; gap:10px; width:100%; min-height:56px; padding:10px 14px; border:0; background:transparent; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+.ben-ch .t { flex:1; min-width:0; }
+.ben-ch .t b { display:block; font-size:14px; color:var(--ink); }
+.ben-ch .t small { display:block; font-size:11px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.ben-st { font-size:11px; font-weight:700; padding:4px 8px; border-radius:7px; background:#F1EFEA; color:#77736d; white-space:nowrap; }
+.ben-st.ok { background:#E7F5EC; color:#15803D; }
+.ben-chev { color:#a39d90; transition:transform .2s; flex-shrink:0; }
+.ben-card.open .ben-chev { transform:rotate(180deg); }
+.ben-cb { padding:2px 14px 14px; border-top:1px solid var(--line); }
+.ben-cb select, .ben-cb input[type=number] { width:100%; font:inherit; font-size:16px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:10px; min-height:44px; padding:8px 10px; }
+.ben-cnt { font-style:normal; color:var(--brassF); }
+.ben-acts { display:flex; gap:8px; margin-top:12px; }
+.ben-btn { min-height:44px; border-radius:10px; font:inherit; font-weight:800; padding:0 16px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; }
+.ben-btn.pri { flex:1; background:var(--brassF); border-color:var(--brassF); color:#fff; }
+.ben-btn.rel { flex:1; color:#B91C1C; border-color:#E3B7B7; }
+.ben-btn:disabled { opacity:.4; cursor:not-allowed; }
+.ben-val { font-size:11px; color:#B45309; margin:7px 0 0; }
+.ben-bar { flex-shrink:0; display:flex; align-items:center; gap:12px; background:#fff; border-top:1px solid var(--line); padding:10px 14px max(10px, env(safe-area-inset-bottom)); }
+.ben-bar .s { flex:1; min-width:0; font-size:11px; color:var(--sub); }
+.ben-bar .s b { display:block; font-size:16px; color:var(--ink); margin:1px 0; }
+.ben-bar .s i { font-style:normal; font-weight:700; }
+.ben-bar .s i.dn { color:#15803D; }
+.ben-bar .s i.up { color:#B45309; }
+.ben-bar button { min-height:46px; padding:0 22px; border:0; border-radius:10px; background:var(--brassF); color:#fff; font:inherit; font-weight:800; cursor:pointer; }
 .ben-lead { font-size:12px; color:var(--sub); margin:2px 2px 12px; }
 .ben-field { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 13px; margin-bottom:12px; }
 .ben-field > label, .ben-two label, .ben-sub { display:block; font-size:12px; font-weight:700; color:var(--ink); margin:0 0 6px; }
@@ -833,8 +859,9 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
 </div>
 <div class="cmp-page" id="benPage">
-  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>결합 · 납부 혜택</b></div>
+  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>혜택 설정</b></div>
   <div class="cmp-body" id="benBody"></div>
+  <div class="ben-bar" id="benBar" style="display:none"></div>
 </div>
 <div class="cmp-page" id="cmpPage">
   <div class="cmp-head"><button type="button" onclick="closeCompare()">&#8249; 견적으로</button><b>견적 차이 비교</b></div>
@@ -4706,29 +4733,40 @@ function benHas(kind,it){
   var t=benS.sun.type; if(t==='none') return false;
   return it.선납===(t==='period'?benS.sun.period:'선납2');
 }
+function benTop(o){ var b='',n=0; for(var k in o){ if(o[k]>n){ n=o[k]; b=k; } } return b; }
+/* 혜택별 초안(draft) 초기화: 현재 견적의 적용 상태에서 계산. 적용된 제품이 없으면 첫 실제 옵션을 기본 선택 */
+function benInitKind(kind){
+  if(kind==='kor'){
+    var kc={}; cart.forEach(function(it){ (it.kors||[]).forEach(function(k){ if(k.on) kc[k.prod]=(kc[k.prod]||0)+1; }); });
+    var kp=benTop(kc), fk=null;
+    cart.forEach(function(it){ (it.kors||[]).forEach(function(k){ if(!fk&&k.on&&k.prod===kp) fk=k; }); });
+    if(!kp) kp=Object.keys(KORASOL)[0]||'';
+    benS.kor={prod:kp,si:fk?fk.si:0,cnt:fk?fk.cnt:1,sel:{}};
+  } else if(kind==='sun'){
+    var sc={}, s2=null;
+    cart.forEach(function(it){ var s=it.선납||'none'; if(s!=='none') sc[s]=(sc[s]||0)+1; if(!s2&&it.선납==='선납2'&&it.s2) s2=it.s2; });
+    var b=benTop(sc);
+    benS.sun={type:(b==='선납2')?'선납2':'period',period:(b==='36'||b==='24'||b==='60')?b:'36',grade:s2?s2.grade:'A',oi:s2?s2.oi:0,kind:s2?s2.kind:'half',smo:s2?(s2.반값월||0):0,sel:{}};
+  } else if(kind==='disc'){
+    var dc={}; cart.forEach(function(it){ var dd=benDiscOf(it); if(dd!=='none') dc[dd]=(dc[dd]||0)+1; });
+    var dt=benTop(dc), fdI=null;
+    cart.forEach(function(it){ if(!fdI&&dt&&benDiscOf(it)===dt) fdI=it; });
+    var fdd=fdI?(fdI.discounts||{}):{};
+    benS.disc={type:dt||'결합',combo:(dt==='타사보상'?(fdd.동시구매?'동시구매':(fdd.결합?'결합':'none')):'none'),t1:!!(fdI&&fdI.tasab1년on),sel:{}};
+  } else if(kind==='per'){
+    var pc={}; cart.forEach(function(it){ var pk=benPerOf(it); if(pk!=='none') pc[pk]=(pc[pk]||0)+1; });
+    var pt=benTop(pc), fpI=null;
+    cart.forEach(function(it){ if(!fpI&&pt&&benPerOf(it)===pt) fpI=it; });
+    benS.per={type:pt||'half',months:fpI?((pt==='half'?fpI.반값개월:fpI.만원개월)||0):0,sel:{}};
+  } else if(kind==='jiro'){
+    benS.jiro={on:true,sel:{}};
+  }
+  benPre(kind);
+}
 function benInit(){
-  var kc={}, sc={}, dc={}, pc={}, jc=0, first=null;
-  cart.forEach(function(it){
-    (it.kors||[]).forEach(function(k){ if(k.on){ kc[k.prod]=(kc[k.prod]||0)+1; if(!first) first=k; } });
-    var s=it.선납||'none'; if(s!=='none') sc[s]=(sc[s]||0)+1;
-    var dd=benDiscOf(it); if(dd!=='none') dc[dd]=(dc[dd]||0)+1;
-    var pk=benPerOf(it); if(pk!=='none') pc[pk]=(pc[pk]||0)+1;
-    if(it.지로On) jc++;
-  });
-  var top=function(o){ var b='',n=0; for(var k in o){ if(o[k]>n){ n=o[k]; b=k; } } return b; };
-  var kp=top(kc);
-  var fk=null; cart.forEach(function(it){ (it.kors||[]).forEach(function(k){ if(!fk&&k.on&&k.prod===kp) fk=k; }); });
-  var s2=null; cart.forEach(function(it){ if(!s2&&it.선납==='선납2'&&it.s2) s2=it.s2; });
-  var dt=top(dc), pt=top(pc), fdI=null, fpI=null;
-  cart.forEach(function(it){ if(!fdI&&dt&&benDiscOf(it)===dt) fdI=it; if(!fpI&&pt&&benPerOf(it)===pt) fpI=it; });
-  var fdd=fdI?(fdI.discounts||{}):{};
-  benS={ kor:{prod:kp,si:fk?fk.si:0,cnt:fk?fk.cnt:1,sel:{}},
-         sun:{type:(function(){var b=top(sc); return !b?'none':(b==='선납2'?'선납2':'period');})(),period:(function(){var b=top(sc); return (b==='36'||b==='24'||b==='60')?b:'36';})(),grade:s2?s2.grade:'A',oi:s2?s2.oi:0,kind:s2?s2.kind:'half',smo:s2?(s2.반값월||0):0,sel:{}},
-         disc:{type:dt||'none',combo:(dt==='타사보상'?(fdd.동시구매?'동시구매':(fdd.결합?'결합':'none')):'none'),t1:!!(fdI&&fdI.tasab1년on),sel:{}},
-         per:{type:pt||'none',months:fpI?((pt==='half'?fpI.반값개월:fpI.만원개월)||0):0,sel:{}},
-         jiro:{on:jc>0,sel:{}},
-         msg:{} };
-  ['kor','sun','disc','per','jiro'].forEach(function(k){ benPre(k); });
+  benS={msg:{},open:'disc'};
+  ['kor','sun','disc','per','jiro'].forEach(benInitKind);
+  var S=betaSummary(calcTotals()); benS.base={month:S.month,total:S.total};
 }
 function benAny(kind,it){
   if(kind==='kor') return (it.kors||[]).some(function(k){return k.on;});
@@ -4737,8 +4775,10 @@ function benAny(kind,it){
   if(kind==='jiro') return !!it.지로On;
   return (!!it.선납&&it.선납!=='none');
 }
+function benAnyKind(kind){ return cart.some(function(it){ return benAny(kind,it); }); }
+function benRel(kind){ return kind==='kor'?!benS.kor.prod:(kind==='jiro')?!benS.jiro.on:benS[kind].type==='none'; }
 function benPre(kind){
-  var rel=(kind==='kor')?!benS.kor.prod:(kind==='jiro')?!benS.jiro.on:benS[kind].type==='none'; // 미적용 선택 = 해제 모드: 현재 적용 중인 제품을 미리 체크
+  var rel=benRel(kind); // 미적용 선택 = 해제 모드: 현재 적용 중인 제품을 미리 체크
   benS[kind].sel={}; cart.forEach(function(it,i){ if(!benElig(kind,it)&&(rel?benAny(kind,it):benHas(kind,it))) benS[kind].sel[i]=true; });
 }
 function benEligX(kind,it){
@@ -4775,25 +4815,27 @@ function benSet(kind,key,val){
   if((key==='months'||key==='smo')&&o[key]<0) o[key]=0;
   if(key==='prod'||key==='type'||key==='period'||key==='on'){ if(kind==='kor'||kind==='sun'){ o.si=0; o.oi=0; } benPre(kind); }
   if(key==='grade') o.oi=0;
-  benS.msg[kind]='';
   benRender();
 }
-function benToggle(kind,i,on){ if(on) benS[kind].sel[i]=true; else delete benS[kind].sel[i]; benS.msg[kind]=''; benRender(); }
+function benToggle(kind,i,on){ if(on) benS[kind].sel[i]=true; else delete benS[kind].sel[i]; benRender(); }
 function benAll(kind,on){
   benS[kind].sel={};
   if(on) cart.forEach(function(it,i){ if(!benElig(kind,it)) benS[kind].sel[i]=true; });
-  benS.msg[kind]=''; benRender();
+  benRender();
 }
 function benLabel(kind,o){
   if(kind==='kor') return o.prod?KORASOL[o.prod].name:'미적용';
   if(kind==='disc') return o.type==='none'?'미적용':o.type;
   if(kind==='per') return o.type==='none'?'미적용':((o.type==='half'?'반값':'1만원 청구')+(o.months?' '+o.months+'개월':' 전기간'));
-  if(kind==='jiro') return o.on?'지로납부':'미적용';
+  if(kind==='jiro') return o.on?'지로납부':'자동납부';
   return o.type==='none'?'미적용':o.type==='선납2'?'분산 선납(선납2)':o.period+'선납';
 }
+var _benFlT;
+function benFlash(m){ var f=document.getElementById('bflash'); if(!f) return; f.textContent=m; f.classList.add('on'); clearTimeout(_benFlT); _benFlT=setTimeout(function(){f.classList.remove('on');},1900); }
 function benApply(kind){
-  var o=benS[kind], idxs=Object.keys(o.sel).map(Number).filter(function(i){return cart[i]&&!benElig(kind,cart[i]);});
-  if(!idxs.length){ benS.msg[kind]='적용할 제품을 선택해 주세요.'; benRender(); return; }
+  var o=benS[kind], rel=benRel(kind);
+  var idxs=Object.keys(o.sel).map(Number).filter(function(i){return cart[i]&&!benElig(kind,cart[i]);});
+  if(!idxs.length) return;
   var flagsOff=function(it){ var d=it.discounts||{}; d.동시구매=d.결합=d.동시결합=d.페스타=d.반값=d.만원=false; it.discounts=d; };
   idxs.forEach(function(i){
     var it=cart[i];
@@ -4830,13 +4872,21 @@ function benApply(kind){
   });
   renderCart();
   var label=benLabel(kind,o);
-  benPre(kind); benS.msg[kind]=idxs.length+'개 제품에 '+label+' 적용 완료'; benRender();
+  benFlash(idxs.length+'개 제품'+(rel?'에서 해제했습니다':'에 '+label+' 적용했습니다'));
+  benInitKind(kind); benS.open=null; benRender();
 }
 function benCard(id){
   plans[activePlan].card=id||'';
   if(id) cardCurrentId=id;
+  benFlash(id?'제휴카드를 선택했습니다':'제휴카드를 해제했습니다');
   benRender();
 }
+function benOpen(kind){
+  benS.open=(benS.open===kind)?null:kind;
+  if(benS.open&&kind!=='card') benInitKind(kind);
+  benRender();
+}
+function benReset(kind){ benInitKind(kind); benRender(); }
 function benCur(kind,it){
   if(kind==='kor') return (it.kors||[]).filter(function(k){return k.on;}).map(function(k){return (KORASOL[k.prod]||{}).name||k.prod;}).join(', ');
   if(kind==='disc'){ var x=benDiscOf(it); return x==='none'?'':x; }
@@ -4845,68 +4895,91 @@ function benCur(kind,it){
   return (it.선납&&it.선납!=='none')?(it.선납==='선납2'?'분산 선납(선납2)':it.선납+'선납'):'';
 }
 function benList(kind){
-  var o=benS[kind], h='<div class="ben-match"><div class="ben-mh"><span>적용할 제품 선택</span><span><button type="button" class="ben-lnk" onclick="benAll(\''+kind+'\',true)">전체</button> · <button type="button" class="ben-lnk" onclick="benAll(\''+kind+'\',false)">해제</button></span></div>';
+  var o=benS[kind], rel=benRel(kind), nSel=Object.keys(o.sel).length;
+  var h='<div class="ben-match"><div class="ben-mh"><span>'+(rel?'해제할 제품':'적용할 제품')+' <em class="ben-cnt">선택 '+nSel+'/'+cart.length+'</em></span><span><button type="button" class="ben-lnk" onclick="benAll(\''+kind+'\',true)">전체</button> · <button type="button" class="ben-lnk" onclick="benAll(\''+kind+'\',false)">해제</button></span></div>';
   cart.forEach(function(it,i){
     var why=benElig(kind,it), cur=benCur(kind,it);
-    h+='<label class="ben-mrow'+(why?' off':'')+'"><input type="checkbox"'+(o.sel[i]?' checked':'')+(why?' disabled':'')+' onchange="benToggle(\''+kind+'\','+i+',this.checked)"><span class="n">'+esc(it.제품명)+'<small>'+yakjLabel(it.약정년)+(cur?' · 현재 '+esc(cur):' · 현재 미적용')+(why?' · <b>'+why+'</b>':'')+'</small></span></label>';
+    h+='<label class="ben-mrow'+(why?' off':'')+'"><input type="checkbox"'+(o.sel[i]?' checked':'')+(why?' disabled':'')+' onchange="benToggle(\''+kind+'\','+i+',this.checked)"><span class="n">'+esc(it.제품명)+'<small>'+(it.구매방법==='cash'?'일시불':yakjLabel(it.약정년))+(cur?' · 현재 '+esc(cur):' · 현재 미적용')+(why?' · <b>'+why+'</b>':'')+'</small></span></label>';
   });
   return h+'</div>';
 }
-function benGo(kind,on){ return '<button type="button" class="qd-btn primary ben-go" onclick="benApply(\''+kind+'\')">'+(on?'선택 제품에 적용':'선택 제품에서 해제')+'</button>'+(benS.msg[kind]?'<p class="ben-msg">'+esc(benS.msg[kind])+'</p>':''); }
+var BEN_KEYS=['disc','per','sun','kor','card','jiro'];
+var BEN_DEF={
+  disc:{t:'할인',d:'결합 · 동시구매 · 타사보상 등'},
+  per:{t:'특정 기간 할인',d:'반값 · 1만원 청구 (기간 설정)'},
+  sun:{t:'선납',d:'선납 · 분산 선납(선납2)'},
+  kor:{t:'코라솔',d:'코웨이 라이프솔루션 연동'},
+  card:{t:'제휴카드',d:'견적 전체 안내용 · 제품 선택 없음'},
+  jiro:{t:'납부 방법',d:'자동납부 · 지로 납부'}
+};
+function benStatus(kind){
+  if(kind==='card') return plans[activePlan].card?{t:'선택됨',c:'ok'}:{t:'미적용',c:''};
+  var n=cart.filter(function(it){return benAny(kind,it);}).length;
+  return n?{t:n+'개 제품 적용',c:'ok'}:{t:'미적용',c:''};
+}
+function benSummaryLine(kind){
+  if(kind==='card'){ var cid=plans[activePlan].card||''; var c=(typeof CARDS!=='undefined')?CARDS.filter(function(x){return x.id===cid;})[0]:null; return c?c.name:BEN_DEF.card.d; }
+  var seen={}, a=[]; cart.forEach(function(it){ var l=benCur(kind,it); if(l&&!seen[l]){ seen[l]=1; a.push(l); } });
+  return a.length?a.join(' · '):BEN_DEF[kind].d;
+}
+function benOpt(v,l,cur){ return '<option value="'+esc(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+esc(l)+'</option>'; }
+function benBody(kind){
+  var any=benAnyKind(kind), rel=benRel(kind), o=benS[kind], h='';
+  if(kind==='card'){
+    var cid=plans[activePlan].card||'';
+    return '<label class="ben-sub">제휴카드</label><select onchange="benCard(this.value)">'+benOpt('','미적용',cid)+((typeof CARDS!=='undefined')?CARDS.map(function(c){return benOpt(c.id,c.name,cid);}).join(''):'')+'</select>'
+      +'<p class="ben-hint">카드 청구할인은 제품별 적용이 아니라 견적 전체 안내용입니다. 렌탈 청구액·합계에는 반영하지 않습니다.'+(cid?' <button type="button" class="ben-lnk" onclick="closeBenefits();switchMainTab(\'card\')">카드 상세 ›</button>':'')+'</p>';
+  }
+  var f=function(arr){ return arr.filter(function(x){ return any||x[0]!=='none'; }); }; // 적용된 제품이 없으면 '미적용' 선택지는 숨김(해제할 대상이 없음)
+  if(kind==='disc'){
+    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'disc\',\'type\',this.value)">'+f([['none','미적용'],['결합','결합 (-5%)'],['동시구매','동시구매 (-10%)'],['동시결합','동시결합 (10%+5%)'],['페스타','페스타 (-15%)'],['타사보상','타사보상']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
+    if(o.type==='타사보상') h+='<label class="ben-sub">함께 적용</label><select onchange="benSet(\'disc\',\'combo\',this.value)">'+benOpt('none','없음',o.combo)+benOpt('동시구매','동시구매 (-10%)',o.combo)+benOpt('결합','결합 (-5%)',o.combo)+'</select>'
+      +'<label class="ben-chk"><input type="checkbox"'+(o.t1?' checked':'')+' onchange="benSet(\'disc\',\'t1\',this.checked)"><span>1년간 추가 할인 <small>(약정별 조건이 있는 제품만 적용)</small></span></label>';
+    if(!rel) h+='<p class="ben-hint">신규 렌탈 제품에 적용됩니다. 재렌탈 할인은 제품 편집에서, 일시불 할인은 일시불 제품 편집에서 설정합니다.</p>';
+  } else if(kind==='per'){
+    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'per\',\'type\',this.value)">'+f([['none','미적용'],['half','반값 (-50%)'],['manwon','1만원 청구']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
+    if(!rel) h+='<label class="ben-sub">적용 기간 (개월, 0=전기간)</label><input type="number" min="0" value="'+o.months+'" onchange="benSet(\'per\',\'months\',this.value)"><p class="ben-hint">기간이 지나면 정상 요금으로 돌아갑니다. 약정 개월 수를 넘는 값은 제품별로 약정 기간까지만 반영됩니다.</p>';
+  } else if(kind==='sun'){
+    var G=SUNAP2[o.grade]||null;
+    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'sun\',\'type\',this.value)">'+f([['none','미적용'],['period','선납'],['선납2','분산 선납(선납2)']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
+    if(o.type==='선납2'&&G){
+      h+='<div class="ben-two"><div><label>구분</label><select onchange="benSet(\'sun\',\'grade\',this.value)">'+Object.keys(SUNAP2).map(function(k){return benOpt(k,k+'구분: '+SUNAP2[k].label,o.grade);}).join('')+'</select></div><div><label>추가 할인</label><select onchange="benSet(\'sun\',\'kind\',this.value)">'+benOpt('half','반값 (-50%)',o.kind)+benOpt('manwon','1만원 청구',o.kind)+'</select></div></div>'
+        +'<label class="ben-sub">선납금</label><select onchange="benSet(\'sun\',\'oi\',this.value)">'+G.opts.map(function(x,i){return benOpt(i,won(x.amt)+' 선납 (할인 '+won(x.disc)+')',o.oi);}).join('')+'</select>'
+        +'<label class="ben-sub">'+(o.kind==='manwon'?'1만원 청구':'반값')+' 적용 기간 (개월, 0=없음)</label><input type="number" min="0" value="'+o.smo+'" onchange="benSet(\'sun\',\'smo\',this.value)">';
+    }
+    if(o.type==='period') h+='<label class="ben-sub">선납 종류</label><select onchange="benSet(\'sun\',\'period\',this.value)">'+[['36','36선납 (36개월치 일시납, 10% 할인)'],['24','24선납 (24개월치 일시납, 8% 할인)'],['60','60선납 (36개월 10%↓ + 24개월 8%↓)']].map(function(x){return benOpt(x[0],x[1],o.period);}).join('')+'</select>';
+    if(!rel) h+='<p class="ben-hint">선납금은 할인액이 아니라 초기 납부액으로 따로 표시합니다.'+(o.type==='period'?' 코라솔 결합 제품에는 일반 선납을 적용할 수 없습니다.':'')+'</p>';
+  } else if(kind==='kor'){
+    var kk=o.prod?KORASOL[o.prod]:null;
+    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'kor\',\'prod\',this.value)">'+(any?benOpt('','미적용',o.prod):'')+Object.keys(KORASOL).map(function(key){return benOpt(key,KORASOL[key].name,o.prod);}).join('')+'</select>';
+    if(kk){
+      var sp=kk.지원[o.si]||kk.지원[0];
+      h+='<div class="ben-two"><div><label>지원 기간</label><select onchange="benSet(\'kor\',\'si\',this.value)">'+kk.지원.map(function(s,i){return benOpt(i,s.months+'개월',o.si);}).join('')+'</select></div><div><label>구좌 수</label><input type="number" min="1" value="'+o.cnt+'" onchange="benSet(\'kor\',\'cnt\',this.value)"></div></div>'
+        +'<p class="ben-hint">구좌당 렌탈료 감액 월 '+won(sp.monthly)+' · 별도 납입금 월 '+won(kk.납부금)+' × '+kk.납부회차+'회 (렌탈 청구액과 별도)</p>';
+    }
+  } else if(kind==='jiro'){
+    h+='<label class="ben-sub">납부 방법</label><select onchange="benSet(\'jiro\',\'on\',this.value)">'+(any?benOpt('0','자동납부 (기본)',o.on?'1':'0'):'')+benOpt('1','지로 납부',o.on?'1':'0')+'</select>';
+    if(!rel) h+='<p class="ben-hint">지로 납부는 자동납부 할인이 빠져 월 +'+won(JIRO_SURCHARGE)+'이 가산됩니다. 렌탈 제품에만 적용됩니다.</p>';
+  }
+  var n=Object.keys(o.sel).length;
+  h+=benList(kind);
+  if(rel) h+='<div class="ben-acts"><button type="button" class="ben-btn" onclick="benReset(\''+kind+'\')">초기화</button><button type="button" class="ben-btn rel" onclick="benApply(\''+kind+'\')"'+(n?'':' disabled')+'>'+(n?n+'개 제품에서 해제':'해제할 제품 선택')+'</button></div>';
+  else h+='<div class="ben-acts"><button type="button" class="ben-btn" onclick="benReset(\''+kind+'\')">초기화</button><button type="button" class="ben-btn pri" onclick="benApply(\''+kind+'\')"'+(n?'':' disabled')+'>'+(n?n+'개 제품에 적용':'제품을 선택하세요')+'</button></div>'+(n?'':'<p class="ben-val">적용할 제품을 하나 이상 선택하세요.</p>');
+  return h;
+}
 function renderBenefits(){ benInit(); benRender(); }
 function benRender(){
-  var body=document.getElementById('benBody'), st=body.scrollTop;
-  if(!cart.length){ body.innerHTML='<div class="cmp-card"><p class="cmp-note" style="margin:4px 0">담긴 제품이 없습니다. 제품을 추가한 뒤 혜택을 적용할 수 있습니다.</p></div>'; return; }
+  var body=document.getElementById('benBody'), bar=document.getElementById('benBar'), st=body.scrollTop;
+  if(!cart.length){ body.innerHTML='<div class="cmp-card"><p class="cmp-note" style="margin:4px 0">담긴 제품이 없습니다. 제품을 추가한 뒤 혜택을 적용할 수 있습니다.</p></div>'; bar.style.display='none'; return; }
   var t=calcTotals(), a=t.agg, S=betaSummary(t);
-  var h='<p class="ben-lead">'+esc(plans[activePlan].name)+' · 적용할 혜택을 고른 뒤 매칭할 제품을 선택하세요.</p>';
-  var opt=function(v,l,cur){ return '<option value="'+esc(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+esc(l)+'</option>'; };
-  // 할인 (결합·동시구매 등)
-  var D=benS.disc;
-  h+='<div class="ben-field"><label>할인 (결합 · 동시구매 등)</label><select onchange="benSet(\'disc\',\'type\',this.value)">'
-    +[['none','미적용'],['결합','결합 (-5%)'],['동시구매','동시구매 (-10%)'],['동시결합','동시결합 (10%+5%)'],['페스타','페스타 (-15%)'],['타사보상','타사보상']].map(function(x){return opt(x[0],x[1],D.type);}).join('')+'</select>';
-  if(D.type==='타사보상'){
-    h+='<label class="ben-sub">함께 적용</label><select onchange="benSet(\'disc\',\'combo\',this.value)">'+opt('none','없음',D.combo)+opt('동시구매','동시구매 (-10%)',D.combo)+opt('결합','결합 (-5%)',D.combo)+'</select>'
-      +'<label class="ben-chk"><input type="checkbox"'+(D.t1?' checked':'')+' onchange="benSet(\'disc\',\'t1\',this.checked)"><span>1년간 추가 할인 <small>(약정별 조건이 있는 제품만 적용)</small></span></label>';
-  }
-  h+='<p class="ben-hint">신규 렌탈 제품에 적용됩니다. 재렌탈 할인은 제품 편집에서, 일시불 할인은 일시불 제품 편집에서 설정합니다.</p>'
-    +benList('disc')+benGo('disc',D.type!=='none')+'</div>';
-  // 특정 기간 할인
-  var R=benS.per;
-  h+='<div class="ben-field"><label>특정 기간 할인</label><select onchange="benSet(\'per\',\'type\',this.value)">'+opt('none','미적용',R.type)+opt('half','반값 (-50%)',R.type)+opt('manwon','1만원 청구',R.type)+'</select>';
-  if(R.type!=='none') h+='<label class="ben-sub">적용 기간 (개월, 0=전기간)</label><input type="number" min="0" value="'+R.months+'" onchange="benSet(\'per\',\'months\',this.value)">';
-  h+='<p class="ben-hint">기간이 지나면 정상 요금으로 돌아갑니다. 약정 개월 수를 넘는 값은 제품별로 약정 기간까지만 반영됩니다.</p>'
-    +benList('per')+benGo('per',R.type!=='none')+'</div>';
-  // 선납
-  var P=benS.sun, G=SUNAP2[P.grade]||null;
-  h+='<div class="ben-field"><label>선납</label><select onchange="benSet(\'sun\',\'type\',this.value)">'+[['none','미적용'],['period','선납'],['선납2','분산 선납(선납2)']].map(function(x){return opt(x[0],x[1],P.type);}).join('')+'</select>';
-  if(P.type==='선납2'&&G){
-    h+='<div class="ben-two"><div><label>구분</label><select onchange="benSet(\'sun\',\'grade\',this.value)">'+Object.keys(SUNAP2).map(function(k){return opt(k,k+'구분: '+SUNAP2[k].label,P.grade);}).join('')+'</select></div><div><label>추가 할인</label><select onchange="benSet(\'sun\',\'kind\',this.value)">'+opt('half','반값 (-50%)',P.kind)+opt('manwon','1만원 청구',P.kind)+'</select></div></div>'
-      +'<label class="ben-sub">선납금</label><select onchange="benSet(\'sun\',\'oi\',this.value)">'+G.opts.map(function(o,i){return opt(i,won(o.amt)+' 선납 (할인 '+won(o.disc)+')',P.oi);}).join('')+'</select>'
-      +'<label class="ben-sub">'+(P.kind==='manwon'?'1만원 청구':'반값')+' 적용 기간 (개월, 0=없음)</label><input type="number" min="0" value="'+P.smo+'" onchange="benSet(\'sun\',\'smo\',this.value)">';
-  }
-  if(P.type==='period') h+='<label class="ben-sub">선납 종류</label><select onchange="benSet(\'sun\',\'period\',this.value)">'+[['36','36선납 (36개월치 일시납, 10% 할인)'],['24','24선납 (24개월치 일시납, 8% 할인)'],['60','60선납 (36개월 10%↓ + 24개월 8%↓)']].map(function(x){return opt(x[0],x[1],P.period);}).join('')+'</select>';
-  h+='<p class="ben-hint">선납금은 할인액이 아니라 초기 납부액으로 따로 표시합니다.'+(P.type==='period'?' 코라솔 결합 제품에는 일반 선납을 적용할 수 없습니다.':'')+'</p>'
-    +benList('sun')+benGo('sun',P.type!=='none')+'</div>';
-  // 코라솔
-  var K=benS.kor, kk=K.prod?KORASOL[K.prod]:null;
-  h+='<div class="ben-field"><label>코라솔 (코웨이 라이프솔루션)</label><select onchange="benSet(\'kor\',\'prod\',this.value)">'+opt('','미적용',K.prod)+Object.keys(KORASOL).map(function(key){return opt(key,KORASOL[key].name,K.prod);}).join('')+'</select>';
-  if(kk){
-    h+='<div class="ben-two"><div><label>지원 기간</label><select onchange="benSet(\'kor\',\'si\',this.value)">'+kk.지원.map(function(s,i){return opt(i,s.months+'개월',K.si);}).join('')+'</select></div><div><label>구좌 수</label><input type="number" min="1" value="'+K.cnt+'" onchange="benSet(\'kor\',\'cnt\',this.value)"></div></div>';
-    var sp=kk.지원[K.si]||kk.지원[0];
-    h+='<p class="ben-hint">구좌당 렌탈료 감액 월 '+won(sp.monthly)+' · 별도 납입금 월 '+won(kk.납부금)+' × '+kk.납부회차+'회 (렌탈 청구액과 별도)</p>';
-  }
-  h+=benList('kor')+benGo('kor',!!K.prod)+'</div>';
-  // 제휴카드
-  var cid=plans[activePlan].card||'';
-  h+='<div class="ben-field"><label>제휴카드</label><select onchange="benCard(this.value)">'+opt('','미적용',cid)+((typeof CARDS!=='undefined')?CARDS.map(function(c){return opt(c.id,c.name,cid);}).join(''):'')+'</select>'
-    +'<p class="ben-hint">카드 청구할인은 제품별 적용이 아니라 견적 전체 안내용입니다. 렌탈 청구액·합계에는 반영하지 않습니다.'+(cid?' <button type="button" class="ben-lnk" onclick="closeBenefits();switchMainTab(\'card\')">카드 상세 ›</button>':'')+'</p></div>';
-  // 지로납부
-  var J=benS.jiro;
-  h+='<div class="ben-field"><label>납부 방법</label><select onchange="benSet(\'jiro\',\'on\',this.value)">'+opt('0','자동납부 (기본)',J.on?'1':'0')+opt('1','지로 납부',J.on?'1':'0')+'</select>'
-    +'<p class="ben-hint">지로 납부는 자동납부 할인이 빠져 월 +'+won(JIRO_SURCHARGE)+'이 가산됩니다. 렌탈 제품에만 적용됩니다.</p>'
-    +benList('jiro')+benGo('jiro',!!J.on)+'</div>';
+  var h='<p class="ben-lead">'+esc(plans[activePlan].name)+' · 담긴 제품 '+cart.length+'개 · 필요한 항목만 펼쳐서 설정하세요.</p>';
+  BEN_KEYS.forEach(function(k){
+    var s=benStatus(k), isOpen=benS.open===k;
+    h+='<section class="ben-card'+(isOpen?' open':'')+'"><button type="button" class="ben-ch" onclick="benOpen(\''+k+'\')"><span class="t"><b>'+BEN_DEF[k].t+'</b><small>'+esc(benSummaryLine(k))+'</small></span><span class="ben-st '+s.c+'">'+s.t+'</span><svg class="ben-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>'
+      +(isOpen?'<div class="ben-cb">'+benBody(k)+'</div>':'')+'</section>';
+  });
   // 금액 구분
-  h+='<div class="cmp-card" style="margin-top:6px"><h4>금액 구분 (현재 적용 기준)</h4>'
+  h+='<div class="cmp-card" style="margin-top:10px"><h4>금액 구분 (현재 적용 기준)</h4>'
     +'<div class="cmp-row"><span>렌탈 계약 청구액'+(S.multi?' (첫 구간)':'')+'</span><span>'+won(S.month)+'/월</span></div>'
     +'<div class="cmp-row"><span>초기 납부액</span><span>'+won(S.init)+'</span></div>'
     +(a.ilsibl>0?'<div class="cmp-row"><span>　· 선납금</span><span>'+won(a.ilsibl)+'</span></div>':'')
@@ -4915,6 +4988,11 @@ function benRender(){
     +'<div class="cmp-row"><span>라이프솔루션 별도 납입금</span><span>'+(a.hasKor?'월 '+won(a.korNabM)+' · 총 '+won(a.korNabTotal):'해당 없음')+'</span></div>'
     +'<div class="cmp-row"><span>예상 카드 혜택</span><span>합계에 미반영</span></div></div>';
   body.innerHTML=h; body.scrollTop=st;
+  // 하단 고정 바: 실시간 금액 (열었을 때 대비)
+  var dm=benS.base?(S.month-benS.base.month):0, dt=benS.base?(S.total-benS.base.total):0;
+  bar.style.display='flex';
+  bar.innerHTML='<div class="s">월 '+won(S.month)+(S.multi?' (첫 구간)':'')+'<b>총 납부액 '+won(S.total)+'</b>'
+    +((dm||dt)?'열었을 때 대비 <i class="'+((dm||dt)<0?'dn':'up')+'">'+(dm?'월 '+(dm<0?'−':'+')+won(Math.abs(dm))+' · ':'')+'총 '+(dt<0?'−':'+')+won(Math.abs(dt))+'</i>':'열었을 때와 동일')+'</div><button type="button" onclick="closeBenefits()">견적으로</button>';
 }
 function openCompare(){
   syncActivePlan();

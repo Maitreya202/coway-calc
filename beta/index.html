@@ -673,7 +673,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
     <div id="planBar" style="display:none"></div>
     <div id="masterCheckBar" class="bar row" style="display:none">
       <span id="masterChkTitle"></span>
-      <span style="display:flex;gap:6px;flex-shrink:0"><button type="button" id="selModeBtn" class="qd-btn" onclick="toggleSelectMode()">선택</button><button type="button" id="benBtn" class="qd-btn" onclick="openBenefitsFromBar()">할인·결제</button><button type="button" class="qd-btn primary" onclick="switchMainTab('estimate');openSearchModal()">＋ 상품 추가</button></span>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button type="button" id="selModeBtn" class="qd-btn" onclick="toggleSelectMode()">선택</button><button type="button" id="benBtn" class="qd-btn" onclick="openBenefitsFromBar()">조건</button><button type="button" class="qd-btn primary" onclick="switchMainTab('estimate');openSearchModal()">＋ 상품 추가</button></span>
     </div>
     <div id="masterChkWrap" class="bar" style="display:none">
       <label for="masterChk"><input type="checkbox" id="masterChk" onchange="toggleAllCart(this.checked)" style="width:17px;height:17px;accent-color:#8F6D2B;cursor:pointer;flex-shrink:0"><span id="masterChkLabel">전체 선택</span></label>
@@ -681,7 +681,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
-    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>할인·결제</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
+    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>조건</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -833,7 +833,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="console-content">
     <form id="cmdForm" class="console-input"><input id="cmdInput" aria-label="빠른 명령 입력" placeholder="전체 7년" autocomplete="off"><button class="qd-btn primary" type="submit">확인</button></form>
     <div class="console-hint">정해진 명령으로 빠르게 조작 · Ctrl / ⌘ + K</div>
-    <div class="console-chips"><button type="button" class="qd-btn sm" data-cmd="전체 7년">전체 7년</button><button type="button" class="qd-btn sm" data-cmd="선택 5년">선택 5년</button><button type="button" class="qd-btn sm" data-cmd="견적 복제">견적 복제</button><button type="button" class="qd-btn sm" data-cmd="비교">차이 비교</button><button type="button" class="qd-btn sm" data-cmd="제품 추가">제품 추가</button><button type="button" class="qd-btn sm" data-cmd="혜택">결합·납부</button><button type="button" class="qd-btn sm" data-cmd="견적서">견적서</button><button type="button" class="qd-btn sm" data-cmd="전체 선택">전체 선택</button><button type="button" class="qd-btn sm" data-cmd="일괄변경">일괄변경</button><button type="button" class="qd-btn sm" data-cmd="선택 복사">선택 복사</button><button type="button" class="qd-btn sm" data-cmd="견적 담기">견적 담기</button><button type="button" class="qd-btn sm" data-cmd="선택 견적서">선택 견적서</button><button type="button" class="qd-btn sm" data-cmd="견적안 삭제">견적안 삭제</button><button type="button" class="qd-btn sm" data-cmd="안내문">고객 안내문</button><button type="button" class="qd-btn sm" data-cmd="데이터 갱신">데이터 갱신</button></div>
+    <div class="console-chips"><button type="button" class="qd-btn sm" data-cmd="전체 7년">전체 7년</button><button type="button" class="qd-btn sm" data-cmd="선택 5년">선택 5년</button><button type="button" class="qd-btn sm" data-cmd="견적 복제">견적 복제</button><button type="button" class="qd-btn sm" data-cmd="비교">차이 비교</button><button type="button" class="qd-btn sm" data-cmd="제품 추가">제품 추가</button><button type="button" class="qd-btn sm" data-cmd="조건">조건</button><button type="button" class="qd-btn sm" data-cmd="견적서">견적서</button><button type="button" class="qd-btn sm" data-cmd="전체 선택">전체 선택</button><button type="button" class="qd-btn sm" data-cmd="일괄변경">일괄변경</button><button type="button" class="qd-btn sm" data-cmd="선택 복사">선택 복사</button><button type="button" class="qd-btn sm" data-cmd="견적 담기">견적 담기</button><button type="button" class="qd-btn sm" data-cmd="선택 견적서">선택 견적서</button><button type="button" class="qd-btn sm" data-cmd="견적안 삭제">견적안 삭제</button><button type="button" class="qd-btn sm" data-cmd="안내문">고객 안내문</button><button type="button" class="qd-btn sm" data-cmd="데이터 갱신">데이터 갱신</button></div>
     <div id="cmdResult" role="status" aria-live="polite">명령을 입력하거나 빠른 버튼을 눌러 주세요.</div>
     <div class="console-actions"><button type="button" id="cmdApply" class="qd-btn primary" hidden>변경 적용</button><button type="button" id="cmdUndo" class="qd-btn" disabled>실행 취소</button></div>
     <div class="console-hint" style="margin-top:12px;margin-bottom:0">최근 실행</div><div id="cmdRecent"></div>
@@ -864,7 +864,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   </div>
 </div>
 <div class="cmp-page" id="benPage">
-  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>할인·결제 설정</b></div>
+  <div class="cmp-head"><button type="button" onclick="closeBenefits()">&#8249; 견적으로</button><b>조건 설정</b></div>
   <div class="cmp-body" id="benBody"></div>
   <div class="ben-bar" id="benBar" style="display:none"></div>
 </div>
@@ -2323,7 +2323,7 @@ function updateBenRow(){
   var cid=(plans[activePlan]&&plans[activePlan].card)||'';
   if(cid&&typeof CARDS!=='undefined'){ var c=CARDS.filter(function(x){return x.id===cid;})[0]; if(c) a.push(c.name); }
   el.textContent=a.length?a.join(' · '):'적용 없음'; el.className=a.length?'on':'';
-  var bb=document.getElementById('benBtn'); if(bb){ bb.style.display=cart.length?'':'none'; bb.innerHTML='할인·결제'+(a.length?' <span class="bn">'+a.length+'</span>':''); }
+  var bb=document.getElementById('benBtn'); if(bb){ bb.style.display=cart.length?'':'none'; bb.innerHTML='조건'+(a.length?' <span class="bn">'+a.length+'</span>':''); }
 }
 function updateMasterChk(){
   updateBenRow();
@@ -5182,7 +5182,7 @@ function renderCompare(){
       return;
     }
     if(cmd==='제품 추가'){ remember(cmd); close(); goEstimate(); openSearchModal(); return; }
-    if(cmd==='혜택'||cmd==='결합·납부'){ remember('혜택'); close(); openBenefits(); return; }
+    if(cmd==='조건'||cmd==='혜택'||cmd==='결합·납부'){ remember('조건'); close(); openBenefits(); return; }
     if(cmd==='견적서'){
       if(!cart.length){ msg('담긴 제품이 없습니다.'); return; }
       remember(cmd); close(); goEstimate(); openQuoteInfoModal('all'); return;

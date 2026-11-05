@@ -496,7 +496,13 @@ body.has-bbar .wrap { padding-bottom:0; }
 .seg button.on { background:var(--navy); color:#fff; border-color:var(--navy); }
 .terms { display:grid; grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); gap:6px; }
 .terms button { min-height:44px; min-width:0; padding:10px 2px; font:inherit; font-size:12px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
-.terms button strong { display:block; font-size:14px; font-weight:700; margin-top:5px; font-variant-numeric:tabular-nums; }
+.terms button { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+.terms button strong { display:block; font-size:14px; font-weight:700; margin-top:5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.terms button strong small { font-size:11px; font-weight:400; margin-left:1px; }
+.terms .sdw { display:block; width:100%; margin-top:7px; padding:5px 7px 0; border-top:1px solid var(--line); }
+.terms .sdw em.sd { display:flex; justify-content:space-between; align-items:baseline; margin-top:2px; font-variant-numeric:tabular-nums; }
+.terms .sdw em.sd i { margin-right:0; }
+.terms button.on .sdw { border-top-color:var(--brass); }
 .terms button small { font-size:11px; color:var(--sub); }
 .terms button.on { background:var(--brassL); border-color:var(--brass); color:var(--brassD); box-shadow:inset 0 0 0 1px var(--brass); }
 .terms button.on small { color:var(--brassD); }
@@ -1565,8 +1571,8 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   cYaks.forEach(function(y, i) {
     var pr = _tprs[i];
     h += '<button class="' + (item.약정년 === y ? 'on' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + yakjLabel(y)
-      + '<strong>' + (pr ? Math.round(pr.n).toLocaleString('ko-KR') : '-') + '</strong><small>' + (pr && pr.kind === 'sunap' ? '원 선납' : '원/월') + '</small>'
-      + (_prevT ? _stepDiff(pr, _prevT, '직전') + _stepDiff(pr, _maxT, '최고', true) : '') + '</button>';
+      + '<strong>' + (pr ? Math.round(pr.n).toLocaleString('ko-KR') : '-') + '<small>' + (pr && pr.kind === 'sunap' ? '원 선납' : '원/월') + '</small></strong>'
+      + (_prevT ? (function() { var dd = _stepDiff(pr, _prevT, '직전') + _stepDiff(pr, _maxT, '최고', true); return dd ? '<span class="sdw">' + dd + '</span>' : ''; })() : '') + '</button>';
     if (pr) _prevT = pr;
   });
   h += '</div></div>';
@@ -1629,8 +1635,9 @@ function _stepDiff(pr, prev, label, hideZero) {
   if (!pr || !prev || pr.kind !== prev.kind) return '';
   var d = Math.round(pr.n - prev.n);
   var lb = label ? '<i>' + label + '</i>' : '';
-  if (!d) return hideZero ? '' : '<em class="sd">' + lb + '동일</em>';
-  return '<em class="sd ' + (d > 0 ? 'up' : 'dn') + '">' + lb + (d > 0 ? '+' : '−') + Math.abs(d).toLocaleString('ko-KR') + '</em>';
+  var vl = function(t) { return label ? '<b>' + t + '</b>' : t; };
+  if (!d) return hideZero ? '' : '<em class="sd">' + lb + vl('동일') + '</em>';
+  return '<em class="sd ' + (d > 0 ? 'up' : 'dn') + '">' + lb + vl((d > 0 ? '+' : '−') + Math.abs(d).toLocaleString('ko-KR')) + '</em>';
 }
 function _jugiNum(j) { var m = /\d+/.exec(j || ''); return m ? parseInt(m[0], 10) : 1e9; }
 

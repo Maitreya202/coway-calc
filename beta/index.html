@@ -1518,7 +1518,7 @@ function badgeHtml(text, color) {
 
 // ── 구매방법/약정/관리방법 패널 ────────────────────────────────
 function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
-  var pmLabel = isCashMode ? '일시불' : (item.isRerental ? '재렌탈' : '신규');
+  var pmLabel = isCashMode ? '일시불' : (item.isRerental ? '재렌탈' : (item.tasabosangOn ? '타사보상' : '신규'));
   // 가격 요약 바 (옵션 조정 중 항상 보이게)
   var _isSunap2=item.선납==='선납2';
   var _ki=itemKorCalc(item,c);
@@ -1544,11 +1544,13 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
 
   // 구매방법 (균등 분할 버튼)
   var pmOpts = [['rental', '신규(렌탈)']];
+  if (item.타사보상렌탈 > 0 && item.타사보상사용 !== false) pmOpts.push(['tasab', '타사보상']);
   if (item.재렌탈 > 0 && item.재렌탈사용 !== false) pmOpts.push(['rerental', '재렌탈']);
   if (item.일시불 > 0) pmOpts.push(['cash', '일시불']);
   h += '<div class="og"><h4>구매방법</h4><div class="seg">';
   pmOpts.forEach(function(o) {
-    var on = (o[0]==="rental" ? (!item.isRerental&&item.구매방법!=="cash") : o[0]==="rerental" ? item.isRerental : item.구매방법===o[0]);
+    var rentalMode = !item.isRerental && item.구매방법 !== "cash";
+    var on = (o[0]==="rental" ? (rentalMode&&!item.tasabosangOn) : o[0]==="tasab" ? (rentalMode&&!!item.tasabosangOn) : o[0]==="rerental" ? item.isRerental : item.구매방법===o[0]);
     h += '<button class="' + (on ? 'on' : '') + '" onclick="setPurchaseMode(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
   });
   h += '</div></div>';
@@ -2080,8 +2082,14 @@ function setRerental1년(idx,v){cart[idx].재렌탈1년on=v;renderCart();}
 function setPurchaseMode(idx,mode){
   var item=cart[idx];
   if (mode==='cash'){ item.구매방법='cash'; item.isRerental=false; }
-  else if (mode==='rerental'){ item.구매방법='rental'; item.isRerental=true; }
-  else { item.구매방법='rental'; item.isRerental=false; }
+  else if (mode==='rerental'){ item.구매방법='rental'; item.isRerental=true; item.tasabosangOn=false; item.tasab1년on=false; }
+  else if (mode==='tasab'){
+    // 타사보상: 구매방법의 하나. 타사보상과 함께 못 쓰는 조건(반값·1만원·동시결합·페스타·분산 선납)은 해제
+    item.구매방법='rental'; item.isRerental=false; item.tasabosangOn=true;
+    var dt=item.discounts||{}; dt.동시결합=false; dt.페스타=false; dt.반값=false; dt.만원=false; item.discounts=dt; item.반값개월=0; item.만원개월=0;
+    if (item.선납==='선납2') item.선납='none';
+  }
+  else { item.구매방법='rental'; item.isRerental=false; item.tasabosangOn=false; item.tasab1년on=false; var dn=item.discounts||{}; dn.동시구매=false; dn.결합=false; item.discounts=dn; }
   renderCart();
 }
 function toggleBox(idx,key){
@@ -2157,7 +2165,7 @@ function _deltaInfo(idx){
 }
 function _chgText(cur){
   var o=(_dSnap&&_dSnap.idx===_dSheetIdx)?_dSnap.obj:null;
-  var mode=function(it){return it.구매방법==='cash'?'일시불':(it.isRerental?'재렌탈':'신규');};
+  var mode=function(it){return it.구매방법==='cash'?'일시불':(it.isRerental?'재렌탈':(it.tasabosangOn?'타사보상':'신규'));};
   var mg=function(it){return (it.관리방법||'')+((it.관리주기&&it.관리주기!=='-')?' '+it.관리주기:'');};
   var base=mode(cur)+(cur.구매방법==='cash'?'':' · '+yakjLabel(cur.약정년)+' · '+mg(cur));
   if(!o||_itemJson(cur)===_dSnap.json) return base;
@@ -4737,7 +4745,7 @@ function openItemTab(idx,tab){
 }
 var benS=null;
 /* 제품에 현재 적용된 값 읽기 (혜택 화면·시트 요약 공용) */
-function benDiscOf(it){ var d=it.discounts||{}; return it.tasabosangOn?'타사보상':d.동시결합?'동시결합':d.동시구매?'동시구매':d.결합?'결합':d.페스타?'페스타':'none'; }
+function benDiscOf(it){ var d=it.discounts||{}; return d.동시결합?'동시결합':d.동시구매?'동시구매':d.결합?'결합':d.페스타?'페스타':'none'; }
 function benPerOf(it){ var d=it.discounts||{}; return d.반값?'half':d.만원?'manwon':(it.tasab1년on?'tasab1':'none'); }
 function benPerLabel(it){ var k=benPerOf(it); if(k==='none') return ''; if(k==='tasab1') return '타사보상 1년 추가 할인'; var m=(k==='half'?it.반값개월:it.만원개월)||0; return (k==='half'?'반값':'1만원 청구')+(m?' '+m+'개월':' 전기간'); }
 function benHas(kind,it){
@@ -4764,10 +4772,8 @@ function benInitKind(kind){
     benS.sun={type:(b==='선납2')?'선납2':'period',period:(b==='36'||b==='24'||b==='60')?b:'36',grade:s2?s2.grade:'A',oi:s2?s2.oi:0,kind:s2?s2.kind:'half',smo:s2?(s2.반값월||0):0,sel:{}};
   } else if(kind==='disc'){
     var dc={}; cart.forEach(function(it){ var dd=benDiscOf(it); if(dd!=='none') dc[dd]=(dc[dd]||0)+1; });
-    var dt=benTop(dc), fdI=null;
-    cart.forEach(function(it){ if(!fdI&&dt&&benDiscOf(it)===dt) fdI=it; });
-    var fdd=fdI?(fdI.discounts||{}):{};
-    benS.disc={type:dt||'결합',combo:(dt==='타사보상'?(fdd.동시구매?'동시구매':(fdd.결합?'결합':'none')):'none'),sel:{}};
+    var dt=benTop(dc);
+    benS.disc={type:dt||'결합',sel:{}};
   } else if(kind==='per'){
     var pc={}; cart.forEach(function(it){ var pk=benPerOf(it); if(pk!=='none') pc[pk]=(pc[pk]||0)+1; });
     var pt=benTop(pc), fpI=null;
@@ -4808,16 +4814,17 @@ function benEligX(kind,it){
   var t=benS[kind].type;
   if(t==='none') return '';
   if(kind==='per'&&t==='tasab1'){
-    if(!it.tasabosangOn) return '타사보상 적용 필요';
+    if(!it.tasabosangOn) return '구매방법이 타사보상이어야 함';
     if(!((TASAB_COND[it.약정년]||{}).base>0)) return '이 약정은 1년 추가 할인 조건 없음';
     return '';
   }
   if(kind==='disc'){
-    if(it.선납==='선납2'){ if(t==='타사보상') return '분산 선납 적용 중'; if(t==='동시결합'||t==='페스타') return '분산 선납과 함께 불가'; }
-    if(t==='타사보상' && !(it.타사보상렌탈>0&&it.타사보상사용!==false)) return '타사보상 대상 아님';
+    if(it.선납==='선납2'&&(t==='동시결합'||t==='페스타')) return '분산 선납과 함께 불가';
+    if(it.tasabosangOn&&(t==='동시결합'||t==='페스타')) return '타사보상과 함께 불가';
     return '';
   }
   if(it.선납==='선납2') return '분산 선납은 자체 기간 할인 사용';
+  if(it.tasabosangOn&&(t==='half'||t==='manwon')) return '타사보상과 함께 불가';
   return '';
 }
 function benElig(kind,it){
@@ -4827,7 +4834,7 @@ function benElig(kind,it){
   if(kind==='kor') return plain?'일반 선납 적용 중':'';
   var t=benS.sun.type;
   if(t==='none') return '';
-  if(t==='선납2'){ if(it.isRerental) return '재렌탈은 분산 선납 불가'; if(it.약정년===3) return '3년 약정은 분산 선납 불가'; return ''; }
+  if(t==='선납2'){ if(it.isRerental) return '재렌탈은 분산 선납 불가'; if(it.약정년===3) return '3년 약정은 분산 선납 불가'; if(it.tasabosangOn) return '타사보상과 함께 불가'; return ''; }
   if((it.kors||[]).some(function(k){return k.on;})) return '코라솔 결합 중';
   return '';
 }
@@ -4870,25 +4877,17 @@ function benApply(kind){
     } else if(kind==='disc'){
       var d=Object.assign({},it.discounts||{});
       d.동시구매=d.결합=d.동시결합=d.페스타=false;
-      if(o.type==='타사보상'){
-        it.tasabosangOn=true; d.반값=false; d.만원=false; it.반값개월=0; it.만원개월=0;
-        if(it.선납==='선납2') it.선납='none';
-        if(o.combo==='동시구매') d.동시구매=true; else if(o.combo==='결합') d.결합=true;
-      } else {
-        it.tasabosangOn=false; it.tasab1년on=false;
-        if(o.type!=='none') d[o.type]=true;
-      }
+      if(o.type!=='none') d[o.type]=true;
       it.discounts=d;
     } else if(kind==='per'){
       var mo=Math.max(0,Math.min(parseInt(o.months)||0,(it.약정년||0)*12));
       it.discounts=Object.assign({},it.discounts||{},{반값:o.type==='half',만원:o.type==='manwon'});
       it.반값개월=o.type==='half'?mo:0; it.만원개월=o.type==='manwon'?mo:0;
-      if(o.type==='tasab1'){ it.tasab1년on=true; }
-      else { if(o.type!=='none') it.tasabosangOn=false; it.tasab1년on=false; }
+      it.tasab1년on=(o.type==='tasab1');
     } else if(kind==='jiro'){
       it.지로On=!!o.on;
     } else if(o.type==='선납2'){
-      it.선납='선납2'; it.tasabosangOn=false; it.tasab1년on=false; flagsOff(it);
+      it.선납='선납2'; flagsOff(it);
       it.s2={grade:o.grade,oi:o.oi,반값월:Math.max(0,Math.min(parseInt(o.smo)||0,(it.약정년||0)*12)),kind:o.kind};
     } else {
       if(it.선납==='선납2') flagsOff(it);
@@ -4931,7 +4930,7 @@ function benList(kind){
 }
 var BEN_KEYS=['disc','per','sun','kor','card','jiro'];
 var BEN_DEF={
-  disc:{t:'할인',d:'결합 · 동시구매 · 타사보상 등'},
+  disc:{t:'할인',d:'결합 · 동시구매 · 동시결합 · 페스타'},
   per:{t:'특정 기간 할인',d:'반값 · 1만원 청구 · 타사보상 1년 추가'},
   sun:{t:'선납',d:'선납 · 분산 선납(선납2)'},
   kor:{t:'코라솔',d:'코웨이 라이프솔루션 연동'},
@@ -4959,12 +4958,11 @@ function benBody(kind){
   var any=benAnyKind(kind), rel=benRel(kind), o=benS[kind];
   var f=function(arr){ return arr.filter(function(x){ return any||x[0]!=='none'; }); }; // 적용된 제품이 없으면 '미적용' 선택지는 숨김(해제할 대상이 없음)
   if(kind==='disc'){
-    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'disc\',\'type\',this.value)">'+f([['none','미적용'],['결합','결합 (-5%)'],['동시구매','동시구매 (-10%)'],['동시결합','동시결합 (10%+5%)'],['페스타','페스타 (-15%)'],['타사보상','타사보상']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
-    if(o.type==='타사보상') h+='<label class="ben-sub">함께 적용</label><select onchange="benSet(\'disc\',\'combo\',this.value)">'+benOpt('none','없음',o.combo)+benOpt('동시구매','동시구매 (-10%)',o.combo)+benOpt('결합','결합 (-5%)',o.combo)+'</select>';
-    if(!rel) h+='<p class="ben-hint">신규 렌탈 제품에 적용됩니다. 재렌탈 할인은 제품 편집에서, 일시불 할인은 일시불 제품 편집에서 설정합니다.</p>';
+    h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'disc\',\'type\',this.value)">'+f([['none','미적용'],['결합','결합 (-5%)'],['동시구매','동시구매 (-10%)'],['동시결합','동시결합 (10%+5%)'],['페스타','페스타 (-15%)']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
+    if(!rel) h+='<p class="ben-hint">신규 렌탈 제품에 적용됩니다. 타사보상 제품은 결합·동시구매만 가능합니다. 재렌탈·일시불 할인은 제품 편집에서 설정합니다.</p>';
   } else if(kind==='per'){
     h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'per\',\'type\',this.value)">'+f([['none','미적용'],['half','반값 (-50%)'],['manwon','1만원 청구'],['tasab1','타사보상 1년 추가 할인']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';
-    if(!rel&&o.type==='tasab1') h+='<p class="ben-hint">타사보상이 적용된 제품에서 처음 12개월 동안 약정별 추가 할인이 적용됩니다. 먼저 "할인"에서 타사보상을 적용해 주세요.</p>';
+    if(!rel&&o.type==='tasab1') h+='<p class="ben-hint">구매방법이 타사보상인 제품에서 처음 12개월 동안 약정별 추가 할인이 적용됩니다. 제품 편집의 구매방법에서 타사보상을 먼저 선택해 주세요.</p>';
     else if(!rel) h+='<label class="ben-sub">적용 기간 (개월, 0=전기간)</label><input type="number" min="0" value="'+o.months+'" onchange="benSet(\'per\',\'months\',this.value)"><p class="ben-hint">기간이 지나면 정상 요금으로 돌아갑니다. 약정 개월 수를 넘는 값은 제품별로 약정 기간까지만 반영됩니다.</p>';
   } else if(kind==='sun'){
     var G=SUNAP2[o.grade]||null;

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결합·동시구매 미리보기 목업</title>
+<style>
+:root{--ink:#16213A;--sub:#77736d;--line:#E6E1D6;--brass:#A07D3B;--brassF:#8A6A2C;--navy:#16213A;--soft:#F1E8D4}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e6df;font-family:-apple-system,"Noto Sans KR",sans-serif;color:var(--ink)}
+.top{padding:12px 14px;font-size:12px;color:var(--sub)}
+.tabs{display:flex;gap:6px;padding:0 14px 10px}
+.tabs button{flex:1;min-height:40px;border:1px solid var(--line);background:#fff;border-radius:10px;font:inherit;font-weight:700;color:var(--sub)}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sheet{background:#fff;max-width:480px;margin:0 auto;padding:14px 14px 18px;border-radius:18px 18px 0 0;min-height:560px}
+.sheet h3{margin:0 0 2px;font-size:17px}
+.sheet .m{font-size:11px;color:var(--sub)}
+.hd{margin:12px 0 4px;display:flex;align-items:baseline;justify-content:space-between}
+.hd b{font-size:15px}.hd small{font-size:11px;color:var(--sub)}
+.terms{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.t{border:1px solid var(--line);border-radius:10px;padding:8px 4px 6px;text-align:center;background:#fff}
+.t.on{background:var(--soft);border-color:var(--brass);border-width:2px}
+.t .y{font-size:12px;color:var(--sub)}
+.t .p{font-size:14px;font-weight:800;margin:2px 0}
+.t .p small{font-size:10px;font-weight:400;color:var(--sub)}
+.t .row{display:flex;justify-content:space-between;font-size:10.5px;padding:2px 5px;border-top:1px dashed var(--line);color:var(--sub)}
+.t .row b{color:#15803D;font-weight:700}
+.t .row.c1 b{color:#1D4ED8}.t .row.c2 b{color:#B45309}
+.t .alt{font-size:12px;font-weight:800;margin-top:3px;padding-top:4px;border-top:1px solid var(--line)}
+.note{font-size:11px;color:var(--sub);margin:8px 0 0}
+/* B: 미리보기 선택 */
+.seg{display:flex;gap:6px;margin:6px 0 8px}
+.seg button{flex:1;min-height:38px;border:1px solid var(--line);background:#fff;border-radius:10px;font:inherit;font-size:13px;font-weight:700}
+.seg button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.seg button small{display:block;font-size:10px;font-weight:400;opacity:.8}
+.tag{display:inline-block;font-size:10px;font-weight:800;border-radius:5px;padding:1px 5px;margin-bottom:2px}
+.tag.c1{background:#E0E9FF;color:#1D4ED8}.tag.c2{background:#FDEBD0;color:#B45309}
+.strike{font-size:11px;color:#a39d90;text-decoration:line-through}
+/* C: 한 줄 요약 카드 */
+.cmp{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:6px}
+.cmp .r{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line);font-size:13px}
+.cmp .r:first-child{border-top:0}
+.cmp .r.now{background:var(--soft);font-weight:800}
+.cmp .r .l small{display:block;font-size:11px;color:var(--sub);font-weight:400}
+.cmp .r .v{text-align:right;font-weight:800}
+.cmp .r .v small{display:block;font-size:11px;color:#15803D;font-weight:700}
+.hint{margin:10px 0 0;padding:10px;background:#F7F5F0;border-radius:10px;font-size:12px;color:var(--sub);line-height:1.5}
+</style></head><body>
+<div class="top">목업 · 노블 공기청정기2 (AP-1623M) · 5년 방문관리 4개월 기준 / 시안 3가지를 눌러서 비교</div>
+<div class="tabs" id="tabs">
+ <button class="on" data-v="A">A 약정 버튼 안에 같이</button>
+ <button data-v="B">B 보기 전환 스위치</button>
+ <button data-v="C">C 현재 약정 비교 카드</button>
+</div>
+<div class="sheet" id="sheet"></div>
+<script>
+var T=[{y:3,p:37430},{y:5,p:35530},{y:6,p:34580},{y:7,p:33630}], SEL=5, mode='none', view='A';
+function w(n){return n.toLocaleString('ko-KR');}
+function r10(x){return Math.round(x/10)*10;}
+function c1(p){return r10(p*0.95);} function c2(p){return r10(p*0.9);}
+function header(){return '<h3>노블 공기청정기2</h3><div class="m">AP-1623M · 신규</div>';}
+function vA(){
+  var h=header()+'<div class="hd"><b>약정기간</b><small>결합·동시구매 적용 시 예상 월 금액</small></div><div class="terms">';
+  T.forEach(function(t){
+    h+='<div class="t'+(t.y===SEL?' on':'')+'"><div class="y">'+t.y+'년</div><div class="p">'+w(t.p)+'<small>원/월</small></div>'
+     +'<div class="row c1"><span>결합 −5%</span><b>'+w(c1(t.p))+'</b></div>'
+     +'<div class="row c2"><span>동시구매 −10%</span><b>'+w(c2(t.p))+'</b></div></div>';
+  });
+  return h+'</div><p class="note">버튼 안에 두 금액을 같이 보여줍니다. 한눈에 비교되지만 버튼이 길어집니다.</p>';
+}
+function vB(){
+  var lab={none:'기본',c1:'결합 −5%',c2:'동시구매 −10%'};
+  var h=header()+'<div class="hd"><b>약정기간</b><small>보기 기준을 바꿔서 비교</small></div>'
+   +'<div class="seg">'+['none','c1','c2'].map(function(k){return '<button data-m="'+k+'" class="'+(mode===k?'on':'')+'">'+lab[k]+'<small>'+(k==='none'?'현재 조건':k==='c1'?'결합 할인':'동시구매 할인')+'</small></button>';}).join('')+'</div><div class="terms">';
+  T.forEach(function(t){
+    var v=mode==='c1'?c1(t.p):mode==='c2'?c2(t.p):t.p;
+    h+='<div class="t'+(t.y===SEL?' on':'')+'"><div class="y">'+t.y+'년</div>'
+     +(mode!=='none'?'<span class="tag '+mode+'">'+lab[mode]+'</span><br>':'')
+     +'<div class="p">'+w(v)+'<small>원/월</small></div>'
+     +(mode!=='none'?'<div class="strike">'+w(t.p)+'</div><div class="row"><span>할인</span><b>−'+w(t.p-v)+'</b></div>':'')+'</div>';
+  });
+  return h+'</div><p class="note">스위치로 보기 기준만 바꿉니다(실제 적용은 "조건"에서). 버튼 크기는 그대로입니다.</p>';
+}
+function vC(){
+  var t=T.filter(function(x){return x.y===SEL;})[0];
+  var h=header()+'<div class="hd"><b>약정기간</b><small>선택한 5년 기준</small></div><div class="terms">';
+  T.forEach(function(x){h+='<div class="t'+(x.y===SEL?' on':'')+'"><div class="y">'+x.y+'년</div><div class="p">'+w(x.p)+'<small>원/월</small></div></div>';});
+  h+='</div><div class="hd"><b>할인 조건 미리보기</b><small>5년 · 방문관리 4개월</small></div><div class="cmp">'
+   +'<div class="r now"><span class="l">지금 (적용 없음)</span><span class="v">'+w(t.p)+'원</span></div>'
+   +'<div class="r"><span class="l">결합 −5%<small>결합 할인 대상일 때</small></span><span class="v">'+w(c1(t.p))+'원<small>−'+w(t.p-c1(t.p))+'</small></span></div>'
+   +'<div class="r"><span class="l">동시구매 −10%<small>2개 이상 함께 구매할 때</small></span><span class="v">'+w(c2(t.p))+'원<small>−'+w(t.p-c2(t.p))+'</small></span></div>'
+   +'</div><p class="note">약정 버튼은 지금처럼 단순하게 두고, 선택한 약정의 예상 금액만 따로 보여줍니다. 각 줄을 누르면 바로 적용되는 형태로 확장할 수 있습니다.</p>';
+  return h;
+}
+function draw(){document.getElementById('sheet').innerHTML=view==='A'?vA():view==='B'?vB():vC();
+  document.querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){mode=b.dataset.m;draw();};});}
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){view=b.dataset.v;document.querySelectorAll('#tabs button').forEach(function(x){x.classList.toggle('on',x===b);});draw();};});
+draw();
+</script></body></html>

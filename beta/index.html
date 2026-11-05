@@ -419,6 +419,17 @@ body.has-bbar .wrap { padding-bottom:0; }
 @keyframes lsBar { 0% { transform:translateX(-120%); } 100% { transform:translateX(320%); } }
 @keyframes lsIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 #benPage { z-index:70; }
+.lp-box { background:#F7F5F0; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; }
+.lp-h { font-size:13px; font-weight:800; color:var(--ink); margin-bottom:6px; }
+.lp-h small { display:block; font-size:11px; font-weight:400; color:var(--sub); margin-top:1px; }
+.lp-r { display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:13px; padding:4px 0; color:var(--ink); }
+.lp-r b { font-weight:700; white-space:nowrap; }
+.lp-r.dn b { color:#15803D; }
+.lp-r.dn2 b { color:#15803D; }
+.lp-r.na, .lp-r.na b { color:#a39d90; font-weight:500; }
+.lp-r em { font-style:normal; font-size:12px; }
+.lp-r.sum { border-top:1px solid var(--line); margin-top:3px; padding-top:7px; font-weight:800; }
+.lp-note { margin:6px 0 0; font-size:11px; color:#B45309; }
 .calc-og { margin-top:6px; padding-top:14px; border-top:1px solid var(--line); }
 .apply { border:1px solid var(--line); border-radius:12px; background:var(--paper); padding:11px 12px; margin-bottom:16px; }
 .apply .t { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:800; color:var(--ink); }
@@ -943,7 +954,7 @@ function loadAppData(attempt) {
         return { s:r[0], 분류:r[1], 모델명:r[2], 제품명:r[3], 관리방법:r[4], 관리주기:r[5],
                  약정년:r[6], 정상가:r[7], 프로모션:r[8], 재렌탈:r[9], 일시불:r[10],
                  타사보상렌탈:r[11]||0, 타사보상일시불:r[12]||0,
-                 프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N', 타사보상일시불사용:(r[16]||'Y')!=='N' };
+                 프로모션사용:(r[13]||'Y')!=='N', 타사보상사용:(r[14]||'Y')!=='N', 재렌탈사용:(r[15]||'Y')!=='N', 타사보상일시불사용:(r[16]||'Y')!=='N', 정가:Number(r[17])||0 };
       });
       // 조건 데이터 로드
       var cond = resp.conditions || {};
@@ -1625,7 +1636,7 @@ function _variantPrice(item, jg, y, mth) {
       return r.제품명 === o.제품명 && r.모델명 === o.모델명 && (!o.관리방법 || r.관리방법 === o.관리방법) && (!o.관리주기 || r.관리주기 === o.관리주기) && r.약정년 === y;
     });
     if (!row) return null;
-    ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불'].forEach(function(k) { o[k] = row[k] || 0; });
+    ['정상가','프로모션','재렌탈','일시불','타사보상렌탈','타사보상일시불','정가'].forEach(function(k) { o[k] = row[k] || 0; });
     o.프로모션사용 = row.프로모션사용; o.타사보상사용 = row.타사보상사용; o.재렌탈사용 = row.재렌탈사용; o.타사보상일시불사용 = row.타사보상일시불사용;
     return betaPriceNum(o);
   } catch (e) { return null; }
@@ -1774,6 +1785,36 @@ function _baseChainSteps(item, c, d) {
     if (combo) steps.push({label:combo, val:c.normalMonthly});
   }
   return steps;
+}
+
+
+// ── 할인 전 금액(정가) 표시 ─────────────────────────────────────────
+// 시트의 정상가에는 약정할인과 자동이체(정기결제) 할인 1,000원이 이미 반영돼 있음.
+// 정가(할인 전 월렌탈료)는 제품DB에 '정가' 필드가 생기면(현재 준비 중) 자동으로 채워짐.
+// 미리보기: 주소 끝에 ?listdemo=1 을 붙이면 정가가 없는 제품에 임시 값을 넣어 화면을 확인할 수 있음.
+var LIST_DEMO = /[?&]listdemo=1/.test(location.search);
+var _DEMO_TERM_DISC = {3:3000,4:3500,5:4000,6:4500,7:5000};
+function listPriceOf(item){
+  if (item.정가 > 0) return {lp:item.정가, demo:false};
+  if (LIST_DEMO && item.정상가 > 0) return {lp:item.정상가 + JIRO_SURCHARGE + (_DEMO_TERM_DISC[item.약정년]||3000), demo:true};
+  return {lp:0, demo:false};
+}
+function listPriceBlock(item, c){
+  if (item.구매방법==='cash' || item.tasabosangOn) return '';
+  if (!(item.정상가 > 0)) return '';
+  var L = listPriceOf(item), has = L.lp > 0;
+  var termDisc = has ? Math.max(0, L.lp - item.정상가 - JIRO_SURCHARGE) : 0;
+  var row = function(lbl, val, cls){ return '<div class="lp-r'+(cls?' '+cls:'')+'"><span>'+lbl+'</span><b>'+val+'</b></div>'; };
+  var h = '<div class="lp-box"><div class="lp-h">할인 전 금액<small>정상가에는 아래 할인이 이미 반영돼 있어요</small></div>';
+  h += row('정가 (할인 전)', has ? won(L.lp)+'/월' : '<em>데이터 준비 중</em>', has?'':'na');
+  h += row('약정할인 · '+item.약정년+'년', has ? '−'+won(termDisc) : '<em>—</em>', has?'dn':'na');
+  h += row('자동이체 할인 (제품 공통)', '−'+won(JIRO_SURCHARGE), 'dn');
+  h += row('정상가', won(item.정상가)+'/월', 'sum');
+  var hasPromo = item.프로모션 > 0 && item.프로모션사용 !== false;
+  if (item.isRerental && item.재렌탈 > 0) h += row('재렌탈가', won(item.재렌탈)+'/월', 'dn2');
+  else if (hasPromo) h += row('프로모션 할인', '−'+won(item.정상가 - item.프로모션)+' → '+won(item.프로모션)+'/월', 'dn2');
+  if (L.demo) h += '<p class="lp-note">※ 미리보기용 임시 값입니다 (실제 데이터 아님)</p>';
+  return h + '</div>';
 }
 
 function renderResultBox(item, idx, c, d, isSunap2) {
@@ -2002,7 +2043,7 @@ function renderCart() {
       } else {
         _tb.buy = renderOptionPanels(item, idx, c, false, isSunap2) + (item.isRerental ? renderRerentalDisc(item, idx) : '');
         _tb.bmp = renderBmpPanel(item, idx);
-        _tb.res = renderResultBox(item, idx, c, d, isSunap2);
+        _tb.res = listPriceBlock(item, c) + renderResultBox(item, idx, c, d, isSunap2);
       }
       _tb.buy += '<div class="og calc-og"><h4>계산내역</h4>' + _tb.res + '</div>'; _tb.res = '';
       _sheet = { idx: idx, name: item.제품명, model: item.모델명, pm: window._sheetPm, price: window._sheetPrice, tabs: _tb };
@@ -2308,7 +2349,7 @@ function doUpdate(){
         return {s:r[0],분류:r[1],모델명:r[2],제품명:r[3],관리방법:r[4],관리주기:r[5],
           약정년:r[6],정상가:r[7],프로모션:r[8],재렌탈:r[9],일시불:r[10],
           타사보상렌탈:r[11]||0,타사보상일시불:r[12]||0,
-          프로모션사용:(r[13]||'Y')!=='N',타사보상사용:(r[14]||'Y')!=='N',재렌탈사용:(r[15]||'Y')!=='N',타사보상일시불사용:(r[16]||'Y')!=='N'};
+          프로모션사용:(r[13]||'Y')!=='N',타사보상사용:(r[14]||'Y')!=='N',재렌탈사용:(r[15]||'Y')!=='N',타사보상일시불사용:(r[16]||'Y')!=='N',정가:Number(r[17])||0};
       });
       var cond=resp.conditions||{};
       if(cond.sunap2) SUNAP2=cond.sunap2;

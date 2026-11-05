@@ -414,6 +414,7 @@ body.has-bbar .wrap { padding-bottom:0; }
 @keyframes lsBar { 0% { transform:translateX(-120%); } 100% { transform:translateX(320%); } }
 @keyframes lsIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 #benPage { z-index:70; }
+.calc-og { margin-top:6px; padding-top:14px; border-top:1px solid var(--line); }
 .apply { border:1px solid var(--line); border-radius:12px; background:var(--paper); padding:11px 12px; margin-bottom:16px; }
 .apply .t { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:800; color:var(--ink); }
 .apply .t a { font-size:12px; font-weight:700; color:var(--brassD); text-decoration:none; border-bottom:1px solid var(--brass); }
@@ -1964,6 +1965,7 @@ function renderCart() {
         _tb.bmp = renderBmpPanel(item, idx);
         _tb.res = renderResultBox(item, idx, c, d, isSunap2);
       }
+      _tb.buy += '<div class="og calc-og"><h4>계산내역</h4>' + _tb.res + '</div>'; _tb.res = '';
       _sheet = { idx: idx, name: item.제품명, model: item.모델명, pm: window._sheetPm, price: window._sheetPrice, tabs: _tb };
     }
 
@@ -2174,7 +2176,7 @@ function syncDetailSheet(s){
     _td.textContent='기존'+(_t0.cash?' 일시불':' '+_t0.months+'개월')+' 총액 대비 '+_sgn(_tt.n-_t0.n)+((!_tt.cash&&!_t0.cash&&_tt.months!==_t0.months)?' · 비교기간 다름':'');
     _td.style.display='';
   } else { _td.style.display='none'; }
-  var T=[['buy','계약·관리'],['bmp','별매품'],['res','계산내역']];
+  var T=[['buy','계약·관리'],['bmp','별매품']];
   document.getElementById('dSheetTabs').innerHTML=T.map(function(t){
     return '<div class="tab'+(_dTab===t[0]?' on':'')+((t[0]==='bmp'&&!s.tabs.bmp)?' dim':'')+'" onclick="setDetailTab(\''+t[0]+'\')">'+t[1]+'</div>';
   }).join('');

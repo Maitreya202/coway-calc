@@ -357,7 +357,11 @@ body.has-bbar .wrap { padding-bottom:0; }
 .it-desc { display:block; margin-top:3px; font-size:11.5px; color:var(--sub); }
 .it-skip { color:#9A3412; font-weight:700; }
 .benefit-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:15px 16px; background:#fff; border-bottom:1px solid var(--line); cursor:pointer; color:var(--ink); font-size:14px; }
-.benefit-row small { font-size:11px; color:var(--sub); }
+.benefit-row small { font-size:11px; color:var(--sub); flex-shrink:0; }
+.benefit-row .br-l { display:flex; align-items:baseline; gap:10px; min-width:0; flex:1; }
+.benefit-row .br-l b { font-size:14px; }
+.benefit-row .br-l em { font-style:normal; font-size:12px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.benefit-row .br-l em.on { color:#15803D; font-weight:700; }
 .qd-foot { background:var(--paper); padding:14px 16px; }
 .qd-foot .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; padding:2px 0; font-size:14px; color:var(--ink); }
 .qd-foot .big { font-size:23px; font-weight:800; color:var(--navy); }
@@ -676,7 +680,7 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
-    <div class="benefit-row" onclick="openBenefits()"><span>코라솔 · 카드 · 선납</span><small>설정 ›</small></div>
+    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>혜택</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -1635,11 +1639,6 @@ function itemBenChips(it) {
   if (it.지로On) a.push('지로납부');
   return a;
 }
-function renderBenefitSummary(item) {
-  var chips = itemBenChips(item);
-  return '<div class="apply"><div class="t"><span>적용 중 혜택</span><a href="#" onclick="openBenefits();return false">혜택 설정 &rsaquo;</a></div>'
-    + '<div class="chips">' + (chips.length ? chips.map(function(x) { return '<span class="chip g">' + esc(x) + '</span>'; }).join('') : '<span class="chip n">적용 중인 혜택 없음</span>') + '</div></div>';
-}
 function renderRerentalDisc(item, idx) {
   var h = '<div class="og"><h4>재렌탈 할인</h4><div class="seg">';
   [['none', '없음'], ['3', '-3%'], ['6', '-6%']].forEach(function(o) {
@@ -1988,7 +1987,7 @@ function renderCart() {
         if (c.bmpOneTimeTotal > 0) _tb.res += '<div class="res-sub" style="color:#15803d;font-weight:700"><span>별매품(일시불)</span><span>' + won(c.bmpOneTimeTotal) + '</span></div>';
         _tb.res += '<div class="res-main"><span>최종 결제금액</span><span>' + won(c.cashFinal + c.bmpOneTimeTotal) + '</span></div></div>';
       } else {
-        _tb.buy = renderBenefitSummary(item) + renderOptionPanels(item, idx, c, false, isSunap2) + (item.isRerental ? renderRerentalDisc(item, idx) : '');
+        _tb.buy = renderOptionPanels(item, idx, c, false, isSunap2) + (item.isRerental ? renderRerentalDisc(item, idx) : '');
         _tb.bmp = renderBmpPanel(item, idx);
         _tb.res = renderResultBox(item, idx, c, d, isSunap2);
       }
@@ -2316,7 +2315,16 @@ function toggleAllCart(checked){
 }
 var selectMode=false;
 function toggleSelectMode(){ selectMode=!selectMode; cartSel={}; renderCart(); }
+function updateBenRow(){
+  var el=document.getElementById('benRowTxt'); if(!el) return;
+  var seen={}, a=[];
+  cart.forEach(function(it){ itemBenChips(it).forEach(function(l){ if(!seen[l]){ seen[l]=1; a.push(l); } }); });
+  var cid=(plans[activePlan]&&plans[activePlan].card)||'';
+  if(cid&&typeof CARDS!=='undefined'){ var c=CARDS.filter(function(x){return x.id===cid;})[0]; if(c) a.push(c.name); }
+  el.textContent=a.length?a.join(' · '):'적용 중인 혜택 없음'; el.className=a.length?'on':'';
+}
 function updateMasterChk(){
+  updateBenRow();
   var bar=document.getElementById('masterCheckBar');
   var chk=document.getElementById('masterChk');
   var lbl=document.getElementById('masterChkLabel');
@@ -4879,6 +4887,7 @@ function benCard(id){
   plans[activePlan].card=id||'';
   if(id) cardCurrentId=id;
   benFlash(id?'제휴카드를 선택했습니다':'제휴카드를 해제했습니다');
+  updateBenRow();
   benRender();
 }
 function benOpen(kind){
@@ -4924,12 +4933,13 @@ function benSummaryLine(kind){
 }
 function benOpt(v,l,cur){ return '<option value="'+esc(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+esc(l)+'</option>'; }
 function benBody(kind){
-  var any=benAnyKind(kind), rel=benRel(kind), o=benS[kind], h='';
+  var h='';
   if(kind==='card'){
     var cid=plans[activePlan].card||'';
     return '<label class="ben-sub">제휴카드</label><select onchange="benCard(this.value)">'+benOpt('','미적용',cid)+((typeof CARDS!=='undefined')?CARDS.map(function(c){return benOpt(c.id,c.name,cid);}).join(''):'')+'</select>'
       +'<p class="ben-hint">카드 청구할인은 제품별 적용이 아니라 견적 전체 안내용입니다. 렌탈 청구액·합계에는 반영하지 않습니다.'+(cid?' <button type="button" class="ben-lnk" onclick="closeBenefits();switchMainTab(\'card\')">카드 상세 ›</button>':'')+'</p>';
   }
+  var any=benAnyKind(kind), rel=benRel(kind), o=benS[kind];
   var f=function(arr){ return arr.filter(function(x){ return any||x[0]!=='none'; }); }; // 적용된 제품이 없으면 '미적용' 선택지는 숨김(해제할 대상이 없음)
   if(kind==='disc'){
     h+='<label class="ben-sub">적용할 혜택</label><select onchange="benSet(\'disc\',\'type\',this.value)">'+f([['none','미적용'],['결합','결합 (-5%)'],['동시구매','동시구매 (-10%)'],['동시결합','동시결합 (10%+5%)'],['페스타','페스타 (-15%)'],['타사보상','타사보상']]).map(function(x){return benOpt(x[0],x[1],o.type);}).join('')+'</select>';

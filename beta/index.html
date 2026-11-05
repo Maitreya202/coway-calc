@@ -500,6 +500,7 @@ body.has-bbar .wrap { padding-bottom:0; }
 .terms button small { font-size:11px; color:var(--sub); }
 .terms button.on { background:var(--brassL); border-color:var(--brass); color:var(--brassD); box-shadow:inset 0 0 0 1px var(--brass); }
 .terms button.on small { color:var(--brassD); }
+em.sd i { font-style:normal; font-weight:400; font-size:10px; color:var(--sub); margin-right:3px; }
 em.sd { display:block; font-style:normal; font-size:11px; font-weight:700; margin-top:3px; color:var(--sub); }
 em.sd.dn { color:#15803D; }
 em.sd.up { color:#B45309; }
@@ -1558,13 +1559,14 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   if (isCashMode) return h;
 
   // 약정기간 (버튼마다 해당 약정의 요금 표시)
-  h += '<div class="og"><div class="ogh"><h4>약정기간</h4><small>' + pmLabel + ' · 현재 관리조건 기준' + (cYaks.length > 1 ? ' · 증감은 직전 약정 대비' : '') + '</small></div><div class="terms" style="margin-top:10px">';
-  var _prevT = null;
-  cYaks.forEach(function(y) {
-    var pr = _termPrice(item, y);
+  h += '<div class="og"><div class="ogh"><h4>약정기간</h4><small>' + pmLabel + ' · 현재 관리조건 기준' + (cYaks.length > 1 ? ' · 증감은 직전·최고가 약정 대비' : '') + '</small></div><div class="terms" style="margin-top:10px">';
+  var _prevT = null, _maxT = null, _tprs = cYaks.map(function(y) { return _termPrice(item, y); });
+  _tprs.forEach(function(p) { if (p && (!_maxT || (p.kind === _maxT.kind && p.n > _maxT.n))) _maxT = p; });
+  cYaks.forEach(function(y, i) {
+    var pr = _tprs[i];
     h += '<button class="' + (item.약정년 === y ? 'on' : '') + '" onclick="setCartYakj(' + idx + ',' + y + ')">' + yakjLabel(y)
       + '<strong>' + (pr ? Math.round(pr.n).toLocaleString('ko-KR') : '-') + '</strong><small>' + (pr && pr.kind === 'sunap' ? '원 선납' : '원/월') + '</small>'
-      + (_prevT ? _stepDiff(pr, _prevT) : '') + '</button>';
+      + (_prevT ? _stepDiff(pr, _prevT, '직전') + _stepDiff(pr, _maxT, '최고', true) : '') + '</button>';
     if (pr) _prevT = pr;
   });
   h += '</div></div>';
@@ -1623,11 +1625,12 @@ function _variantPrice(item, jg, y, mth) {
   } catch (e) { return null; }
 }
 // 직전 단계 대비 증감 표시 (같은 종류의 금액끼리만 비교, 첫 단계는 표시 없음)
-function _stepDiff(pr, prev) {
+function _stepDiff(pr, prev, label, hideZero) {
   if (!pr || !prev || pr.kind !== prev.kind) return '';
   var d = Math.round(pr.n - prev.n);
-  if (!d) return '<em class="sd">동일</em>';
-  return '<em class="sd ' + (d > 0 ? 'up' : 'dn') + '">' + (d > 0 ? '+' : '−') + Math.abs(d).toLocaleString('ko-KR') + '</em>';
+  var lb = label ? '<i>' + label + '</i>' : '';
+  if (!d) return hideZero ? '' : '<em class="sd">' + lb + '동일</em>';
+  return '<em class="sd ' + (d > 0 ? 'up' : 'dn') + '">' + lb + (d > 0 ? '+' : '−') + Math.abs(d).toLocaleString('ko-KR') + '</em>';
 }
 function _jugiNum(j) { var m = /\d+/.exec(j || ''); return m ? parseInt(m[0], 10) : 1e9; }
 

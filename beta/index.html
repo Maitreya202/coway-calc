@@ -419,6 +419,18 @@ body.has-bbar .wrap { padding-bottom:0; }
 @keyframes lsBar { 0% { transform:translateX(-120%); } 100% { transform:translateX(320%); } }
 @keyframes lsIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 #benPage { z-index:70; }
+.cmp-prev { border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-top:8px; background:#fff; }
+.cmp-prev .r { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-top:1px solid var(--line); font-size:14px; }
+.cmp-prev .r:first-child { border-top:0; }
+.cmp-prev .r.now { background:#F1E8D4; font-weight:800; }
+.cmp-prev .l small { display:block; font-size:11px; font-weight:400; color:var(--sub); margin-top:1px; }
+.cmp-prev .v { text-align:right; font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.cmp-prev .v small { display:block; font-size:11px; font-weight:700; }
+.cmp-prev .v small.dn { color:#15803D; }
+.cmp-prev .v small.up { color:#B45309; }
+.cmp-prev .act { font-style:normal; font-size:10px; font-weight:800; background:#E7F5EC; color:#15803D; border-radius:5px; padding:1px 5px; margin-left:4px; }
+.cp-note { margin:6px 2px 0; font-size:11px; color:var(--sub); }
+.cp-note a { color:var(--brassF); font-weight:700; text-decoration:none; }
 .lp-box { background:#F7F5F0; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; }
 .lp-h { font-size:13px; font-weight:800; color:var(--ink); margin-bottom:6px; }
 .lp-h small { display:block; font-size:11px; font-weight:400; color:var(--sub); margin-top:1px; }
@@ -1587,6 +1599,7 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
     if (pr) _prevT = pr;
   });
   h += '</div></div>';
+  h += comboPreviewBlock(item, idx);
 
   // 관리방법 · 주기
   h += '<div class="og">';
@@ -1614,6 +1627,32 @@ function renderOptionPanels(item, idx, c, isCashMode, isSunap2) {
   }
   if (cMeths.length <= 1 && cJugis.length <= 1) h += '<h4>관리방법</h4><p style="font-size:12px;color:#7B8190;margin:0">이 제품은 관리방법 선택 옵션이 없습니다.</p>';
   h += '</div>';
+  return h;
+}
+
+
+// ── 결합·동시구매 미리보기: 현재 제품에 그 할인만 단독 적용했을 때의 금액 (calcItem 그대로 사용, 원본 변경 없음)
+function _comboPrice(item, type){
+  try {
+    var o = JSON.parse(JSON.stringify(item)); delete o._calcSnap;
+    var d = o.discounts || {}; d.동시구매 = d.결합 = d.동시결합 = d.페스타 = false; d[type] = true; o.discounts = d;
+    return betaPriceNum(o);
+  } catch (e) { return null; }
+}
+function comboPreviewBlock(item, idx){
+  if (item.구매방법 === 'cash' || item.isRerental) return '';
+  var cur = betaPriceNum(item); if (!cur || cur.kind !== 'month') return '';
+  var now = benDiscOf(item);
+  var rows = [['결합','결합 −5%','결합 할인 대상일 때'],['동시구매','동시구매 −10%','2개 이상 함께 구매할 때']];
+  var h = '<div class="og"><div class="ogh"><h4>할인 조건 미리보기</h4><small>' + item.약정년 + '년 · 현재 관리조건 기준</small></div><div class="cmp-prev">';
+  h += '<div class="r now"><span class="l">지금' + (now !== 'none' ? '<small>' + now + ' 적용 중</small>' : '<small>결합·동시구매 미적용</small>') + '</span><span class="v">' + Math.round(cur.n).toLocaleString('ko-KR') + '원</span></div>';
+  rows.forEach(function(r){
+    var pr = _comboPrice(item, r[0]); if (!pr || pr.kind !== 'month') return;
+    var on = (now === r[0]), diff = Math.round(pr.n - cur.n);
+    h += '<div class="r"><span class="l">' + r[1] + (on ? ' <i class="act">적용 중</i>' : '') + '<small>' + r[2] + '</small></span><span class="v">' + Math.round(pr.n).toLocaleString('ko-KR') + '원'
+      + (on ? '' : '<small class="' + (diff > 0 ? 'up' : 'dn') + '">' + (diff > 0 ? '+' : '−') + Math.abs(diff).toLocaleString('ko-KR') + '</small>') + '</span></div>';
+  });
+  h += '</div><p class="cp-note">미리보기입니다. 적용은 <a href="#" onclick="openBenefits({' + idx + ':true});return false">조건에서 설정 ›</a></p></div>';
   return h;
 }
 

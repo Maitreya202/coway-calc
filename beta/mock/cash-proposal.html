@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>일시불 제안 목업</title>
+<style>
+:root{--ink:#16213A;--sub:#77736d;--line:#E6E1D6;--brass:#A07D3B;--brassF:#8A6A2C;--navy:#16213A;--soft:#F1E8D4}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e6df;font-family:-apple-system,"Noto Sans KR",sans-serif;color:var(--ink)}
+.top{padding:12px 14px 6px;font-size:12px;color:var(--sub)}
+.tabs{display:flex;gap:6px;padding:0 14px 10px;max-width:480px;margin:0 auto}
+.tabs button{flex:1;min-height:40px;border:1px solid var(--line);background:#fff;border-radius:10px;font:inherit;font-weight:700;color:var(--sub);cursor:pointer}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sheet{background:#fff;max-width:480px;margin:0 auto;padding:14px 14px 22px;border-radius:18px 18px 0 0;min-height:600px}
+h3{margin:0 0 2px;font-size:17px}.m{font-size:11px;color:var(--sub)}
+.price{font-size:26px;font-weight:800;margin:6px 0 2px}
+.og{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.ogh{display:flex;align-items:baseline;justify-content:space-between}
+.ogh h4{margin:0;font-size:15px}.ogh small{font-size:11px;color:var(--sub)}
+.seg{display:flex;gap:7px;margin-top:10px}
+.seg button{flex:1;min-height:44px;padding:9px 4px;font:inherit;font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.seg.sub button{min-height:38px;font-size:12px}
+.cmp-prev{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px;background:#fff}
+.cmp-prev .r{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+.cmp-prev .r:first-child{border-top:0}
+.cmp-prev .r.now{background:var(--soft);font-weight:800}
+.cmp-prev .l small{display:block;font-size:11px;font-weight:400;color:var(--sub);margin-top:1px}
+.cmp-prev .v{text-align:right;font-weight:800;white-space:nowrap}
+.cmp-prev .v small{display:block;font-size:11px;font-weight:700}
+.dn{color:#15803D}.up{color:#B45309}
+.act{font-style:normal;font-size:10px;font-weight:800;background:#E7F5EC;color:#15803D;border-radius:5px;padding:1px 5px;margin-left:4px}
+.cp-note{margin:6px 2px 0;font-size:11px;color:var(--sub)}
+.cp-note a{color:var(--brassF);font-weight:700;text-decoration:none;cursor:pointer}
+.box{background:#F7F5F0;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}
+.box .a{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);padding:3px 0}
+.box .a.c{color:#2563eb}
+.box .main{display:flex;justify-content:space-between;font-size:16px;font-weight:800;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+.foot{margin-top:16px;padding:12px;background:#F1EFEA;border-radius:10px;font-size:13px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;font-size:13px;color:var(--sub)}
+.tot b{font-size:19px;color:var(--ink)}
+/* 조건 화면 */
+.ben-card{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+.ben-card.open{border-color:var(--brass)}
+.ben-ch{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.ben-ch .t{flex:1}.ben-ch .t b{display:block;font-size:14px}.ben-ch .t small{font-size:11px;color:var(--sub)}
+.ben-st{font-size:11px;font-weight:700;padding:4px 8px;border-radius:7px;background:#F1EFEA;color:#77736d}
+.ben-st.ok{background:#E7F5EC;color:#15803D}
+.ben-cb{padding:2px 14px 14px;border-top:1px solid var(--line)}
+.ben-cb label{display:block;font-size:12px;color:var(--sub);margin:12px 0 6px}
+.ben-cb select{width:100%;font:inherit;font-size:16px;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+.plist{margin-top:6px}
+.prow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.prow:first-child{border-top:0}
+.prow input{width:20px;height:20px;accent-color:var(--navy)}
+.prow .n{flex:1}.prow small{display:block;font-size:11px;color:var(--sub)}
+.prow.dis{opacity:.45}
+.btnrow{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;min-height:44px;border-radius:10px;font:inherit;font-weight:800;border:1px solid var(--line);background:#fff;cursor:pointer}
+.btn.pri{background:var(--brassF);border-color:var(--brassF);color:#fff}
+.btn.rel{color:#B91C1C;border-color:#E3B7B7}
+.note{font-size:11px;color:var(--sub);margin:10px 0 0;line-height:1.5}
+</style></head><body>
+<div class="top">목업 · 일시불 제안 / 아래 탭과 화면 안의 버튼을 눌러 보세요 (숫자는 예시)</div>
+<div class="tabs" id="tabs">
+ <button class="on" data-v="S">① 시트 (계약·관리)</button>
+ <button data-v="B">② 조건 화면</button>
+</div>
+<div class="sheet" id="sheet"></div>
+<script>
+var BASE=1010000, TASAB=960000, st={tasab:false, on:false}, view='S';
+function w(n){return Math.round(n).toLocaleString('ko-KR')+'원';}
+function cur(){return st.tasab?TASAB:BASE;}
+function fin(){return st.on?Math.round(cur()*0.9):cur();}
+function vS(){
+  var h='<h3>아이콘 얼음정수기 미니</h3><div class="m">CHPI-7430N · 일시불'+(st.tasab?'(타사보상)':'')+'</div><div class="price">'+w(fin())+'</div>';
+  h+='<div class="og"><div class="ogh"><h4>구매방법</h4></div><div class="seg"><button>신규(렌탈)</button><button>타사보상</button><button>재렌탈</button><button class="on">일시불</button></div>';
+  h+='<div class="seg sub"><button data-t="0" class="'+(!st.tasab?'on':'')+'">일시불</button><button data-t="1" class="'+(st.tasab?'on':'')+'">일시불 (타사보상)</button></div></div>';
+  h+='<div class="og"><div class="ogh"><h4>할인 조건 미리보기</h4><small>일시불 결제 기준</small></div><div class="cmp-prev">';
+  h+='<div class="r now"><span class="l">지금<small>'+(st.on?'일시불 −10% 적용 중':'일시불 할인 미적용')+'</small></span><span class="v">'+w(fin())+'</span></div>';
+  var p=Math.round(cur()*0.9), d=p-fin();
+  h+='<div class="r"><span class="l">일시불 −10%'+(st.on?' <i class="act">적용 중</i>':'')+'<small>일시불 할인</small></span><span class="v">'+w(p)+(st.on?'':'<small class="dn">−'+Math.round(cur()-p).toLocaleString('ko-KR')+'</small>')+'</span></div>';
+  h+='</div><p class="cp-note">미리보기입니다. 적용은 <a data-go="B">조건에서 설정 ›</a></p></div>';
+  h+='<div class="og"><div class="ogh"><h4>계산내역</h4></div><div class="box"><div class="a"><span>일시불 정가'+(st.tasab?' (타사보상)':'')+'</span><span>'+w(cur())+'</span></div>';
+  if(st.on) h+='<div class="a c"><span>↳ 일시불 −10%</span><span>−'+Math.round(cur()-fin()).toLocaleString('ko-KR')+'원</span></div>';
+  h+='<div class="main"><span>최종 결제금액</span><span>'+w(fin())+'</span></div></div></div>';
+  h+='<div class="foot">재렌탈 → 일시불</div><div class="tot"><span>일시불 결제금액</span><b>'+w(fin())+'</b></div>';
+  h+='<p class="note">※ 시트에서는 보기만 합니다. 줄을 눌러도 적용되지 않고, 적용·해제는 조건 화면에서 합니다. (결합·동시구매·재렌탈 카드와 동일)</p>';
+  return h;
+}
+function vB(){
+  var h='<h3>조건 설정</h3><div class="m">여러 제품에 한 번에 적용하는 화면</div>';
+  h+='<div class="ben-card open"><div class="ben-ch"><div class="t"><b>할인</b><small>결합 · 동시구매 · 동시결합 · 페스타 · 재렌탈 · 일시불</small></div><span class="ben-st'+(st.on?' ok':'')+'">'+(st.on?'1개 제품 적용':'미적용')+'</span></div><div class="ben-cb">';
+  h+='<label>적용할 조건</label><select><option>일시불 −10%</option><option>결합 (−5%)</option><option>동시구매 (−10%)</option><option>동시결합 (10%+5%)</option><option>페스타 (−15%)</option><option>재렌탈 −3%</option><option>재렌탈 −6%</option></select>';
+  h+='<label>적용할 제품</label><div class="plist">';
+  h+='<label class="prow" style="margin:0"><input type="checkbox" id="c1" '+(st.on?'checked':'')+'><span class="n">아이콘 얼음정수기 미니<small>일시불'+(st.tasab?'(타사보상)':'')+' · '+w(cur())+'</small></span></label>';
+  h+='<div class="prow dis"><input type="checkbox" disabled><span class="n">노블 공기청정기2<small>신규 렌탈 · 일시불 제품만 가능</small></span></div>';
+  h+='<div class="prow dis"><input type="checkbox" disabled><span class="n">아이콘 정수기 2<small>재렌탈 · 일시불 제품만 가능</small></span></div>';
+  h+='</div><div class="btnrow"><button class="btn pri" id="ap">선택한 제품에 적용</button>'+(st.on?'<button class="btn rel" id="rl">1개 제품에서 해제</button>':'')+'</div>';
+  h+='<p class="note">일시불 −10%는 일시불 제품에만 적용됩니다. 선납·코라솔·지로납부 등은 일시불에서 계속 사용할 수 없습니다.</p></div></div>';
+  return h;
+}
+function draw(){
+  document.getElementById('sheet').innerHTML=view==='S'?vS():vB();
+  var s=document.getElementById('sheet');
+  s.querySelectorAll('[data-t]').forEach(function(b){b.onclick=function(){st.tasab=b.dataset.t==='1';draw();};});
+  s.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(){view='B';sync();draw();};});
+  var ap=document.getElementById('ap'); if(ap) ap.onclick=function(){st.on=document.getElementById('c1').checked;draw();};
+  var rl=document.getElementById('rl'); if(rl) rl.onclick=function(){st.on=false;draw();};
+}
+function sync(){document.querySelectorAll('#tabs button').forEach(function(x){x.classList.toggle('on',x.dataset.v===view);});}
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){view=b.dataset.v;sync();draw();};});
+draw();
+</script></body></html>

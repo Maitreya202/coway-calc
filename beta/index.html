@@ -429,6 +429,7 @@ body.has-bbar .wrap { padding-bottom:0; }
 .cmp-prev .v small.dn { color:#15803D; }
 .cmp-prev .v small.up { color:#B45309; }
 .cmp-prev .act { font-style:normal; font-size:10px; font-weight:800; background:#E7F5EC; color:#15803D; border-radius:5px; padding:1px 5px; margin-left:4px; }
+.cmp-prev .r.pick { cursor:pointer; }
 .cp-note { margin:6px 2px 0; font-size:11px; color:var(--sub); }
 .cp-note a { color:var(--brassF); font-weight:700; text-decoration:none; }
 .lp-box { background:#F7F5F0; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; }
@@ -1707,18 +1708,19 @@ function _reDiscPrice(item, v) {
   try { var o = JSON.parse(JSON.stringify(item)); delete o._calcSnap; o.재렌탈할인 = v; return betaPriceNum(o); } catch (e) { return null; }
 }
 function renderRerentalDisc(item, idx) {
-  var opts = [['none', '없음'], ['3', '−3%'], ['6', '−6%']];
+  var opts = [['none', '할인 없음', '재렌탈 기본 금액'], ['3', '−3%', '재렌탈 3% 할인'], ['6', '−6%', '재렌탈 6% 할인']];
+  var cur = item.재렌탈할인 || 'none';
   var pr = opts.map(function(o) { return _reDiscPrice(item, o[0]); });
-  var base = pr[0];
-  var h = '<div class="og"><div class="ogh"><h4>재렌탈 할인</h4><small>선택 시 예상 월 금액</small></div><div class="seg jseg" style="margin-top:10px">';
+  var curP = pr[opts.map(function(o){return o[0];}).indexOf(cur)] || pr[0];
+  var h = '<div class="og"><div class="ogh"><h4>재렌탈 할인</h4><small>선택 시 예상 월 금액</small></div><div class="cmp-prev">';
   opts.forEach(function(o, i) {
-    var p = pr[i], dd = '';
-    if (p && base && i > 0 && p.kind === base.kind) {
-      var df = Math.round(p.n - base.n);
-      if (df) dd = '<em class="sd ' + (df < 0 ? 'dn' : 'up') + '">' + (df < 0 ? '−' : '+') + Math.abs(df).toLocaleString('ko-KR') + '</em>';
+    var p = pr[i]; if (!p) return;
+    var on = (cur === o[0]), dd = '';
+    if (!on && curP && p.kind === curP.kind) {
+      var df = Math.round(p.n - curP.n);
+      if (df) dd = '<small class="' + (df < 0 ? 'dn' : 'up') + '">' + (df < 0 ? '−' : '+') + Math.abs(df).toLocaleString('ko-KR') + '</small>';
     }
-    h += '<button class="' + ((item.재렌탈할인 || 'none') === o[0] ? 'on' : '') + '" onclick="setRerentalDisc(' + idx + ',\'' + o[0] + '\')"><span>' + o[1] + '</span>'
-      + (p ? '<b>' + Math.round(p.n).toLocaleString('ko-KR') + '원</b>' : '') + dd + '</button>';
+    h += '<div class="r pick' + (on ? ' now' : '') + '" onclick="setRerentalDisc(' + idx + ',' + "'" + o[0] + "'" + ')"><span class="l">' + o[1] + (on ? ' <i class="act">적용 중</i>' : '') + '<small>' + o[2] + '</small></span><span class="v">' + Math.round(p.n).toLocaleString('ko-KR') + '원' + dd + '</span></div>';
   });
   h += '</div></div>';
   return h;

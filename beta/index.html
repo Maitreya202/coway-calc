@@ -714,7 +714,6 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
       <button type="button" class="qd-btn" data-console-open onclick="betaConsole.prefill('선택 ')">약정 변경</button>
     </div>
     <div id="cartArea"></div>
-    <div class="benefit-row" onclick="openBenefits()"><span class="br-l"><b>조건</b><em id="benRowTxt"></em></span><small>설정 ›</small></div>
     <div id="actionBtns" style="display:none"></div>
     <button id="updateBtn" onclick="openUpdateConfirm()" style="display:none;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;margin-top:6px">🔄 데이터 업데이트</button>
     <div id="totalBar" style="display:none"></div>
@@ -2415,12 +2414,10 @@ function toggleAllCart(checked){
 var selectMode=false;
 function toggleSelectMode(){ selectMode=!selectMode; cartSel={}; renderCart(); }
 function updateBenRow(){
-  var el=document.getElementById('benRowTxt'); if(!el) return;
   var seen={}, a=[];
   cart.forEach(function(it){ itemBenChips(it).forEach(function(l){ if(!seen[l]){ seen[l]=1; a.push(l); } }); });
   var cid=(plans[activePlan]&&plans[activePlan].card)||'';
   if(cid&&typeof CARDS!=='undefined'){ var c=CARDS.filter(function(x){return x.id===cid;})[0]; if(c) a.push(c.name); }
-  el.textContent=a.length?a.join(' · '):'적용 없음'; el.className=a.length?'on':'';
   var bb=document.getElementById('benBtn'); if(bb){ bb.style.display=cart.length?'':'none'; bb.innerHTML='조건'+(a.length?' <span class="bn">'+a.length+'</span>':''); }
 }
 function updateMasterChk(){

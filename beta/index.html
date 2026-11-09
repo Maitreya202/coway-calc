@@ -612,6 +612,13 @@ em.sd.up { color:#B45309; }
 .dsheet-head .price { font-size:22px; line-height:1.15; }
 .dsheet-head .price small { font-size:12px; font-weight:600; margin-left:1px; letter-spacing:0; }
 .dsheet-head .dbadge { display:inline-block; margin-top:4px; }
+.dsheet-head .hrow { align-items:center; }
+.dsheet-head .dthumb { flex:none; width:48px; height:48px; object-fit:contain; border-radius:10px; background:var(--paper); border:1px solid var(--line); }
+.dsheet-head .dthumb[hidden] { display:none; }
+.dsheet-head .hchg { display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid var(--line); font-size:12px; color:var(--sub); }
+.dsheet-head .hchg .old { display:inline; margin:0; font-size:12px; }
+.dsheet-head .hchg .old::after { content:'·'; margin-left:8px; color:#cbd5e1; }
+.dsheet-head .hchg .dbadge { margin:0; padding:4px 10px; border-radius:999px; font-size:12px; }
 .dsheet-foot button.ghost { flex:1; background:#fff !important; color:var(--navy); border:1.5px solid var(--line); }
 .sum3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
 .sum3 small { display:block; font-size:11px; opacity:.7; margin-bottom:2px; }
@@ -931,9 +938,11 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="dsheet-head">
     <button type="button" class="dx" onclick="closeDetail()" aria-label="닫기">&#10005;</button>
     <div class="hrow">
-      <div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span><small class="old" id="dSheetOld"></small></div>
-      <div class="pq"><small id="dSheetPLbl"></small><div class="price" id="dSheetPrice"></div><span class="dbadge" id="dSheetDelta"></span></div>
+      <img class="dthumb" id="dSheetThumb" alt="" hidden>
+      <div class="t"><b id="dSheetTitle"></b><span id="dSheetSub"></span></div>
+      <div class="pq"><small id="dSheetPLbl"></small><div class="price" id="dSheetPrice"></div></div>
     </div>
+    <div class="hchg" id="dSheetChgRow"><span class="old" id="dSheetOld"></span><span class="dbadge" id="dSheetDelta"></span></div>
   </div>
   <div class="dsheet-tabs" id="dSheetTabs"></div>
   <div class="dsheet-body" id="dSheetBody"></div>
@@ -2312,13 +2321,13 @@ function _deltaInfo(idx){
   var cur=cart[idx];
   if(!cur||!_dSnap||_dSnap.idx!==idx) return {old:'',badge:'',cls:''};
   var p0=_dSnap.price, unit=p0.kind==='month'?'월 ':'';
-  var old='현재 입력 '+unit+won(p0.n)+' →';
+  var old='현재 입력 '+unit+won(p0.n);
   if(_itemJson(cur)===_dSnap.json) return {old:old,badge:'변경 없음',cls:''};
   if(cur.모델명!==_dSnap.obj.모델명) return {old:old,badge:'제품 변경됨',cls:''};
   var p1=betaPriceNum(cur);
   if(p0.kind!==p1.kind) return {old:old,badge:p0.label+' → '+p1.label,cls:''};
   var diff=p1.n-p0.n;
-  return {old:old,badge:diff?'현재 입력 대비 '+unit+_sgn(diff):'현재 입력과 동일',cls:diff>0?'up':(diff<0?'down':'')};
+  return {old:old,badge:diff?((diff<0?'↓ ':'↑ ')+unit+won(Math.abs(diff))+(diff<0?' 절감':' 증가')):'현재 입력과 동일',cls:diff>0?'up':(diff<0?'down':'')};
 }
 function _chgText(cur){
   var o=(_dSnap&&_dSnap.idx===_dSheetIdx)?_dSnap.obj:null;
@@ -2358,8 +2367,10 @@ function syncDetailSheet(s){
   document.getElementById('dSheetPrice').innerHTML=String(s.price).replace('원/월','<small>원/월</small>');
   var _pk=betaPriceNum(cart[s.idx]); document.getElementById('dSheetPLbl').textContent=_pk.kind==='cash'?'일시불 결제금액':_pk.kind==='sunap'?'선납금':'월 렌탈료';
   var _di=_deltaInfo(s.idx), _de=document.getElementById('dSheetDelta');
-  document.getElementById('dSheetOld').textContent=_di.old; document.getElementById('dSheetOld').style.display=(_di.badge==='변경 없음')?'none':'';
-  _de.textContent=_di.badge; _de.className='dbadge '+_di.cls; _de.style.display=(_di.badge&&_di.badge!=='변경 없음')?'':'none';
+  document.getElementById('dSheetOld').textContent=_di.old; document.getElementById('dSheetChgRow').style.display=(_di.badge&&_di.badge!=='변경 없음')?'':'none';
+  var _th=document.getElementById('dSheetThumb'), _im=(cart[s.idx]&&(cart[s.idx].이미지||cart[s.idx].img))||''; // 사진 데이터가 생기면 자동 표시 (없으면 칸 자체를 숨김)
+  if(_im){ _th.src=_im; _th.hidden=false; } else { _th.hidden=true; _th.removeAttribute('src'); }
+  _de.textContent=_di.badge; _de.className='dbadge '+_di.cls; _de.style.display=_di.badge?'':'none';
   var _cur=cart[s.idx], _tt=_itemTotal(_cur), _t0=_dSnap?_dSnap.tot:_tt;
   document.getElementById('dSheetChg').textContent=_chgText(_cur);
   document.getElementById('dSheetTotLbl').textContent=_tt.cash?'일시불 결제금액':'선택기간 총 납부액 · '+_tt.months+'개월';

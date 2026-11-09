@@ -576,6 +576,29 @@ em.sd.up { color:#B45309; }
 .dsheet-head .delta .down { color:#15803D; }
 .dsheet-foot { display:flex; gap:10px; }
 .dsheet-foot button { width:auto; flex:2; }
+/* 모바일 시트 컴팩트: 고정 영역(머리·꼬리)을 줄여 본문 스크롤 영역 확보 + 닫기 버튼 터치 영역 확대 */
+.dsheet-grab { margin:6px auto 0; }
+.dsheet-head { padding:2px 14px 6px; }
+.dsheet-head .row { margin-top:0; gap:4px; }
+.dsheet-head .t { display:flex; align-items:baseline; gap:7px; min-width:0; }
+.dsheet-head .t b { flex:0 1 auto; min-width:0; font-size:15px; }
+.dsheet-head .t span { flex:none; font-size:11px; white-space:nowrap; }
+.dsheet-head .row > button { position:relative; z-index:2; flex:none; width:44px; height:44px; margin:-10px -12px -10px 0; padding:0; display:flex; align-items:center; justify-content:center; font-size:22px; touch-action:manipulation; }
+.dsheet-head .pr { margin-top:0; align-items:center; }
+.dsheet-head .price { font-size:22px; letter-spacing:-.5px; line-height:1.15; }
+.dsheet-head .old { font-size:11px; line-height:1.2; }
+.dbadge { margin-bottom:0; font-size:11px; padding:4px 8px; }
+.dsheet-tabs .tab { padding:9px 0; font-size:13.5px; }
+.dsheet-foot { padding:8px 14px max(10px, env(safe-area-inset-bottom)); }
+.dsheet-foot .fsum { margin-bottom:8px; }
+.dsheet-foot .frow { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.dsheet-foot .chg { flex:1; min-width:0; margin:0; padding:7px 10px; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dsheet-foot button.dlink { padding:8px 2px !important; white-space:nowrap; }
+.dsheet-foot .trow b { font-size:15px; }
+.dsheet-foot .tdiff { margin:2px 0 0; font-size:11px; }
+.dsheet-foot .facts button { padding:11px 8px; font-size:14px; }
+#searchModal .sp-head { margin:2px 0 10px; }
+#searchModal .sp-head button { position:relative; z-index:2; width:44px; height:44px; margin:-10px -10px -10px 0; padding:0; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
 .dsheet-foot button.ghost { flex:1; background:#fff !important; color:var(--navy); border:1.5px solid var(--line); }
 .sum3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
 .sum3 small { display:block; font-size:11px; opacity:.7; margin-bottom:2px; }
@@ -900,10 +923,9 @@ details.cmp-same summary { font-size:13px; font-weight:700; color:var(--brassD);
   <div class="dsheet-body" id="dSheetBody"></div>
   <div class="dsheet-foot">
     <div class="fsum">
-      <div class="chg" id="dSheetChg"></div>
+      <div class="frow"><div class="chg" id="dSheetChg"></div><button type="button" class="dlink" onclick="deleteFromSheet()">이 제품 삭제</button></div>
       <div class="trow"><small id="dSheetTotLbl"></small><b id="dSheetTot"></b></div>
       <p class="tdiff" id="dSheetTotDiff"></p>
-      <button type="button" class="dlink" onclick="deleteFromSheet()">이 제품 삭제</button>
     </div>
     <div class="facts"><button class="ghost" onclick="cancelDetail()">취소</button><button onclick="closeDetail()">변경 적용</button></div>
   </div>
@@ -1468,6 +1490,16 @@ function closeSearchModal(){
   _smTimer = setTimeout(function(){ m.classList.remove('show'); m.classList.remove('closing'); }, 200);
 }
 document.getElementById('searchModal').addEventListener('click',function(e){ if (e.target===this) closeSearchModal(); });
+// 시트 머리(손잡이·제목 줄)를 아래로 쓸어내리면 닫힘
+function bindSwipeDown(els, fn){
+  els.forEach(function(el){
+    if(!el) return; var y0=null;
+    el.addEventListener('touchstart',function(e){ y0=e.touches[0].clientY; },{passive:true});
+    el.addEventListener('touchend',function(e){ if(y0===null) return; var dy=e.changedTouches[0].clientY-y0; y0=null; if(dy>70) fn(); },{passive:true});
+  });
+}
+bindSwipeDown([document.querySelector('.dsheet-grab'),document.querySelector('.dsheet-head')], function(){ closeDetail(); });
+bindSwipeDown([document.querySelector('#searchModal .sp-grab'),document.querySelector('#searchModal .sp-head')], function(){ closeSearchModal(); });
 document.addEventListener('click',function(e){
   /* 전체 화면 검색: 바깥 클릭으로 결과를 닫지 않음 */
 });
@@ -2264,13 +2296,13 @@ function _deltaInfo(idx){
   var cur=cart[idx];
   if(!cur||!_dSnap||_dSnap.idx!==idx) return {old:'',badge:'',cls:''};
   var p0=_dSnap.price, unit=p0.kind==='month'?'월 ':'';
-  var old='변경 전 '+unit+won(p0.n)+' →';
+  var old='현재 입력 '+unit+won(p0.n)+' →';
   if(_itemJson(cur)===_dSnap.json) return {old:old,badge:'변경 없음',cls:''};
   if(cur.모델명!==_dSnap.obj.모델명) return {old:old,badge:'제품 변경됨',cls:''};
   var p1=betaPriceNum(cur);
   if(p0.kind!==p1.kind) return {old:old,badge:p0.label+' → '+p1.label,cls:''};
   var diff=p1.n-p0.n;
-  return {old:old,badge:diff?'변경 전 대비 '+unit+_sgn(diff):'변경 전과 동일',cls:diff>0?'up':(diff<0?'down':'')};
+  return {old:old,badge:diff?'현재 입력 대비 '+unit+_sgn(diff):'현재 입력과 동일',cls:diff>0?'up':(diff<0?'down':'')};
 }
 function _chgText(cur){
   var o=(_dSnap&&_dSnap.idx===_dSheetIdx)?_dSnap.obj:null;
@@ -2296,7 +2328,7 @@ function _deltaHtml(idx){
   if(p0.kind!==p1.kind) return '구매 방식 변경: '+p0.label+' → '+p1.label;
   var diff=p1.n-p0.n, unit=p0.kind==='month'?'/월':'';
   var sign=diff>0?'+':(diff<0?'−':'±'), cls=diff>0?'up':(diff<0?'down':'');
-  return '변경 전 '+won(p0.n)+unit+' <b class="'+cls+'">'+sign+won(Math.abs(diff))+unit+'</b>';
+  return '현재 입력 '+won(p0.n)+unit+' <b class="'+cls+'">'+sign+won(Math.abs(diff))+unit+'</b>';
 }
 var _dSheetIdx=-1, _dTab='buy', _dShownTab='';
 function setDetailTab(t){ _dTab=t; renderCart(); }
@@ -2309,7 +2341,7 @@ function syncDetailSheet(s){
   document.getElementById('dSheetSub').textContent=s.model+' · '+s.pm;
   document.getElementById('dSheetPrice').innerHTML=s.price;
   var _di=_deltaInfo(s.idx), _de=document.getElementById('dSheetDelta');
-  document.getElementById('dSheetOld').textContent=_di.old;
+  document.getElementById('dSheetOld').textContent=_di.old; document.getElementById('dSheetOld').style.display=(_di.badge==='변경 없음')?'none':'';
   _de.textContent=_di.badge; _de.className='dbadge '+_di.cls; _de.style.display=_di.badge?'':'none';
   var _cur=cart[s.idx], _tt=_itemTotal(_cur), _t0=_dSnap?_dSnap.tot:_tt;
   document.getElementById('dSheetChg').textContent=_chgText(_cur);

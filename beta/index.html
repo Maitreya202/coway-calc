@@ -323,6 +323,7 @@ input:focus, select:focus { border-color:var(--brass); }
 .cart-card { overflow:hidden !important; touch-action:pan-y; }
 .cart-card .cart-body { position:relative; z-index:1; background:inherit; transition:transform .2s ease; }
 .cart-card.swiping .cart-body { transition:none; }
+.cart-card.swiping { user-select:none; -webkit-user-select:none; }
 .cart-card .swdel { position:absolute; top:0; right:0; bottom:0; width:80px; border:0; background:#DC2626; color:#fff; font:inherit; font-size:14px; font-weight:700; cursor:pointer; z-index:0; visibility:hidden; }
 .cart-card.sw-on .swdel { visibility:visible; }
 /* ===== 콘솔 UI (QUOTE DESK 목업 기준) ===== */
@@ -1534,25 +1535,37 @@ function bindSwipeDown(els, fn){
   function bodyOf(c){ return c.querySelector('.cart-body'); }
   function setX(c,x){ bodyOf(c).style.transform=x?'translateX('+x+'px)':''; c._sx=x; c.classList.toggle('sw-on',!!x); }
   function closeAll(except){ [].forEach.call(area.querySelectorAll('.cart-card'),function(c){ if(c!==except&&c._sx) setX(c,0); }); }
-  area.addEventListener('touchstart',function(e){
-    var c=e.target.closest&&e.target.closest('.cart-card'); if(!c||e.touches.length!==1){ st=null; return; }
-    var g=e.target.closest('.box-grid'); if(g&&g.scrollWidth>g.clientWidth+2){ st=null; return; }
+  function begin(target,x,y){
+    var c=target.closest&&target.closest('.cart-card'); if(!c){ st=null; return false; }
+    var g=target.closest('.box-grid'); if(g&&g.scrollWidth>g.clientWidth+2){ st=null; return false; }
     closeAll(c);
-    st={c:c,x:e.touches[0].clientX,y:e.touches[0].clientY,base:c._sx||0,lock:null};
-  },{passive:true});
-  area.addEventListener('touchmove',function(e){
-    if(!st) return; var t=e.touches[0], dx=t.clientX-st.x, dy=t.clientY-st.y;
+    st={c:c,x:x,y:y,base:c._sx||0,lock:null}; return true;
+  }
+  function move(x,y){
+    if(!st) return; var dx=x-st.x, dy=y-st.y;
     if(st.lock===null){ if(Math.abs(dx)<8&&Math.abs(dy)<8) return; st.lock=Math.abs(dx)>Math.abs(dy)?'h':'v'; if(st.lock==='h') st.c.classList.add('swiping'); }
     if(st.lock!=='h') return;
     setX(st.c,Math.max(-W-24,Math.min(0,st.base+dx)));
-  },{passive:true});
+  }
   function end(){
     if(!st) return; var c=st.c, was=st.lock==='h'; st=null; c.classList.remove('swiping');
     if(!was) return; justSwiped=true; setTimeout(function(){ justSwiped=false; },350);
     setX(c,(c._sx||0)<-W/2?-W:0);
   }
+  area.addEventListener('touchstart',function(e){ if(e.touches.length!==1){ st=null; return; } begin(e.target,e.touches[0].clientX,e.touches[0].clientY); },{passive:true});
+  area.addEventListener('touchmove',function(e){ move(e.touches[0].clientX,e.touches[0].clientY); },{passive:true});
   area.addEventListener('touchend',end,{passive:true});
   area.addEventListener('touchcancel',end,{passive:true});
+  /* PC: 마우스 드래그 (터치 직후 합성 마우스 이벤트는 무시) */
+  var lastTouch=0, mouseDown=false;
+  area.addEventListener('touchstart',function(){ lastTouch=Date.now(); },{passive:true});
+  area.addEventListener('mousedown',function(e){
+    if(e.button!==0||Date.now()-lastTouch<800) return;
+    if(e.target.closest('input,select,textarea,button,a')) return;
+    mouseDown=begin(e.target,e.clientX,e.clientY);
+  });
+  document.addEventListener('mousemove',function(e){ if(mouseDown){ move(e.clientX,e.clientY); if(st&&st.lock==='h') e.preventDefault(); } });
+  document.addEventListener('mouseup',function(){ if(mouseDown){ mouseDown=false; end(); } });
   /* 스와이프 직후 클릭은 무시, 열려 있는 카드를 누르면 닫기만 함 */
   area.addEventListener('click',function(e){
     if(e.target.closest&&e.target.closest('.swdel')) return;
@@ -2456,10 +2469,10 @@ function removeCart(idx){
   var t=document.getElementById('undoToast');
   if(!t){
     t=document.createElement('div');t.id='undoToast';
-    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:92px;z-index:9999;background:#1e293b;color:#fff;border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:92px;z-index:9999;width:max-content;max-width:calc(100vw - 32px);white-space:nowrap;background:#1e293b;color:#fff;border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
     document.body.appendChild(t);
   }
-  t.innerHTML='<span>제품을 삭제했습니다</span><button onclick="undoRemoveCart()" style="background:none;border:none;color:#7dd3fc;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:2px 4px">되돌리기</button>';
+  t.innerHTML='<span>제품을 삭제했습니다</span><button onclick="undoRemoveCart()" style="background:none;border:none;color:#7dd3fc;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:2px 4px;white-space:nowrap">되돌리기</button>';
   t.style.display='flex';
   clearTimeout(_undoTimer);
   _undoTimer=setTimeout(function(){t.style.display='none';_undoDel=null;},5000);

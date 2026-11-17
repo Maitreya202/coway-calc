@@ -320,6 +320,11 @@ input:focus, select:focus { border-color:var(--brass); }
 .cart-list { gap:0 !important; background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .cart-card { border:0 !important; border-bottom:1px solid var(--line) !important; border-radius:0 !important; box-shadow:none !important; padding:10px 12px 9px !important; }
 .cart-card:last-child { border-bottom:0 !important; }
+.cart-card { overflow:hidden !important; touch-action:pan-y; }
+.cart-card .cart-body { position:relative; z-index:1; background:inherit; transition:transform .2s ease; }
+.cart-card.swiping .cart-body { transition:none; }
+.cart-card .swdel { position:absolute; top:0; right:0; bottom:0; width:80px; border:0; background:#DC2626; color:#fff; font:inherit; font-size:14px; font-weight:700; cursor:pointer; z-index:0; visibility:hidden; }
+.cart-card.sw-on .swdel { visibility:visible; }
 /* ===== 콘솔 UI (QUOTE DESK 목업 기준) ===== */
 .fab, .wveil, .wheel, .bbar, .beta-head, .plan-bar { display:none !important; }
 body { padding-bottom:84px; }
@@ -1523,6 +1528,38 @@ function bindSwipeDown(els, fn){
     el.addEventListener('touchend',function(e){ if(y0===null) return; var dy=e.changedTouches[0].clientY-y0; y0=null; if(dy>70) fn(); },{passive:true});
   });
 }
+/* 목록 카드 왼쪽 스와이프 → 삭제 버튼 노출 (삭제 후 되돌리기 토스트는 removeCart가 처리) */
+(function(){
+  var area=document.getElementById('cartArea'), W=80, st=null, justSwiped=false;
+  function bodyOf(c){ return c.querySelector('.cart-body'); }
+  function setX(c,x){ bodyOf(c).style.transform=x?'translateX('+x+'px)':''; c._sx=x; c.classList.toggle('sw-on',!!x); }
+  function closeAll(except){ [].forEach.call(area.querySelectorAll('.cart-card'),function(c){ if(c!==except&&c._sx) setX(c,0); }); }
+  area.addEventListener('touchstart',function(e){
+    var c=e.target.closest&&e.target.closest('.cart-card'); if(!c||e.touches.length!==1){ st=null; return; }
+    var g=e.target.closest('.box-grid'); if(g&&g.scrollWidth>g.clientWidth+2){ st=null; return; }
+    closeAll(c);
+    st={c:c,x:e.touches[0].clientX,y:e.touches[0].clientY,base:c._sx||0,lock:null};
+  },{passive:true});
+  area.addEventListener('touchmove',function(e){
+    if(!st) return; var t=e.touches[0], dx=t.clientX-st.x, dy=t.clientY-st.y;
+    if(st.lock===null){ if(Math.abs(dx)<8&&Math.abs(dy)<8) return; st.lock=Math.abs(dx)>Math.abs(dy)?'h':'v'; if(st.lock==='h') st.c.classList.add('swiping'); }
+    if(st.lock!=='h') return;
+    setX(st.c,Math.max(-W-24,Math.min(0,st.base+dx)));
+  },{passive:true});
+  function end(){
+    if(!st) return; var c=st.c, was=st.lock==='h'; st=null; c.classList.remove('swiping');
+    if(!was) return; justSwiped=true; setTimeout(function(){ justSwiped=false; },350);
+    setX(c,(c._sx||0)<-W/2?-W:0);
+  }
+  area.addEventListener('touchend',end,{passive:true});
+  area.addEventListener('touchcancel',end,{passive:true});
+  /* 스와이프 직후 클릭은 무시, 열려 있는 카드를 누르면 닫기만 함 */
+  area.addEventListener('click',function(e){
+    if(e.target.closest&&e.target.closest('.swdel')) return;
+    var c=e.target.closest&&e.target.closest('.cart-card');
+    if(justSwiped||(c&&c._sx)){ e.stopPropagation(); e.preventDefault(); if(c&&c._sx) setX(c,0); }
+  },true);
+})();
 bindSwipeDown([document.querySelector('.dsheet-grab'),document.querySelector('.dsheet-head')], function(){ closeDetail(); });
 bindSwipeDown([document.querySelector('#searchModal .sp-grab'),document.querySelector('#searchModal .sp-head')], function(){ closeSearchModal(); });
 document.addEventListener('click',function(e){
@@ -2138,7 +2175,7 @@ function renderCart() {
     var isCashMode = item.구매방법 === 'cash';
     var isSunap2   = item.선납 === '선납2';
 
-    html += '<div class="cart-card" style="padding:13px 12px 11px;background:' + (_isOpen ? '#f0f7ff' : 'white') + ';transition:background .15s;border-left:' + (item.inQuote ? '3px solid #15803D' : '3px solid transparent') + '">';
+    html += '<div class="cart-card" data-idx="' + idx + '" style="padding:13px 12px 11px;background:' + (_isOpen ? '#f0f7ff' : 'white') + ';transition:background .15s;border-left:' + (item.inQuote ? '3px solid #15803D' : '3px solid transparent') + '">';
     html += '<div class="cart-body" style="padding:0">';
 
     // 1. 박스 한 줄
@@ -2164,7 +2201,7 @@ function renderCart() {
       _sheet = { idx: idx, name: item.제품명, model: item.모델명, pm: window._sheetPm, price: window._sheetPrice, tabs: _tb };
     }
 
-    html += '</div></div>';
+    html += '</div><button type="button" class="swdel" tabindex="-1" onclick="removeCart(' + idx + ')">삭제</button></div>';
   });
 
   area.innerHTML = '<div class="cart-list">' + html + '</div>';
